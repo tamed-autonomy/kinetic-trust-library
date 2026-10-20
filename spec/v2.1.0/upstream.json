@@ -1,0 +1,92 @@
+{
+  "repository": "nmcitra/ktp-rfc",
+  "tag": "v2.1.0",
+  "commit": "15520035267546e1035aad7beea0cc3cf9ef8f2c",
+  "artifacts": [
+    {
+      "source_path": "catalog/body.json",
+      "path": "catalog/body.json",
+      "sha256": "ba2a9bebcdf5e2d276714605384594594c8e58a1e9913efd164f294d4b88ae9d"
+    },
+    {
+      "source_path": "catalog/index.json",
+      "path": "catalog/index.json",
+      "sha256": "fc7d5d08d870d6ff45231f871f858f4d8f95240a1e5b43b43b06c22554102736"
+    },
+    {
+      "source_path": "catalog/information.json",
+      "path": "catalog/information.json",
+      "sha256": "40575732b38b7e28f2f2b36849fbaf1dae603bfa40b19d56772692e2596ab925"
+    },
+    {
+      "source_path": "catalog/meta.json",
+      "path": "catalog/meta.json",
+      "sha256": "98eafb50ab50c2bfdec0ff63acde2f4e25287c91e872db04d4a34180cd6eb403"
+    },
+    {
+      "source_path": "catalog/relational.json",
+      "path": "catalog/relational.json",
+      "sha256": "4e65ba4a894b67ddeca7e1672ca1f55f680a84e5ecbece077c6b570d2c6cfd5c"
+    },
+    {
+      "source_path": "catalog/soul.json",
+      "path": "catalog/soul.json",
+      "sha256": "c08c0247a3670dd65b423e3dafc9cf3f4e6b258db0d05d17b45a135f2735b6dd"
+    },
+    {
+      "source_path": "catalog/time.json",
+      "path": "catalog/time.json",
+      "sha256": "3f1af85df393cfba9e775d1e7c057e925c5f2f7c720c4cd2e05f50e6acab6b84"
+    },
+    {
+      "source_path": "catalog/world.json",
+      "path": "catalog/world.json",
+      "sha256": "3604705de9a8af97a3001ad38ca3047a3c0d4bd838863b40f96ba2e3e9dab6e2"
+    },
+    {
+      "source_path": "specifications/conformance/aggregation-empty-window-v1.json",
+      "path": "conformance/aggregation-empty-window-v1.json",
+      "sha256": "8b3403ed7889f6b3d708d2e75f7cb8b9b700e75aaa00959ef46bf6d2d35aaa73"
+    },
+    {
+      "source_path": "specifications/conformance/ros2-reference-v0.1.json",
+      "path": "conformance/ros2-reference-v0.1.json",
+      "sha256": "fbb11fefe441c10154c5bf99bd88b63d79a6885b5b1f3a70852f83d325a8b024"
+    },
+    {
+      "source_path": "schemas/deployment-profile.json",
+      "path": "schemas/deployment-profile.json",
+      "sha256": "c0087dc3662b8ef1988f7d612a779ca38f2b771454a45fc33abaaed6f2ebb3f2"
+    },
+    {
+      "source_path": "schemas/risk-factors.json",
+      "path": "schemas/risk-factors.json",
+      "sha256": "a2f497489b94e727398278794389e6fbae0a44c851f19a1e5d1daafc1daa16e0"
+    },
+    {
+      "source_path": "schemas/sensor-config.json",
+      "path": "schemas/sensor-config.json",
+      "sha256": "a9f70585fc9ba85334f972dc8dbccb9dfa0446cb18ce3d8b79cadf5d59f3ad22"
+    },
+    {
+      "source_path": "schemas/soul-constraint.json",
+      "path": "schemas/soul-constraint.json",
+      "sha256": "94dae2a47bab45ea324e11df43d3030c4850a78e72846f46ab60a9b1399f8fd5"
+    },
+    {
+      "source_path": "schemas/sponsorship-bond.json",
+      "path": "schemas/sponsorship-bond.json",
+      "sha256": "2718d44a473370caaf9d278f6514bd1e5ba111f3e00ff6bff2a72739c6a5025e"
+    },
+    {
+      "source_path": "schemas/transaction-record.json",
+      "path": "schemas/transaction-record.json",
+      "sha256": "d0649fd4d7c77eb85243b37f115b48adf145cbcfd4d8b43cff912d8014fc0f12"
+    },
+    {
+      "source_path": "schemas/trust-proof.json",
+      "path": "schemas/trust-proof.json",
+      "sha256": "41d5dd2506893094d41e21193cf95eed396dc99b8d32d7264f50ea1a7972d4e0"
+    }
+  ]
+}

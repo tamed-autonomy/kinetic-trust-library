@@ -1,0 +1,1 @@
+"""Focused Trajectory contract tests."""

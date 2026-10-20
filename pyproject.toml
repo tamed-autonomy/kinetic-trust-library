@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kinetic-trust-library"
+version = "1.0.0"
+description = "Informative Python reference library for selected KTP protocol primitives"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+keywords = [
+  "kinetic-trust-protocol",
+  "trust-evaluation",
+  "autonomous-agents",
+  "security",
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
+  "Operating System :: OS Independent",
+  "Topic :: Security",
+]
+
+[project.urls]
+Repository = "https://github.com/tamed-autonomy/kinetic-trust-library"
+Issues = "https://github.com/tamed-autonomy/kinetic-trust-library/issues"
+Specification = "https://github.com/nmcitra/ktp-rfc/tree/v2.1.0"
+
+[project.optional-dependencies]
+cryptography = ["cryptography>=50.0.0,<51"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kinetic_trust_library"]
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+  "pyproject.toml",
+  "README.md",
+  "LICENSE",
+  "NOTICE",
+  "src/kinetic_trust_library",
+  "examples",
+]
+exclude = [
+  "/.DS_Store",
+  "**/.DS_Store",
+  "**/__pycache__",
+  "**/*.pyc",
+]

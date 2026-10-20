@@ -1,0 +1,52 @@
+Kinetic Trust Library 1.0.0
+Copyright 2026 Tamed Autonomy LLC
+
+This independent implementation contains material pinned or derived from the
+Kinetic Trust Protocol (KTP) v2.1.0 specification.
+Pinned specification commit: 15520035267546e1035aad7beea0cc3cf9ef8f2c
+It is not an official KTP SDK.
+NMCITRA does not certify this implementation.
+NMCITRA does not maintain this implementation.
+NMCITRA does not endorse this implementation.
+This is an informative reference library for selected protocol primitives,
+not a complete deployment or certification claim.
+Products own sensing, storage, keys, transport, failure handling, retries,
+human interaction, action, and enforcement.
+
+---
+
+Kinetic Trust Protocol (KTP)
+Copyright 2025-2026 Chris Perkins.
+
+KTP was first publicly released in November 2025 (v1.0.0 tagged 2025-12-01),
+developed under the New Mexico Cyber Intelligence & Threat Response Alliance
+(NMCITRA).
+
+Canonical source:
+https://github.com/nmcitra/ktp-rfc
+
+Preferred attribution:
+Chris Perkins, "Kinetic Trust Protocol (KTP): RFC Series,"
+Version 2.1.0, September 3, 2026.
+https://github.com/nmcitra/ktp-rfc
+
+KTP is an open framework for environment-sensitive, physics-based
+authorization of autonomous agents.
+
+Distinctive constructs presented as part of the KTP architecture include:
+
+- The Zeroth Law: A <= E
+- Authorization is Motion
+- Identity is Trajectory
+- the Risk Factors (six weighted inputs and the Soul veto)
+- the Silent Veto
+- Blue Zones
+- the Trust Score: E_trust = E_base x (1 - R)
+
+This notice identifies the provenance of the KTP specification and its
+architectural terminology. It does not claim exclusive ownership of general
+ideas, standard engineering concepts, or independently developed methods.
+
+See PROVENANCE.md for the full attribution and citation norms this project
+asks of downstream use:
+https://github.com/nmcitra/ktp-rfc/blob/v2.1.0/PROVENANCE.md
