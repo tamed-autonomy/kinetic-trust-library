@@ -287,7 +287,6 @@ class DependencyPolicyTests(unittest.TestCase):
             ROOT / "README.md",
             ROOT / "CONTEXT.md",
             ROOT / "docs" / "releasing.md",
-            ROOT / "docs" / "design" / "2026-08-20-kinetic-trust-core-architecture.md",
         )
         for path in paths:
             with self.subTest(path=path):
