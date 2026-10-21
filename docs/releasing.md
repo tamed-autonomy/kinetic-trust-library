@@ -1,9 +1,10 @@
 # Ordinary release procedure
 
-This procedure verifies Kinetic Trust Library `1.0.0` from one clean, reviewed
+This procedure verifies Kinetic Trust Library `2.1.0` from one clean, reviewed
 commit as an ordinary wheel and source distribution. The Library profiles KTP
-`v2.1.0` at `15520035267546e1035aad7beea0cc3cf9ef8f2c`; protocol and
-package versions are independent. Do not change versions as part of verification.
+`v2.1.0` at `15520035267546e1035aad7beea0cc3cf9ef8f2c`; package `major.minor`
+tracks the RFC series while package patch releases may advance independently.
+Do not change versions as part of verification.
 
 ## Publication boundary
 
@@ -42,12 +43,12 @@ also rejects a tag whose target is not reachable from `main`.
    commit on `main`, and require the repository's CI and CodeQL checks to pass.
 2. Confirm the Trusted Publisher, GitHub environment, and immutable-tag rules
    above are active. Confirm the tag will equal `v` plus the project version;
-   for this release it is `v1.0.0`.
+   for this release it is `v2.1.0`.
 3. Obtain separate approval to publish. Create and locally verify a signed,
-   annotated `v1.0.0` tag on the reviewed commit. Pushing that tag starts
+   annotated `v2.1.0` tag on the reviewed commit. Pushing that tag starts
    `.github/workflows/release.yml` and publishes to PyPI.
 4. Require the release workflow to succeed, verify the PyPI project metadata
-   and provenance, and install `kinetic-trust-library==1.0.0` in a fresh
+   and provenance, and install `kinetic-trust-library==2.1.0` in a fresh
    environment from PyPI.
 5. Publish Kinetic Trust Service only after this exact Library release is
    visible and installable from PyPI.
@@ -91,13 +92,13 @@ set -euo pipefail
 test -z "$(git status --porcelain)"
 KTP_REVIEWED_LIBRARY_COMMIT="$(git rev-parse HEAD)"
 KTP_LIBRARY_TEMP_ROOT="${TMPDIR:-/tmp}"
-KTP_LIBRARY_ARTIFACT_ROOT="${KTP_LIBRARY_TEMP_ROOT%/}/ktp-library-1.0.0-$KTP_REVIEWED_LIBRARY_COMMIT"
+KTP_LIBRARY_ARTIFACT_ROOT="${KTP_LIBRARY_TEMP_ROOT%/}/ktp-library-2.1.0-$KTP_REVIEWED_LIBRARY_COMMIT"
 test ! -e "$KTP_LIBRARY_ARTIFACT_ROOT"
 mkdir -p "$KTP_LIBRARY_ARTIFACT_ROOT"
 uv run --python 3.11 --with 'build==1.5.0' --no-project \
   python -m build --outdir "$KTP_LIBRARY_ARTIFACT_ROOT/dist" .
-KTP_LIBRARY_WHEEL="$KTP_LIBRARY_ARTIFACT_ROOT/dist/kinetic_trust_library-1.0.0-py3-none-any.whl"
-KTP_LIBRARY_SDIST="$KTP_LIBRARY_ARTIFACT_ROOT/dist/kinetic_trust_library-1.0.0.tar.gz"
+KTP_LIBRARY_WHEEL="$KTP_LIBRARY_ARTIFACT_ROOT/dist/kinetic_trust_library-2.1.0-py3-none-any.whl"
+KTP_LIBRARY_SDIST="$KTP_LIBRARY_ARTIFACT_ROOT/dist/kinetic_trust_library-2.1.0.tar.gz"
 test -f "$KTP_LIBRARY_WHEEL"
 test -f "$KTP_LIBRARY_SDIST"
 test "$(find "$KTP_LIBRARY_ARTIFACT_ROOT/dist" -maxdepth 1 -name '*.whl' | wc -l)" -eq 1
@@ -109,7 +110,7 @@ tar -tzf "$KTP_LIBRARY_SDIST"
 
 Apply the archive assertions in the existing [CI package job](../.github/workflows/ci.yml)
 to these exact files. Require metadata name/version `kinetic-trust-library` /
-`1.0.0`, license expression `Apache-2.0`, and Specification URL
+`2.1.0`, license expression `Apache-2.0`, and Specification URL
 `https://github.com/nmcitra/ktp-rfc/tree/v2.1.0`. The only `Requires-Dist` must
 be the extra-qualified PyCA declaration; there are no base dependencies.
 All wheel payload paths must belong to `kinetic_trust_library`. The sdist must
@@ -136,7 +137,7 @@ tar -xzf "$KTP_LIBRARY_SDIST" -C "$KTP_LIBRARY_ARTIFACT_ROOT/sdist"
 cd "$KTP_LIBRARY_ARTIFACT_ROOT"
 PYTHONPATH= "$KTP_LIBRARY_ARTIFACT_ROOT/venv/bin/python" -I -c \
   'import kinetic_trust_library, kinetic_trust_library.core, kinetic_trust_library.proofs, kinetic_trust_library.protocols; assert callable(kinetic_trust_library.validate_absolute_uri)'
-KTP_LIBRARY_SDIST_ROOT="$KTP_LIBRARY_ARTIFACT_ROOT/sdist/kinetic_trust_library-1.0.0"
+KTP_LIBRARY_SDIST_ROOT="$KTP_LIBRARY_ARTIFACT_ROOT/sdist/kinetic_trust_library-2.1.0"
 PYTHONPATH= "$KTP_LIBRARY_ARTIFACT_ROOT/venv/bin/python" \
   "$KTP_LIBRARY_SDIST_ROOT/examples/01_core_and_envelope_evaluation.py"
 PYTHONPATH= "$KTP_LIBRARY_ARTIFACT_ROOT/venv/bin/python" \

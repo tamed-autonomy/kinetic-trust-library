@@ -355,7 +355,7 @@ importlib.metadata.entry_points()
             project = tomllib.load(source)["project"]
 
         self.assertEqual(project["name"], "kinetic-trust-library")
-        self.assertEqual(project["version"], "1.0.0")
+        self.assertEqual(project["version"], "2.1.0")
         self.assertEqual(
             project["urls"]["Specification"],
             "https://github.com/nmcitra/ktp-rfc/tree/v2.1.0",
@@ -415,7 +415,7 @@ assert not any(
         with (ROOT / "pyproject.toml").open("rb") as source:
             project_version = tomllib.load(source)["project"]["version"]
         self.assertEqual(project_version, kinetic_trust_library.__version__)
-        self.assertEqual(project_version, "1.0.0")
+        self.assertEqual(project_version, "2.1.0")
 
 
 if __name__ == "__main__":

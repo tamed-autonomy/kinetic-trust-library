@@ -11,7 +11,7 @@ from .models.profile import DeploymentProfile
 from .models._uri import validate_absolute_uri
 
 
-__version__ = "1.0.0"
+__version__ = "2.1.0"
 KTP_SPEC_TAG = "v2.1.0"
 KTP_SPEC_COMMIT = "15520035267546e1035aad7beea0cc3cf9ef8f2c"
 

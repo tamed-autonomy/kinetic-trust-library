@@ -238,8 +238,8 @@ class PublicSurfaceTests(unittest.TestCase):
                 with self.subTest(facade=facade.__name__, name=name):
                     self.assertFalse(hasattr(facade, name))
 
-    def test_protocol_provenance_is_independent_of_library_version(self):
-        self.assertEqual(kinetic_trust_library.__version__, "1.0.0")
+    def test_protocol_provenance_is_explicit_beside_library_version(self):
+        self.assertEqual(kinetic_trust_library.__version__, "2.1.0")
         self.assertEqual(kinetic_trust_library.KTP_SPEC_TAG, "v2.1.0")
         self.assertEqual(
             kinetic_trust_library.KTP_SPEC_COMMIT,
@@ -285,7 +285,7 @@ class PublicSurfaceTests(unittest.TestCase):
         self.assertEqual(tuple(kinetic_trust_library.__all__), ROOT_EXPORTS)
         self.assertNotIn("_common", kinetic_trust_library.__all__)
         self.assertEqual(set(namespace) - {"__builtins__"}, set(ROOT_EXPORTS))
-        self.assertEqual(kinetic_trust_library.__version__, "1.0.0")
+        self.assertEqual(kinetic_trust_library.__version__, "2.1.0")
         self.assertEqual(len(kinetic_trust_library.__all__), len(set(kinetic_trust_library.__all__)))
 
     def test_root_uri_validator_preserves_valid_values_and_rejects_malformed_values(self):

@@ -15,12 +15,13 @@ Products also own ingress/body size, decoder depth, collection cardinality,
 concurrency, deadlines, and availability controls. Library parser and selected
 evaluation caps are not a universal resource quota; Soul and Trajectory parsers
 consume already-decoded mappings rather than inheriting Trust Proof limits.
-Library `1.0.0` profiles KTP `v2.1.0` at commit
-`15520035267546e1035aad7beea0cc3cf9ef8f2c` independently of its package version.
+Library `2.1.0` profiles KTP `v2.1.0` at commit
+`15520035267546e1035aad7beea0cc3cf9ef8f2c`.
 Kinetic Trust Library and Kinetic Trust Service share a `major.minor`
-compatibility series, beginning with `1.0`; patch versions advance
-independently for each component. This package compatibility policy does not
-change the independently pinned KTP specification tag or commit.
+compatibility series that follows the implemented KTP RFC series, beginning
+with `2.1`; patch versions advance independently for each component. Package
+patch releases do not change the independently pinned KTP specification tag
+or commit.
 
 The tested support set is CPython 3.11 through 3.15. Canonical KTP-Core and Trust Proof
 vectors protect protocol behavior, including exact protocol bytes; they do not

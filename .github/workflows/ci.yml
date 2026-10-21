@@ -83,20 +83,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          WHEEL=dist/kinetic_trust_library-1.0.0-py3-none-any.whl
-          SDIST=dist/kinetic_trust_library-1.0.0.tar.gz
+          WHEEL=dist/kinetic_trust_library-2.1.0-py3-none-any.whl
+          SDIST=dist/kinetic_trust_library-2.1.0.tar.gz
           test -f "$WHEEL"
           test -f "$SDIST"
           test "$(find dist -maxdepth 1 -name '*.whl' | wc -l)" -eq 1
           test "$(find dist -maxdepth 1 -name '*.tar.gz' | wc -l)" -eq 1
-          python -c 'import email.parser,sys,zipfile; wheel=zipfile.ZipFile(sys.argv[1]); names=wheel.namelist(); metadata_name=next(name for name in names if name.endswith(".dist-info/METADATA")); metadata=email.parser.Parser().parsestr(wheel.read(metadata_name).decode()); requirements=metadata.get_all("Requires-Dist", []); payload=[name for name in names if ".dist-info/" not in name]; assert metadata["Name"] == "kinetic-trust-library"; assert metadata["Version"] == "1.0.0"; assert metadata["License-Expression"] == "Apache-2.0"; assert "Specification, https://github.com/nmcitra/ktp-rfc/tree/v2.1.0" in metadata.get_all("Project-URL", []); assert len(requirements) == 1 and requirements[0].startswith("cryptography") and "extra ==" in requirements[0]; assert payload and all(name.startswith("kinetic_trust_library/") for name in payload)' "$WHEEL"
+          python -c 'import email.parser,sys,zipfile; wheel=zipfile.ZipFile(sys.argv[1]); names=wheel.namelist(); metadata_name=next(name for name in names if name.endswith(".dist-info/METADATA")); metadata=email.parser.Parser().parsestr(wheel.read(metadata_name).decode()); requirements=metadata.get_all("Requires-Dist", []); payload=[name for name in names if ".dist-info/" not in name]; assert metadata["Name"] == "kinetic-trust-library"; assert metadata["Version"] == "2.1.0"; assert metadata["License-Expression"] == "Apache-2.0"; assert "Specification, https://github.com/nmcitra/ktp-rfc/tree/v2.1.0" in metadata.get_all("Project-URL", []); assert len(requirements) == 1 and requirements[0].startswith("cryptography") and "extra ==" in requirements[0]; assert payload and all(name.startswith("kinetic_trust_library/") for name in payload)' "$WHEEL"
           python -c 'import sys,tarfile; names=tarfile.open(sys.argv[1], "r:gz").getnames(); assert any("/src/kinetic_trust_library/" in name for name in names); assert not any("/src/kinetic_trust_core/" in name for name in names); source_payload=[name.split("/src/", 1)[1] for name in names if "/src/" in name]; assert source_payload and all(name.startswith("kinetic_trust_library/") for name in source_payload); required=("/README.md", "/LICENSE", "/NOTICE", "/examples/"); assert all(any(part in name for name in names) for part in required)' "$SDIST"
       - name: Install the wheel and run source-distribution examples
         shell: bash
         run: |
           set -euo pipefail
-          WHEEL="$GITHUB_WORKSPACE/dist/kinetic_trust_library-1.0.0-py3-none-any.whl"
-          SDIST="$GITHUB_WORKSPACE/dist/kinetic_trust_library-1.0.0.tar.gz"
+          WHEEL="$GITHUB_WORKSPACE/dist/kinetic_trust_library-2.1.0-py3-none-any.whl"
+          SDIST="$GITHUB_WORKSPACE/dist/kinetic_trust_library-2.1.0.tar.gz"
           python -m venv "$RUNNER_TEMP/package-smoke"
           "$RUNNER_TEMP/package-smoke/bin/python" -m pip install \
             --disable-pip-version-check --no-index --no-deps "$WHEEL"
@@ -104,8 +104,8 @@ jobs:
           tar -xzf "$SDIST" -C "$RUNNER_TEMP/sdist"
           cd "$RUNNER_TEMP"
           PYTHONPATH= "$RUNNER_TEMP/package-smoke/bin/python" -I -c \
-            'from importlib.metadata import distributions, version; from importlib.util import find_spec; import kinetic_trust_library, kinetic_trust_library.core, kinetic_trust_library.proofs, kinetic_trust_library.protocols; import kinetic_trust_library.soul_constraint as soul_constraint; import kinetic_trust_library.trajectory as trajectory; assert callable(kinetic_trust_library.validate_absolute_uri); assert callable(soul_constraint.parse_soul_constraint); assert callable(trajectory.parse_trajectory_transaction); assert callable(trajectory.assess_trajectory_link); assert version("kinetic-trust-library") == "1.0.0"; assert kinetic_trust_library.KTP_SPEC_TAG == "v2.1.0"; assert find_spec("kinetic_trust_core") is None; assert "kinetic-trust-core" not in {(item.metadata["Name"] or "").lower() for item in distributions()}'
-          SDIST_ROOT="$RUNNER_TEMP/sdist/kinetic_trust_library-1.0.0"
+            'from importlib.metadata import distributions, version; from importlib.util import find_spec; import kinetic_trust_library, kinetic_trust_library.core, kinetic_trust_library.proofs, kinetic_trust_library.protocols; import kinetic_trust_library.soul_constraint as soul_constraint; import kinetic_trust_library.trajectory as trajectory; assert callable(kinetic_trust_library.validate_absolute_uri); assert callable(soul_constraint.parse_soul_constraint); assert callable(trajectory.parse_trajectory_transaction); assert callable(trajectory.assess_trajectory_link); assert version("kinetic-trust-library") == "2.1.0"; assert kinetic_trust_library.KTP_SPEC_TAG == "v2.1.0"; assert find_spec("kinetic_trust_core") is None; assert "kinetic-trust-core" not in {(item.metadata["Name"] or "").lower() for item in distributions()}'
+          SDIST_ROOT="$RUNNER_TEMP/sdist/kinetic_trust_library-2.1.0"
           PYTHONPATH= "$RUNNER_TEMP/package-smoke/bin/python" \
             "$SDIST_ROOT/examples/01_core_and_envelope_evaluation.py"
           PYTHONPATH= "$RUNNER_TEMP/package-smoke/bin/python" \

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "kinetic-trust-library"
-version = "1.0.0"
+version = "2.1.0"
 description = "Informative Python reference library for selected KTP protocol primitives"
 readme = "README.md"
 requires-python = ">=3.11"

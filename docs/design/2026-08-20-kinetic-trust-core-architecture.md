@@ -6,7 +6,7 @@
 > names, specification scope, and interfaces. All text below preserves the
 > historical v2.0.0 decisions, not maintained integration instructions.
 > The old umbrella Core/package names and the single-result/derived-action
-> assumptions below are historical only. Library `1.0.0` now profiles KTP
+> assumptions below are historical only. Library `2.1.0` now profiles KTP
 > `v2.1.0` at `15520035267546e1035aad7beea0cc3cf9ef8f2c`.
 > One evaluation returns separate Core capacity and Envelope facts: equality is
 > `AT_CAPACITY`/within and zero-margin `SILENT_VETO`; Soul short paths leave

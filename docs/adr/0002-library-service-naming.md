@@ -31,15 +31,16 @@ namespace `kinetic_trust_service`.
 The migration is a clean pre-release break. No `kinetic_trust_core` alias,
 compatibility distribution, re-export tree, or dual class family is provided.
 
-Library releases use their own semantic version. Library `1.0.0` declares its
-normative target separately as KTP `v2.1.0` at commit
+Library releases use semantic versions whose `major.minor` identifies the
+implemented KTP RFC series. Library `2.1.0` declares its normative target as
+KTP `v2.1.0` at commit
 `15520035267546e1035aad7beea0cc3cf9ef8f2c`.
 
 The Library and Service package versions share a `major.minor` compatibility
-series, beginning with Library `1.0.0` and Service `1.0.0`. Patch releases are
-component-local and may advance independently. Package compatibility does not
-identify or change the KTP specification version; the Library's exact KTP tag
-and commit remain independent provenance.
+series, beginning with Library `2.1.0` and Service `2.1.0` for KTP v2.1.
+Patch releases are component-local and may advance independently. A package
+patch release does not change specification provenance; the Library's exact
+KTP tag and commit remain separately declared.
 
 The two facts returned by one evaluation are `bundle.core_capacity` and
 `bundle.envelope`. At equality the first reports `AT_CAPACITY`/within and the
