@@ -121,36 +121,35 @@ The tested support set is CPython 3.11 through 3.15. The commands below use the
 virtual-environment support included with Python, so they do not modify a
 system or Homebrew-managed Python installation.
 
-The distribution is not yet published. Source-checkout installation is the
-only currently available installation path; publishing and tagging remain
-separately approved release actions.
-
-First change into the `kinetic-trust-library` source-checkout root (the
-directory containing `pyproject.toml`). On macOS or Linux, create a local
-virtual environment and install the base library with:
+When a release appears on the
+[PyPI project page](https://pypi.org/project/kinetic-trust-library/), create a
+local virtual environment and install the latest available base library with:
 
 ```console
 python3 -m venv .venv
-.venv/bin/python -m pip install .
+.venv/bin/python -m pip install kinetic-trust-library
 ```
 
 Install the optional cryptography extra only when the consuming application
 wants the PyCA adapter supplied in the same wheel:
 
 ```console
-.venv/bin/python -m pip install '.[cryptography]'
+.venv/bin/python -m pip install 'kinetic-trust-library[cryptography]'
 ```
 
 On Windows PowerShell, use the corresponding environment-local interpreter:
 
 ```console
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install .
-.\.venv\Scripts\python.exe -m pip install ".[cryptography]"
+.\.venv\Scripts\python.exe -m pip install kinetic-trust-library
+.\.venv\Scripts\python.exe -m pip install "kinetic-trust-library[cryptography]"
 ```
 
-In every case, run the installation command from the repository root because
-`.` identifies the package in the current directory. Activating the virtual
+For unreleased changes—or until the first release appears on PyPI—change into
+the `kinetic-trust-library` source-checkout root (the directory containing
+`pyproject.toml`) and replace the package name above with `.` or
+`'.[cryptography]'`. The dot identifies the package in the current directory,
+so source installation fails when run elsewhere. Activating the virtual
 environment is optional when invoking its interpreter directly as above.
 
 The base installation has no third-party runtime dependencies.
@@ -662,7 +661,8 @@ The scope matrix above is the public implementation contract. Operational
 Oracle systems, key lifecycle, advanced cryptographic schemes, Flight Recorder
 storage, trajectory-chain operations, and deployment-level verification are
 outside the Library. Passing the released vectors does not certify a product.
-Publication and packaging verification remain separate release work.
+Package publication and provenance are separate from protocol and product
+conformance.
 
 ## Contributing and security
 

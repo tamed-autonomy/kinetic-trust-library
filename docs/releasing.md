@@ -5,6 +5,53 @@ commit as an ordinary wheel and source distribution. The Library profiles KTP
 `v2.1.0` at `15520035267546e1035aad7beea0cc3cf9ef8f2c`; protocol and
 package versions are independent. Do not change versions as part of verification.
 
+## Publication boundary
+
+The repository contains a tag-triggered Trusted Publishing workflow, but its
+presence does not authorize a release. Pushing a matching version tag starts
+publication; it is not a dry run. Tag creation and package publication require
+separate approval after the checks below are complete.
+
+The workflow deliberately separates an unprivileged build job from its
+OIDC-enabled publish job. It builds the wheel and source distribution once,
+retains those exact files as a workflow artifact, and publishes those same
+bytes. The official PyPI action produces Sigstore attestations by default.
+No PyPI password or API token belongs in GitHub secrets.
+
+## One-time Trusted Publishing setup
+
+Before the first tag is pushed, configure a pending PyPI Trusted Publisher with
+these exact values:
+
+- PyPI project: `kinetic-trust-library`
+- GitHub owner: `tamed-autonomy`
+- GitHub repository: `kinetic-trust-library`
+- workflow filename: `release.yml`
+- environment: `pypi`
+
+Create the matching GitHub `pypi` environment. Restrict its deployments to
+tags matching `v*`, require release approval, and prevent the tag creator from
+approving their own deployment. Adjust the tag ruleset so an authorized
+maintainer can create a new tag while tag updates and deletions remain blocked.
+Do not weaken branch protection or permit mutable release tags. The workflow
+also rejects a tag whose target is not reachable from `main`.
+
+## Publication sequence
+
+1. Complete every verification step in this document from the exact reviewed
+   commit on `main`, and require the repository's CI and CodeQL checks to pass.
+2. Confirm the Trusted Publisher, GitHub environment, and immutable-tag rules
+   above are active. Confirm the tag will equal `v` plus the project version;
+   for this release it is `v1.0.0`.
+3. Obtain separate approval to publish. Create and locally verify a signed,
+   annotated `v1.0.0` tag on the reviewed commit. Pushing that tag starts
+   `.github/workflows/release.yml` and publishes to PyPI.
+4. Require the release workflow to succeed, verify the PyPI project metadata
+   and provenance, and install `kinetic-trust-library==1.0.0` in a fresh
+   environment from PyPI.
+5. Publish Kinetic Trust Service only after this exact Library release is
+   visible and installable from PyPI.
+
 ## Supported source suites
 
 Run each existing required-test suite and the pinned catalogue check on
@@ -110,7 +157,7 @@ then repeat the build, inventory, installation, examples, and final scans using
 the new deterministic directory. Do not reuse evidence from the earlier SHA.
 
 Repository visibility remains unchanged. Tagging, pushing, package publishing,
-and GitHub release creation require a separately approved action. This procedure
-establishes neither application conformance nor release/publication. Service
-migration begins only after Library review/merge and availability of its exact
-artifact, under the separately approved dependent plan.
+and GitHub release creation require a separately approved action. This
+procedure and its automation establish neither application conformance nor
+release approval. Service publication begins only after Library publication
+and fresh-install verification.

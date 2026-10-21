@@ -2,8 +2,9 @@
 
 ## Supported versions
 
-`main` is the only currently maintained line. No Kinetic Trust Library package
-release has been published yet, so there is no released-version support table.
+`main` and the latest published package release, if any, are maintained.
+Before the first package publication, this means `main` only. Older package
+releases do not receive routine fixes.
 
 ## Reporting a vulnerability
 
