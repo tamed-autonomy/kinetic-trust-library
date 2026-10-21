@@ -10,14 +10,15 @@ not product instructions.
 | Python distribution | `kinetic-trust-library` |
 | Python import | `kinetic_trust_library` |
 | Source root | `src/kinetic_trust_library` |
-| Library version | `1.0.0` |
+| Library version | `2.1.0` |
 
 Kinetic Trust Library and Kinetic Trust Service share a `major.minor`
 compatibility series; patch releases advance independently for each component.
-The first paired series is `1.0`: Library `1.0.0` and Service `1.0.0` can
+The first paired series is `2.1`: Library `2.1.0` and Service `2.1.0` can
 receive component-local patch releases without changing that shared series.
 
-Package and protocol versions are independent. `kinetic-trust-library==1.0.0`
+Package `major.minor` follows the implemented KTP RFC series, while package
+patch versions may advance independently. `kinetic-trust-library==2.1.0`
 profiles the immutable release with `KTP_SPEC_TAG == "v2.1.0"` and
 `KTP_SPEC_COMMIT == "15520035267546e1035aad7beea0cc3cf9ef8f2c"`.
 The pinned source is [KTP v2.1.0](https://github.com/nmcitra/ktp-rfc/tree/v2.1.0),

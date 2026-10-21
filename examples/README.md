@@ -1,7 +1,7 @@
 # KTP v2.1.0 Library examples
 
 These runnable programs demonstrate the public library API. They are
-illustrative usage for Library `1.0.0`, not shippable product infrastructure
+illustrative usage for Library `2.1.0`, not shippable product infrastructure
 or evidence of deployment-level conformance.
 
 ## Setup
