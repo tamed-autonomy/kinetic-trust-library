@@ -31,9 +31,12 @@ these exact values:
 - environment: `pypi`
 
 Create the matching GitHub `pypi` environment. Restrict its deployments to
-tags matching `v*`, require release approval, and prevent the tag creator from
-approving their own deployment. Adjust the tag ruleset so an authorized
-maintainer can create a new tag while tag updates and deletions remain blocked.
+tags matching `v*` and require approval by the designated release reviewer.
+Under the current single-maintainer governance model, allow that maintainer to
+approve a deployment they initiated. If an independent release reviewer is
+formally appointed, prevent the initiator from approving their own deployment.
+Adjust the tag ruleset so an authorized maintainer can create a new tag while
+tag updates and deletions remain blocked.
 Do not weaken branch protection or permit mutable release tags. The workflow
 also rejects a tag whose target is not reachable from `main`.
 
