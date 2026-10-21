@@ -622,9 +622,8 @@ This capability does not provide:
 Physical continuity, violation response, and recovery policy also remain
 outside this contract. Genesis-shaped records may be parsed, but genesis is
 not assessed. See the
-[frozen v2.1.0 coverage audit](docs/research/2026-10-10-ktp-v2.1.0-coverage-audit.md) and
 [maintained Library-contract matrix](docs/traceability/library-contracts.md)
-for provenance, focused evidence, and boundaries.
+for focused evidence and explicit boundaries.
 
 ## Library, Service, and product responsibilities
 
@@ -714,7 +713,6 @@ provenance.
 
 ## Project documentation
 
-- [KTP v2.1.0 coverage audit](docs/research/2026-10-10-ktp-v2.1.0-coverage-audit.md)
-- [Library and Service naming](https://github.com/tamed-autonomy/kinetic-trust-library/blob/main/docs/adr/0002-library-service-naming.md)
+- [Maintained Library-contract matrix](docs/traceability/library-contracts.md)
 - [Ordinary release procedure](https://github.com/tamed-autonomy/kinetic-trust-library/blob/main/docs/releasing.md)
 - [Project terminology](https://github.com/tamed-autonomy/kinetic-trust-library/blob/main/CONTEXT.md)

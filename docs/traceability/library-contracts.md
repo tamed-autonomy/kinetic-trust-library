@@ -1,25 +1,24 @@
 # Library Contracts
 
-This is the compact, maintained map of meaningful public Library contract
-families to immutable KTP v2.1.0 sources and focused evidence. It tracks
-implementation progress; the [frozen coverage audit](../research/2026-10-10-ktp-v2.1.0-coverage-audit.md)
-preserves the full 81-row pre-implementation snapshot.
+This is the compact, manually maintained map of meaningful public Library
+contract families to immutable KTP v2.1.0 sources and focused evidence. It
+tracks implementation progress and unresolved boundaries.
 
 Normative baseline: `nmcitra/ktp-rfc` tag `v2.1.0`, commit
-`15520035267546e1035aad7beea0cc3cf9ef8f2c`. The initial matrix describes a
-frozen pre-implementation Library snapshot.
+`15520035267546e1035aad7beea0cc3cf9ef8f2c`.
 
 Use `implemented` or `partial` here for active Library-owned contracts.
-Missing and blocked responsibilities remain in the frozen audit. A row is a
-contract family, not a function inventory or a claim to every paragraph of an
-RFC. Implementation modules below include internal calculation functions;
-their presence does not make them new public facades. Focused component tests
-and released vectors support the public contract without asserting deployment
+The matrix is not an exhaustive clause inventory; unresolved responsibilities
+relevant to a listed contract family are named in that row. A row is a contract
+family, not a function inventory or a claim to every paragraph of an RFC.
+Implementation modules below include internal calculation functions; their
+presence does not make them new public facades. Focused component tests and
+released vectors support the public contract without asserting deployment
 conformance.
 
 | Contract | Immutable source | Public API | Implementation module | Focused evidence | Status | Explicit boundary |
 |---|---|---|---|---|---|---|
-| Deployment Profile validation | [Deployment Profile][profile]; [official schema][profile-schema]; [catalogue rules][catalog] | `kinetic_trust_library.DeploymentProfile.validate` | `src/kinetic_trust_library/models/profile.py::DeploymentProfile.validate`; compiled `src/kinetic_trust_library/_catalog.py::CATALOG` | `tests.unit.models.test_profile.ProfileTests.test_profile_owns_one_shared_six_factor_model`; `tests.unit.models.test_catalog.CatalogTests.test_pinned_catalogue_has_exact_identity` | partial | Immutable deterministic declarations, not full official JSON interoperability. Products supply deployment values. Canonical declaration shape, Moment Criticality binding, missing-evidence propagation, and standing decay remain unresolved (frozen PROFILE and SCHEMA-PROFILE rows). |
+| Deployment Profile validation | [Deployment Profile][profile]; [official schema][profile-schema]; [catalogue rules][catalog] | `kinetic_trust_library.DeploymentProfile.validate` | `src/kinetic_trust_library/models/profile.py::DeploymentProfile.validate`; compiled `src/kinetic_trust_library/_catalog.py::CATALOG` | `tests.unit.models.test_profile.ProfileTests.test_profile_owns_one_shared_six_factor_model`; `tests.unit.models.test_catalog.CatalogTests.test_pinned_catalogue_has_exact_identity` | partial | Immutable deterministic declarations, not full official JSON interoperability. Products supply deployment values. Canonical declaration shape, Moment Criticality binding, missing-evidence propagation, and standing decay remain unresolved. |
 | KTP-Core evaluation, component calculations, and Core Capacity | [Core calculation and standing][core]; [Core risk clauses][core-risk]; [Identity resilience/standing][identity]; [Sensors][sensors]; [empty-window vectors][empty] | `kinetic_trust_library.core.evaluate` → `EvaluationBundle` or `RejectedRequest`, including `core_capacity` | `src/kinetic_trust_library/core/evaluate.py::evaluate`, `evidence.py::prepare_evidence`, `soul.py::assess_soul`, `por.py::calculate_por`, `standing.py::prepare_standing`, `risk.py::calculate_risk`, `trust.py::calculate_effective_trust` / `calculate_velocity`, `capacity.py::_capacity_relation` (all component paths under the same `core/` directory) | `tests.unit.core.test_evaluate.CompleteEvaluationTests.test_successful_evaluation_uses_the_exact_stage_order`; `tests.unit.core.test_soul.SoulAssessmentTests.test_missing_framework_is_undetermined_and_fails_closed`; `tests.unit.core.test_evidence.EvidencePreparationTests.test_selects_latest_fresh_observation_before_cutoff`; `tests.unit.core.test_por.PoRTests.test_weighted_score_and_log_contribution`; `tests.unit.core.test_standing.StandingTests.test_peer_share_reallocates_por_and_root`; `tests.unit.core.test_risk.RiskTests.test_context_first_arithmetic_uses_shared_profile_bound_factors`; `tests.unit.core.test_risk.EffectiveTrustTests.test_published_core_effective_trust_vectors_are_exact`; `tests.unit.core.test_risk.EffectiveTrustTests.test_velocity_uses_two_validated_snapshots_and_exact_elapsed_seconds`; `tests.unit.core.test_evaluate.CompleteEvaluationTests.test_core_capacity_and_envelope_matrix`; `spec/v2.1.0/conformance/aggregation-empty-window-v1.json; tests.unit.core.test_evidence.EmptyWindowVectorTests.test_pinned_vector_bytes_and_complete_case_inventory` | partial | Returns deterministic facts, not an Oracle node, action permission, or PEP. Risk composition, PoR interval boundaries, and missing-evidence propagation use the documented local profile. Core's `A <= E` relation stays separate from Envelope supervision at equality. Products own sensing, service operation, and enforcement. |
 | Soul Constraint document parsing | [official Soul Constraint schema][soul-schema] | `kinetic_trust_library.soul_constraint.parse_soul_constraint` → `SoulConstraintDocument` | `src/kinetic_trust_library/soul_constraint.py` | `tests.unit.test_soul_constraint.SoulConstraintDocumentTests`; `tests.unit.models.test_public_surface.PublicSurfaceTests.test_soul_constraint_contract_is_public_only_from_focused_module` | implemented | Closed schema-shape parsing into detached immutable values only. Draft 2020-12 `format` remains annotation-oriented; no authority authentication, trust, action binding, evaluation-declaration conversion, proof claim, remediation, permission, or enforcement is implied. |
 | Kinetic Envelope calculation and result | [Envelope interface and decision contract][envelope]; [released ROS2 vectors][ros2] | `kinetic_trust_library.core.evaluate` → `EvaluationBundle.envelope` | `src/kinetic_trust_library/core/envelope.py::compute_envelope` | `tests.unit.core.test_envelope.EnvelopeArithmeticTests.test_binary_profile_is_stable_below_capacity_and_vetoes_equality`; `tests.unit.core.test_evaluate.CompleteEvaluationTests.test_core_capacity_and_envelope_matrix`; `spec/v2.1.0/conformance/ros2-reference-v0.1.json; tests.unit.core.test_pinned_vectors.PinnedROS2EnvelopeVectorTests` directly asserts every normative `supervision`, `policyCode`, `tightenedAtMost`, `decision`, and `capacityKnown` expectation; `referenceMargin` remains informative per the artifact | partial | Margin, supervision, unknown capacity, and tighten-only result facts within the Library profile. Equality conflict with Core remains explicit; there is no claim to resolve it upstream. The ROS2 decision projection and fixture are test-only; products declare substrate magnitudes, supply observations, and apply constraints or supervision. |
@@ -30,9 +29,9 @@ conformance.
 | Pairwise Trajectory continuity | [Identity adjacent-record continuity][trajectory-continuity]; [Identity chain-integrity relation][trajectory-integrity] | `kinetic_trust_library.trajectory.assess_trajectory_link` → `tuple[TrajectoryLinkFinding, ...]` | `src/kinetic_trust_library/trajectory/_assess.py`; typed equality in `_json.py`, instant comparison in `_time.py`, findings in `_models.py` | `tests/unit/trajectory/test_assess.py::TrajectoryAssessmentTests` (five bounded methods); `tests.unit.models.test_public_surface.PublicSurfaceTests.test_trajectory_contract_is_public_only_from_focused_module` | partial | One supplied parser-validated adjacent pair: sequence, supplied hash reference, timestamp order, and previous/current state match. Same-chain checking, typed semantic state equality, and finding identifiers are Library-local safety rules, not normative KTP reason codes. Genesis, authenticity, full-chain operation, physical continuity, acceptance, storage, violation response, and enforcement remain outside this contract. |
 
 The current table lists existing contract families, Trajectory parsing, and
-partial pairwise continuity. Do not update the frozen audit to mark that
-progress. There is no parser, generated registry, row-count gate, or
-test-name alias system behind this document.
+partial pairwise continuity. This document is manually maintained; there is no
+parser, generated registry, row-count gate, or test-name alias system behind
+it.
 
 Passing these tests or official vectors establishes evidence only for the
 named Library contracts and local profiles. It does not establish Basic,
