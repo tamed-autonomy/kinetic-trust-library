@@ -95,7 +95,7 @@ class PoRTests(unittest.TestCase):
 
     def test_friction_equal_point_three_gets_no_credit(self):
         result = calculate_por(
-            [attestation(friction="0.3")],
+            [attestation(friction="0.3", friction_category=FrictionCategory.CALM)],
             agent_id="agent:one",
             cutoff=CUTOFF,
         )
@@ -286,7 +286,10 @@ class PoRTests(unittest.TestCase):
             )
 
     def test_finite_history_beyond_the_old_batch_limit_is_accepted(self):
-        values = [attestation(index, friction="0.3") for index in range(1, 65_538)]
+        values = [
+            attestation(index, friction="0.3", friction_category=FrictionCategory.CALM)
+            for index in range(1, 65_538)
+        ]
         result = calculate_por(values, "agent:one", CUTOFF)
         self.assertEqual(result.resilience_score, 0)
         self.assertEqual(result.eligible_attestation_ids, ())

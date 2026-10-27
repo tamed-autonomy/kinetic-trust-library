@@ -158,7 +158,10 @@ EXPECTED_FOCUSED_EXPORTS = {
         "compute_envelope", "require_validated_envelope_result",
     ),
     "kinetic_trust_library.core.por": (
-        "calculate_por", "require_validated_por_result",
+        "calculate_por", "classify_friction", "require_validated_por_result",
+    ),
+    "kinetic_trust_library.agent_identity": (
+        "validate_agent_uri", "validate_sponsorship_binding",
     ),
     "kinetic_trust_library.core.risk": ("calculate_risk",),
     "kinetic_trust_library.core.soul": (

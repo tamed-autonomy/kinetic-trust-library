@@ -4,6 +4,8 @@
 
 **Research:** [RFC v3 Library impact](../research/2026-10-26-ktp-v3-rfc-library-impact.md), with source links and status for each proposal. Baseline on this branch: `PYTHONPATH=src python3 -m unittest discover -s tests -q` passed 766 tests on 2026-10-26.
 
+**Implementation started:** PR #193 friction boundaries and PR #194 Agent URI/binding vectors are pinned and exercised provisionally. See [first implementation findings](../research/2026-10-26-v3-first-implementation-findings.md). This is an initial part of slices C and D, not completion of either slice.
+
 ## Goal and source of authority
 
 Advance Kinetic Trust Library from its pinned KTP RFC v2.1.0 semantics to a separately released 3.0.0 series after the RFC's v3.0.0 contract is approved and tagged. Keep the Library generic, deterministic, immutable, and free of storage, transport, enforcement, and product workflows. The published RFC tag and its exact commit, schemas, and conformance vectors will be the normative baseline. Open PRs and `main` are planning inputs only.

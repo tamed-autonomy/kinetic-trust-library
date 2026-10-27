@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 
 class FrictionCategory(StrEnum):
+    CALM = "calm"
     ELEVATED = "elevated"
     HIGH = "high"
     SEVERE = "severe"

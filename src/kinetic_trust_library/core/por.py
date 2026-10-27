@@ -7,7 +7,7 @@ from datetime import datetime
 from decimal import Decimal, localcontext
 
 from kinetic_trust_library._canonical import canonical_json_bytes, canonical_sha256
-from kinetic_trust_library._decimal import KTP_CONTEXT, as_decimal
+from kinetic_trust_library._decimal import KTP_CONTEXT, DecimalLike, as_decimal
 from kinetic_trust_library.errors import ValidationError
 from kinetic_trust_library.models._common import utc_time, validate_identifier
 from kinetic_trust_library.models.standing import (
@@ -17,13 +17,8 @@ from kinetic_trust_library.models.standing import (
 )
 
 
-_CATEGORY_RANGES = {
-    FrictionCategory.ELEVATED: (Decimal("0.3"), Decimal("0.5"), False),
-    FrictionCategory.HIGH: (Decimal("0.5"), Decimal("0.7"), False),
-    FrictionCategory.SEVERE: (Decimal("0.7"), Decimal("0.9"), False),
-    FrictionCategory.CRISIS: (Decimal("0.9"), Decimal("1"), True),
-}
 _CATEGORY_WEIGHTS = {
+    FrictionCategory.CALM: Decimal(0),
     FrictionCategory.ELEVATED: Decimal(1),
     FrictionCategory.HIGH: Decimal(2),
     FrictionCategory.SEVERE: Decimal(5),
@@ -64,6 +59,20 @@ def calculate_por(
         object.__setattr__(result, name, value)
     object.__setattr__(result, "digest", canonical_sha256(_por_digest_input(result)))
     return result
+
+
+def classify_friction(friction: DecimalLike) -> FrictionCategory:
+    """Classify exact friction by the provisional v3 PoR intervals."""
+    value = as_decimal(friction, name="PoR friction", minimum=0, maximum=1)
+    if value <= Decimal("0.3"):
+        return FrictionCategory.CALM
+    if value < Decimal("0.5"):
+        return FrictionCategory.ELEVATED
+    if value < Decimal("0.7"):
+        return FrictionCategory.HIGH
+    if value < Decimal("0.9"):
+        return FrictionCategory.SEVERE
+    return FrictionCategory.CRISIS
 
 
 def require_validated_por_result(value: object) -> PoRResult:
@@ -211,12 +220,7 @@ def _validate_attestation(
 
 
 def _require_matching_category(friction: Decimal, category: FrictionCategory) -> None:
-    lower, upper, upper_inclusive = _CATEGORY_RANGES[category]
-    if (
-        friction < lower
-        or friction > upper
-        or (friction == upper and not upper_inclusive)
-    ):
+    if classify_friction(friction) is not category:
         raise ValidationError("PoR friction category does not match friction")
 
 
@@ -262,4 +266,4 @@ def _identifier(value: object, *, name: str) -> str:
     return validate_identifier(value, name=name)
 
 
-__all__ = ["calculate_por", "require_validated_por_result"]
+__all__ = ["calculate_por", "classify_friction", "require_validated_por_result"]
