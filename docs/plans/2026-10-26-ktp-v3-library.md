@@ -2,11 +2,15 @@
 
 **Status:** Working plan, 2026-10-26. No v3 implementation or conformance claim is made here.
 
+**Research:** [RFC v3 Library impact](../research/2026-10-26-ktp-v3-rfc-library-impact.md), with source links and status for each proposal. Baseline on this branch: `PYTHONPATH=src python3 -m unittest discover -s tests -q` passed 766 tests on 2026-10-26.
+
 ## Goal and source of authority
 
 Advance Kinetic Trust Library from its pinned KTP RFC v2.1.0 semantics to a separately released 3.0.0 series after the RFC's v3.0.0 contract is approved and tagged. Keep the Library generic, deterministic, immutable, and free of storage, transport, enforcement, and product workflows. The published RFC tag and its exact commit, schemas, and conformance vectors will be the normative baseline. Open PRs and `main` are planning inputs only.
 
 RFC release proposal: [issue #182](https://github.com/nmcitra/ktp-rfc/issues/182). It proposes the “Ostrom” release, a merge order, and a December 10, 2026 tag target; the tag waits for the release criteria. The current Library pin remains RFC `v2.1.0` at `15520035267546e1035aad7beea0cc3cf9ef8f2c` until a reviewed v3 release is adopted.
+
+RFC `main` at `6035a2fe929d5d0546961cd084a8b0719eb7ab79` already contains unreleased readiness, trajectory-signature, human-eligibility, and privacy-evidence drafts. No `release/v3.0.0` remote branch or v3 tag was present on 2026-10-26. These drafts require gap analysis alongside the open PRs; they are not v2.1.0 semantics.
 
 ## Workstreams in dependency order
 
@@ -16,9 +20,24 @@ RFC release proposal: [issue #182](https://github.com/nmcitra/ktp-rfc/issues/182
 4. **Profiles and bounded pure primitives.** Review nested-zone and federation proposals (#159/#160, #173/#174, #177/#178), repair (#171/#172), zone boundary (#189/#190), execution observation (#187/#188 and #129/#139), and software-substrate profile (#124/#131) for deterministic Library contracts. Add only pure value, parsing, and calculation surfaces justified by the final specification. Leave durable state, network crossing, execution receipts, operational reconciliation, and authority enforcement to products.
 5. **Conformance and release.** Apply component-scoped claim rules (#155/#199) and the final KTP-CONFORMANCE text. Pin official v3 vectors and test each implemented behavior, including negative and boundary cases. Update the public contract matrix, migration notes, package metadata, `KTP_SPEC_TAG`/`KTP_SPEC_COMMIT`, and release procedure only after the normative pin is immutable. Coordinate the shared 3.0 compatibility series with Kinetic Trust Service; do not claim Basic/Standard/Full or certification for a package.
 
+## Proposed implementation slices and acceptance checks
+
+| Slice | Main files and contracts | Done when |
+|---|---|---|
+| A. Source delta and public migration design | `docs/traceability/library-contracts.md`, a new v3 source ledger, public API inventory; compare v2.1 tag with accepted v3 source | Every changed clause/schema/vector has an owner and status; v2 historical bytes and the Service migration path are explicitly documented; no code silently reads draft text as released. |
+| B. Five-factor Core and evidence | `models/risk.py`, `models/evidence.py`, `models/profile.py`, `core/risk.py`, `core/evidence.py`, `core/evaluate.py` | Official demand and missing-evidence vectors pass; absent evidence never becomes a fabricated zero; Soul veto and unknown Soul stay distinct; Core stage ordering and immutable outputs are preserved. |
+| C. Standing and identity | `models/standing.py`, `models/_uri.py`, `core/por.py`, `core/standing.py`, relevant proof identity projections | Official friction, identifier, and External Root lifecycle vectors pass; person standing is modeled only to the accepted protocol extent; product-owned eligibility remains separate. |
+| D. Proof and request association | `models/proof.py`, `proofs/_jwt.py`, `_issue.py`, `_verify.py`, a focused request-binding module if accepted | Canonical v3 proof positive and negative vectors pass, including signed bytes, outcome, bounds, malformed input, and request mismatch. API and migration tests demonstrate that v2 proofs retain v2 meaning. |
+| E. Decision Geometry | `models/record.py`, `core/record.py`, separate signed-carriage primitive if accepted | Official geometry vectors pass for full evaluation and early stop; no unevaluated field is fabricated; the project-owned v2 Decision Record and canonical v3 record are unambiguously named and migrated. |
+| F. Other pure v3 contracts | Profile, trajectory, zone/federation declaration, observation, and repair modules only where the final RFC supplies a deterministic Library-owned contract | Each included surface has a source clause, vector or focused test, and a contract-matrix row. Operational workflows remain consumer responsibilities. |
+| G. Release adoption | `spec/v3.0.0/`, `docs/traceability/library-contracts.md`, `README.md`, `docs/releasing.md`, `pyproject.toml`, `src/kinetic_trust_library/__init__.py` | Final RFC tag and commit are pinned; all Library tests and included official vectors pass; package version and metadata agree; Service 3.0 compatibility is checked; public claims name only demonstrated component behavior. |
+
+Slices B–E can be designed from pinned proposal heads but remain provisional until their owning PRs merge. Slice F is deliberately selected by the final source delta: a whole-protocol obligation does not automatically become a Library API. Each slice should be one or more focused PRs if its public interface cannot be reviewed as a unit.
+
 ## First executable planning tasks
 
 - Build a source-to-code matrix from the *merged* RFC v3 release branch, listing each changed normative clause, schema field, and vector with its owning Library module and current behavior. Record pending PRs separately from accepted text.
+- Start the provisional matrix now from the source-linked research note, including the unreleased RFC `main` drafts. Record the exact head commit for each candidate PR and refresh it when the PR changes.
 - Identify public API breaks before implementation: factor input shape, request/proof association, subject types, proof and record models, and claim wording. Draft the v2.1-to-v3 migration contract for consumers and Service.
 - Split implementation into reviewable PRs in the dependency order above. Each PR pins its exact RFC source commit, adds focused tests from the official vectors where available, and updates its traceability row.
 - Run the existing Library suite as a baseline, then verify each changed contract with focused tests and the complete suite. Recheck against the final RFC tag before release.
