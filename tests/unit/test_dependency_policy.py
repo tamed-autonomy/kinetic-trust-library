@@ -349,7 +349,7 @@ importlib.metadata.entry_points()
     def test_core_source_boundary_has_no_forbidden_runtime_access(self):
         self.assertEqual(source_boundary_violations(PACKAGE_DIRECTORY), ())
 
-    def test_metadata_has_dependency_free_base_and_exact_crypto_extra(self):
+    def test_metadata_has_dependency_free_base_and_explicit_proof_extras(self):
         with (ROOT / "pyproject.toml").open("rb") as source:
             project = tomllib.load(source)["project"]
 
@@ -362,7 +362,14 @@ importlib.metadata.entry_points()
         self.assertEqual(project["dependencies"], [])
         self.assertEqual(
             project["optional-dependencies"],
-            {"cryptography": ["cryptography>=50.0.0,<51"]},
+            {
+                "cryptography": ["cryptography>=50.0.0,<51"],
+                "v3-proofs": [
+                    "cryptography>=50.0.0,<51",
+                    "rfc8785>=0.1.4,<0.2",
+                    "jsonschema>=4.26,<5",
+                ],
+            },
         )
 
     def test_old_source_namespace_is_absent(self):

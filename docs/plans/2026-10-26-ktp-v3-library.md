@@ -4,7 +4,7 @@
 
 **Research:** [RFC v3 Library impact](../research/2026-10-26-ktp-v3-rfc-library-impact.md), with source links and status for each proposal. Baseline on this branch: `PYTHONPATH=src python3 -m unittest discover -s tests -q` passed 766 tests on 2026-10-26.
 
-**Implementation started:** PR #193 friction boundaries, PR #194 Agent URI/binding, PR #164 five-factor arithmetic, and PR #203 missing-evidence factor projections are pinned and exercised provisionally. See [implementation findings](../research/2026-10-26-v3-first-implementation-findings.md). These are parts of slices B–D, not completion of those slices. The v3 calculator and factor-boundary projection live in a separate `v3` package so the released v2.1 evaluation path remains identifiable.
+**Implementation started:** PR #193 friction boundaries, PR #194 Agent URI/binding, PR #164 five-factor arithmetic, PR #203 missing-evidence factor projections, PR #195 Trust Proof stages 1–5 and selected stage-7 invariants, PR #196 canonical-request and complete-proof digests, and PR #197 Decision Geometry body digest are pinned and exercised provisionally. See [implementation findings](../research/2026-10-26-v3-first-implementation-findings.md). These are parts of slices B–E, not completion of those slices. The provisional v3 primitives live separately from the released v2.1 evaluation path. Stage 6 is blocked by PR #195's schema reference to the six-factor v2 risk shape while its clear vector uses the five-factor v3 shape.
 
 ## Goal and source of authority
 
@@ -49,3 +49,9 @@ Slices B–E can be designed from pinned proposal heads but remain provisional u
 - RFC issue #182 and its component proposals remain open as of this plan. Proposed wording is not normative, and review floors, merge order, and the target tag date may change.
 - Do not publish a v3 package or change the released v2.1 pin based on draft text. Development can proceed on this branch against explicitly provisional source snapshots, with those tests and claims labelled provisional.
 - The Library's scope remains selected primitives. A v3 release number denotes the adopted RFC series, not complete protocol or deployment conformance.
+
+## Current readiness checkpoint
+
+The branch contains provisional, vector-backed primitives for slices B–E. The completed proof precheck covers ordered stages 1–5, but it returns only the first prerequisite failure; passing it is never proof acceptance. The stage-7 predicate is isolated and requires authenticated expected state. Request and geometry digests reproduce the proposal's known answers but do not establish authentic inputs, replay protection, or signed carriage. CI has a separate `v3-proofs` dependency path so the JCS and schema checks run when a PR is eventually opened.
+
+Before a v3 package can ship, resolve the PR #195 five-factor schema conflict documented in the [implementation findings](../research/2026-10-26-v3-first-implementation-findings.md), finish the ordered Trust Proof stage-6/8 contract and ingress verification, bind actual requests and replay state, implement Decision Geometry gate/result and carrier semantics, reconcile all other selected v3 Library clauses against the final tag, then update the public API, migration notes, version, pin and package checks. These are implementation gates, not tasks to defer automatically until after tagging; the final tag supplies the immutable source for the last reconciliation.

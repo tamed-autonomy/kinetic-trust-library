@@ -38,6 +38,30 @@ jobs:
           PYTHONPATH: src
         run: python tools/compile_catalog.py --check
 
+  v3-proposals:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.14"]
+    steps:
+      - name: Check out the tested commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install provisional v3 proof dependencies
+        run: python -m pip install --disable-pip-version-check --no-input ".[v3-proofs]"
+      - name: Run unit tests including v3 proposal vectors
+        env:
+          PYTHONPATH: src
+        run: python tools/run_required_tests.py --start-dir tests/unit --top-level-dir .
+
   crypto:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

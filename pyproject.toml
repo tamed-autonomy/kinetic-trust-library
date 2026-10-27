@@ -35,6 +35,7 @@ Specification = "https://github.com/nmcitra/ktp-rfc/tree/v2.1.0"
 
 [project.optional-dependencies]
 cryptography = ["cryptography>=50.0.0,<51"]
+v3-proofs = ["cryptography>=50.0.0,<51", "rfc8785>=0.1.4,<0.2", "jsonschema>=4.26,<5"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/kinetic_trust_library"]
