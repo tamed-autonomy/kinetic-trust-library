@@ -1,6 +1,6 @@
 # KTP v3.0.0 Library planning
 
-**Status:** Working plan, 2026-10-26. No v3 implementation or conformance claim is made here.
+**Status:** Working plan, 2026-10-26. The proposed v3 slices listed below are under implementation; no v3 conformance claim is made here.
 
 **Research:** [RFC v3 Library impact](../research/2026-10-26-ktp-v3-rfc-library-impact.md), with source links and status for each proposal. Baseline on this branch: `PYTHONPATH=src python3 -m unittest discover -s tests -q` passed 766 tests on 2026-10-26.
 

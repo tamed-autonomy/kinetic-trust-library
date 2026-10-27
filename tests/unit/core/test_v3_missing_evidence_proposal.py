@@ -19,7 +19,7 @@ VECTORS = Path(__file__).parents[3] / "spec/proposals/missing-evidence-v1.json"
 
 class ProposedMissingEvidence(unittest.TestCase):
     def test_all_proposed_factor_boundary_projections(self):
-        vectors = json.loads(VECTORS.read_text())["vectors"]
+        vectors = json.loads(VECTORS.read_text(), parse_float=Decimal)["vectors"]
         for vector in vectors:
             if not vector["expected"]["factor_evaluated"]:
                 continue
@@ -42,6 +42,7 @@ class ProposedMissingEvidence(unittest.TestCase):
                     feed_undefined=feed_failures,
                 )
                 self.assertEqual(result.state, factor["state"])
+                self.assertEqual(result.record(), factor)
                 self.assertEqual(
                     result.value,
                     None if "value" not in factor else Decimal(str(factor["value"])),

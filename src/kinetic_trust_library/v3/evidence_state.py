@@ -46,6 +46,24 @@ class FactorEvidenceState:
     def __init__(self, *args: object, **kwargs: object) -> None:
         raise TypeError("FactorEvidenceState values are derived by assess_required_factor()")
 
+    def record(self) -> dict[str, str | Decimal]:
+        if self.state == "observable":
+            if self.value is None:
+                raise ValidationError("observable factor has no value")
+            return {
+                "input": self.factor,
+                "layer": "term",
+                "state": "observable",
+                "value": self.value,
+            }
+        return {
+            "input": self.factor,
+            "layer": "term",
+            "state": "unobservable",
+            "reason": "undefined",
+            "decision_stress": self.decision_stress,
+        }
+
 
 def _factor_state(
     factor: str,
