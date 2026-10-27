@@ -4,7 +4,7 @@
 
 **Research:** [RFC v3 Library impact](../research/2026-10-26-ktp-v3-rfc-library-impact.md), with source links and status for each proposal. Baseline on this branch: `PYTHONPATH=src python3 -m unittest discover -s tests -q` passed 766 tests on 2026-10-26.
 
-**Implementation started:** PR #193 friction boundaries, PR #194 Agent URI/binding, and PR #164 five-factor arithmetic vectors are pinned and exercised provisionally. See [implementation findings](../research/2026-10-26-v3-first-implementation-findings.md). These are parts of slices B–D, not completion of those slices. The v3 calculator lives in a separate `v3` package so the released v2.1 evaluation path remains identifiable.
+**Implementation started:** PR #193 friction boundaries, PR #194 Agent URI/binding, PR #164 five-factor arithmetic, and PR #203 missing-evidence factor projections are pinned and exercised provisionally. See [implementation findings](../research/2026-10-26-v3-first-implementation-findings.md). These are parts of slices B–D, not completion of those slices. The v3 calculator and factor-boundary projection live in a separate `v3` package so the released v2.1 evaluation path remains identifiable.
 
 ## Goal and source of authority
 
