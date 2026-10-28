@@ -1,4 +1,4 @@
-"""Factor-boundary checks against RFC PR #203, head 9ef31845baeb."""
+"""Factor and sensor-configuration checks against RFC PR #203, head ef4785128cab."""
 
 import json
 import unittest
@@ -12,12 +12,22 @@ from kinetic_trust_library.v3.evidence_state import (
     assess_required_factor,
     canonical_undefined_inputs,
 )
+from kinetic_trust_library.v3.sensor_config import validate_sensor_factor_config
 
 
 VECTORS = Path(__file__).parents[3] / "spec/proposals/missing-evidence-v1.json"
 
 
 class ProposedMissingEvidence(unittest.TestCase):
+    def test_current_sensor_configuration_cases(self):
+        vectors = json.loads(VECTORS.read_text(), parse_float=Decimal)
+        for case in vectors["configuration_cases"]:
+            with self.subTest(case=case["id"]):
+                self.assertEqual(
+                    validate_sensor_factor_config(case["configuration"]),
+                    case["schemaAccepted"],
+                )
+
     def test_all_proposed_factor_boundary_projections(self):
         vectors = json.loads(VECTORS.read_text(), parse_float=Decimal)["vectors"]
         for vector in vectors:
