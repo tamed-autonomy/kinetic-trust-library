@@ -7,7 +7,10 @@ from .core_risk import NativeRiskAssessment, assess_five_factor_risk
 from .core import NativeCorePreflight, preflight_core
 from .core_capacity import NativeCapacityProjection, project_native_capacity
 from .base_trust import NativeBaseTrust, calculate_native_base_trust
-from .core_projection import NativeCoreProjection, project_native_core
+from .core_projection import NativeCoreContext, NativeCoreProjection, project_native_core, project_classified_native_core
+from .installed_demand import InstalledDemandVerifier, DemandAssessment, AuthenticatedDemandEvidence, DemandVerificationFailure
+from .demand_classification import InstalledDemandClassifier, NativeClassifiedDemand
+from .native_envelope import NativeEnvelopeThresholds, NativeEnvelopeProjection, project_native_envelope
 from .evidence_state import FactorEvidenceState, assess_required_factor
 from .soul import SoulGate, SoulGateState, SoulQueryState, assess_soul_queries
 
@@ -18,6 +21,17 @@ __all__ = (
     "NativeCapacityProjection",
     "NativeBaseTrust",
     "NativeCoreProjection",
+    "NativeCoreContext",
+    "InstalledDemandVerifier",
+    "DemandAssessment",
+    "AuthenticatedDemandEvidence",
+    "DemandVerificationFailure",
+    "InstalledDemandClassifier",
+    "NativeClassifiedDemand",
+    "NativeEnvelopeThresholds",
+    "NativeEnvelopeProjection",
+    "project_native_envelope",
+    "project_classified_native_core",
     "NativeRiskAssessment",
     "SoulGate",
     "SoulGateState",
