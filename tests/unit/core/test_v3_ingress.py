@@ -18,7 +18,7 @@ def fixture(depth=2):
     from kinetic_trust_library.v3 import _trajectory_reference as t
     profile=dict(id="urn:unsafe-test:ingress-jcs-ed25519",version=1,signature="embedded-JWS-over-JCS-body",link="sha256-of-complete-JCS-receipt",link_digest_algorithm="sha256")
     subject="agent:guarantor:7gen:optimized:a1b2c3d4"
-    context=dict(subject=subject,receiving_zone="zone-"+str(depth),receipt_profile_id=profile["id"],receipt_profile_digest=t.digest(profile,2),conformance_level=2)
+    context=dict(subject=subject,issuing_zone="zone-"+str(depth),receiving_zone="zone-"+str(depth),receipt_profile_id=profile["id"],receipt_profile_digest=t.digest(profile,2),conformance_level=2)
     rings=[dict(zone_id="zone-"+str(i),enforcement_class=("green","cyan","blue","deep_blue")[min(i,3)],
                 enclosure_reach="0" if i==0 else "0.5",registry_enclosure_reach="0" if i==0 else "0.5",oracle_kids=["key-"+str(i)]) for i in range(depth+1)]
     session=dict(sub=subject,cnf_jkt="test-possession-key",admission_id="admission-1",expires_at=NOW+8)
@@ -73,6 +73,15 @@ def check(f):
 
 @unittest.skipUnless(HAS_EXTRAS,"install v3-proofs")
 class IngressTests(unittest.TestCase):
+    def test_issuing_zone_can_differ_from_authenticated_receiving_ring(self):
+        f=fixture()
+        f["context"]["issuing_zone"]="zone-1"
+        f["payload"]["ktp"]["zone"]="zone-1"
+        f["verifier"]=replace(f["verifier"],context_bytes=f["t"].canonical(f["context"]))
+        self.assertEqual(check(f).reason,"INGRESS_VERIFIED")
+        f["payload"]["ktp"]["zone"]="zone-0"
+        self.assertEqual(check(f).reason,"INGRESS_INVALID")
+
     def test_ordinary_proof_retains_fresh_ingress_and_rejects_boolean_shortcut(self):
         import json,base64
         from pathlib import Path
@@ -81,11 +90,13 @@ class IngressTests(unittest.TestCase):
         from kinetic_trust_library.v3.native_issuance import InstalledProofIssuer
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
         f=fixture()
+        f["context"]["issuing_zone"]="zone-1"
+        f["verifier"]=replace(f["verifier"],context_bytes=f["t"].canonical(f["context"]))
         vectors=json.loads((Path(__file__).parents[3]/"spec/proposals/trust-proof-v3.json").read_text())
         case=next(c for c in vectors["cases"] if c["id"]=="clear")
         payload=json.loads(base64.urlsafe_b64decode(case["jws"].split(".")[1]+"=="))
         context={**vectors["context"],"subject_kind":"software_agent","ring_depth":2}
-        context.update(subject=f["context"]["subject"],zone=f["context"]["receiving_zone"])
+        context.update(subject=f["context"]["subject"],zone=f["context"]["issuing_zone"],receiving_zone=f["context"]["receiving_zone"])
         context["now"]=NOW
         payload.update(sub=context["subject"],iat=NOW,exp=NOW+10)
         payload["ktp"].update(zone=context["zone"],subject_kind="software_agent",ingress_path=f["receipts"],

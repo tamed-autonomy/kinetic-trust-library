@@ -84,8 +84,9 @@ class InstalledProofVerifier:
             if type(self.ingress_policy) is not InstalledIngressVerifier:
                 raise ValidationError("installed ingress policy is invalid")
             ingress_context = _parse_jcs_object(self.ingress_policy.context_bytes)
-            if ingress_context["subject"] != context["subject"] or ingress_context["receiving_zone"] != context["zone"]:
-                raise ValidationError("ingress policy differs from proof subject/zone")
+            if (ingress_context["subject"] != context["subject"] or ingress_context["issuing_zone"] != context["zone"]
+                    or ingress_context["receiving_zone"] != context.get("receiving_zone")):
+                raise ValidationError("ingress policy differs from proof subject/issuing zone/receiving ring")
         if (type(self.fixture_software_default) is not bool
                 or context.get("subject_kind") not in ("software_agent", "person")
                 and not (self.fixture_software_default and "subject_kind" not in context)):

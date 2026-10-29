@@ -460,7 +460,7 @@ established by issuance.
 
 `v3.ingress.InstalledIngressVerifier` installs exact JCS `context_bytes`,
 `receipt_profile_bytes`, a topology/session source and receipt verifier.
-The closed context binds `subject`, `receiving_zone`, `receipt_profile_id`,
+The closed context binds `subject`, `issuing_zone`, `receiving_zone`, `receipt_profile_id`,
 `receipt_profile_digest` and `conformance_level`. The named profile contains
 `id`, positive integer `version`, and `link_digest_algorithm` (`sha256` or
 `sha384`, with SHA-384 required at Level 3); its other fields describe the
@@ -508,6 +508,15 @@ never an implicit shortening. A bare boolean receipt callback is admitted only
 in the explicitly selected fixture mode; native positive-depth use fails at
 `TP_INGRESS` without the installed policy. Existing request/readiness results
 retain the complete proof result for consuming-service fencing.
+
+The proof's Oracle/`ktp.zone` belongs to `issuing_zone`; the receipt ancestry
+and its final audience belong to `receiving_zone`. These can differ at ingress.
+When installing `ingress_policy`, the proof verifier's installed context must
+explicitly include `receiving_zone` as well as the existing issuing `zone`.
+Both are compared with the ingress policy; neither is inferred from the path.
+This does not change native wire claims or key/root issuing-zone checks.
+`TP_CLEAR` remains a prerequisite result. In particular, the readiness sidecar's
+local-proof scope requirement still applies before native protected evaluation.
 
 Ingress remains a prerequisite. Physical/network containment, all route
 enforcement, durable admission/replay state, current enclosure-risk aggregation,

@@ -69,7 +69,7 @@ class InstalledIngressVerifier:
             raise ValidationError("installed ingress verifier is invalid")
         context = _parse_jcs_object(self.context_bytes)
         profile = _parse_jcs_object(self.receipt_profile_bytes)
-        if (set(context) != {"subject", "receiving_zone", "receipt_profile_id", "receipt_profile_digest", "conformance_level"}
+        if (set(context) != {"subject", "issuing_zone", "receiving_zone", "receipt_profile_id", "receipt_profile_digest", "conformance_level"}
                 or type(context["conformance_level"]) is not int or context["conformance_level"] not in (1, 2, 3)
                 or profile.get("id") != context["receipt_profile_id"]
                 or profile.get("link_digest_algorithm") not in ("sha256", "sha384")
@@ -77,7 +77,7 @@ class InstalledIngressVerifier:
                 or not _time(profile.get("version")) or profile["version"] == 0
                 or h.digest(profile, context["conformance_level"]) != context["receipt_profile_digest"]):
             raise ValidationError("installed ingress context/profile binding is invalid")
-        for name in ("subject", "receiving_zone", "receipt_profile_id"):
+        for name in ("subject", "issuing_zone", "receiving_zone", "receipt_profile_id"):
             h.literal(context[name])
 
     def verify(self, payload_bytes: bytes, *, now: int, clock_healthy: bool) -> IngressVerificationResult:
@@ -112,8 +112,8 @@ class InstalledIngressVerifier:
             if len(payload_bytes) > 49152:
                 raise h.InvalidRecord("ingress proof payload exceeds the native byte limit")
             payload = _parse_jcs_object(payload_bytes)
-            if payload["sub"] != expected["subject"] or payload["ktp"]["zone"] != expected["receiving_zone"]:
-                raise h.InvalidRecord("proof differs from installed subject/receiving ring")
+            if payload["sub"] != expected["subject"] or payload["ktp"]["zone"] != expected["issuing_zone"]:
+                raise h.InvalidRecord("proof differs from installed subject/issuing zone")
             if not _time(payload["exp"]) or now >= payload["exp"]:
                 raise h.InvalidRecord("supporting proof is not current")
             topology, session = state["topology"], state["session"]
