@@ -894,3 +894,50 @@ Draft clarification remains useful for a zero count threshold after blocking:
 the literal required recovery is below zero, which nonnegative counts cannot
 reach. This implementation retains the block and does not invent an automatic
 release; a valid policy amendment or clarified draft can supply that rule.
+
+### Ambient repair accounting primitives
+
+`project_ambient_window` keeps exact rational arrival, stock, utilization and
+index values. Each distinct lineage contributes at most its declared share of
+effective capacity to arrival; every breach still enters uncapped open stock.
+Only authenticated anchored closure weight may reduce stock. Quiet windows,
+restarts and a new sponsor have no stock-removal term. The reference bank policy
+carries prior excess, adds positive local index excess and permits only explicit
+retirement bounded by prior debt and anchored closure credit. A quiet window
+alone does not retire anything. This is a declared reference policy, not a
+universal bank formula prescribed by the RFC.
+
+Unknown capacity remains unknown, with saturation and the existing assisted
+supervision floor; known zero/no-accountable-root capacity forbids consequential
+hosting while stock is open. A positive measured index does not independently
+veto an action or manufacture a supervision outcome. Enclosing indices can raise
+the heard index without changing local arrival, stock or bank. The pure helper's
+caller must authenticate that these are enclosing zones; no outward relay or
+topology authority is inferred from a tuple of numbers.
+
+`project_repair_capacity` bounds declared capacity by demonstrated eligible
+records per equal, contiguous backlogged window. A record inside a repairer's
+declared interval remains anchored and may close stock/re-establish what it
+re-establishes, but does not demonstrate durable throughput. Hard-record times
+advance even for an interval-excluded record. Same-repairer records at the same
+instant require distinct authenticated `anchor_order` values when the interval
+matters; record hashes do not supply event order. Duplicate anchors and omitted
+window intervals fail validation. No backlogged demonstration leaves a positive
+declaration empirically unbounded/unknown in this reference policy; explicit
+zero or no accountable roots still establishes zero.
+
+`reference_criticality_valid` evaluates the informative reference condition
+`K > 1/(1-sqrt(g))` by exact rational comparison, avoiding rounded square roots.
+The deployment owns the normative K declaration and actual reproduction evidence.
+These functions do not authenticate audit data, normalize an adversarial-pressure
+feed, execute recovery tiers or implement the installed current-source/Core
+composition. Those paths remain pending; arithmetic tests do not establish
+ambient repair conformance or authorize hosting.
+
+The draft's "above one, the stock necessarily grows" statement needs a precise
+time-scale interpretation alongside repairer intervals and demonstrated capacity.
+Four valid current closures can reduce observed stock even while durable capacity
+is two and capped arrival is three. The helpers report actual `stock_change`
+separately from `durable_capacity_exceeded`; they do not falsify anchored records
+to make those meanings coincide. Both this distinction and the selected bank
+policy must remain explicit when composing the final tagged requirements.

@@ -1,5 +1,32 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 ambient accounting checkpoint
+
+Added pure exact reference helpers for lineage-capped arrival versus uncapped
+stock, anchored-only stock closure, explicit closure-backed bank retirement,
+unknown/zero capacity, inward heard indices, demonstrated capacity and repairer
+intervals. Reference criticality validity uses exact rational inequalities,
+without floating square roots. No ambient current-source/risk integration or
+full 41-vector conformance claim is made by these arithmetic helpers.
+
+Supplier review found no actionable defect. Self-review corrected an event-order
+ambiguity: equal-time records from one repairer now require authenticated anchor
+order when hard-record intervals affect durable throughput. The same two records
+can count differently when the hard record came first, so hash order is not a
+valid substitute for actual order.
+
+Draft issue exposed: the absolute "above one, stock necessarily grows" statement
+does not distinguish durable demonstrated capacity from actual valid closures.
+With prior U=10, capped Z=3, durable mu=2 and four current anchored closures,
+rho=1.5 while U falls to 9. Interval-excluded records are still valid closures.
+The SDK preserves both actual stock change and durable-capacity pressure and
+does not silently discard closures. Clarification of the intended time scale
+and reporting semantics is needed before a complete conformance claim.
+
+Validation: the final full suite passes 967 tests. Twelve focused ambient/capacity
+tests pass from the built wheel without optional proof dependencies. Supplier
+review also verified the authenticated equal-time ordering correction.
+
 ## 2026-10-29 sponsorship and genesis checkpoint
 
 Implemented selected sponsorship checks from repair §5.2 against authenticated
