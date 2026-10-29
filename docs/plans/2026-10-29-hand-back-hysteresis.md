@@ -26,9 +26,9 @@ owns actual append/correction, revoker sanctions, durable state and commit fenci
 Implemented pure and installed current stop pricing plus selected hand-back
 binding. Timelines preserve the original issued quote and current corrected
 price; the priced stop itself is included and its expungement is visible.
-Actual variant/anchor/profile/scope and original bound must agree. Clear refuses
-selected hysteresis pending grant-time integration. Continue that integration
-and relational gates after this checkpoint; do not claim full HB-09 or capability.
+Actual variant/anchor/profile/scope and original bound must agree. Grant-time
+integration now exists in `2026-10-29-hand-back-reissue.md` and is required when
+hysteresis is selected. Continue relational gates; no full HB-09/capability claim.
 
 Checkpoint validation: supplier review cleared the implementation; 1,085 full
 regressions and 35 installed-package related checks passed. Six pure tests also

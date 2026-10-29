@@ -1556,10 +1556,55 @@ ledger assessment, with the shortest evidence expiry. It retains `.hysteresis`
 for audit and correction work. Source failures propagate without accusation of
 hostile wire; hand-back body/bound mismatches remain protocol errors.
 
-Grant-time reissue enforcement and relational reconciliation are not implemented
-by this pricing component. The Clear constructor explicitly rejects a selected
-hysteresis profile until grant-reissue integration is installed, rather than
-silently ignoring it. Source completeness, signatures, actual append/expungement,
+Grant-time reissue enforcement is a separate selected component described below;
+pricing alone does not establish grant eligibility. Clear requires that component
+whenever hysteresis is selected. Relational reconciliation remains unsupported.
+Source completeness, signatures, actual append/expungement,
 revoker sanctions and durable fencing remain external. These Source facts are
 modeled in tests; no ledger write, personal score or production append protocol
 is claimed.
+
+### Grant-time reissue enforcement
+
+`InstalledHandBackReissueVerifier` selects private
+`historical-capped-bound-and-grant-epoch-v1`. Its installed Source authenticates
+the actual complete signed grant digest, actor/whole operation/class/issuance,
+real grant audit position, current protected grant epoch, complete current audit
+history and the governing profiles of surviving applicable stops. The ledger
+owner/append protocol and current profile are pinned; historical bodies are
+checked by digest and zone. Today's curve never replaces the historical curve
+that priced an earlier stop. Expunged or unrelated stops need no obsolete pricing
+body merely to delay nobody, while their actual findings remain validated.
+
+Each surviving same-subject/class stop must precede the grant in audit order,
+and the grant's issuance must meet its corrected reissue bound. Waiting until
+after a bound cannot repair an early issuance. Corrected facts can remove wrongful
+history, as the RFC requires; they do not mint a grant, erase current revocation,
+roll back the protected epoch or dispense with a fresh native evaluation. The
+epoch preserves invalidation when older audit history passes its retention bound;
+Source must authenticate its durable monotonic continuity, including restart.
+That property is not established by a counter value supplied by a requester.
+
+The complete historical window is required for active price computation. If the
+governing cap had fully elapsed before grant issuance, that cap proves the old
+bound satisfied without guessing missing older counts. Diagnostics retain exact
+bounds, cap proofs, ignored expungements and append/correction/accountability
+obligations. A hypothetical shared quote validates the complete inventory and
+supplies diagnostics; it creates no adverse event or extra delay. Revoker window
+expiry is bounded even when no raw Source record changes.
+
+`InstalledClearanceVerifier.reissue_verifier` requires symmetric
+`reissue_profile_digest` selection and the identical installed hand-back
+hysteresis verifier. Clear binds lease/issuance/current epoch across its registry
+and the gate, requires eligibility and caps validity by gate evidence too. Missing
+policy or mismatched Source epochs cannot be silently ignored. Existing native
+policy, template, proof, supervision and constraint checks remain prerequisites.
+No code here signs, mints, renews, consumes or dispatches anything; Service must
+fence the actual ledger head/profile/epoch and remaining authorization at commit.
+
+Relational reissue and Clear remain explicitly unsupported in this selected
+profile pending anchored reconciliation, accountable human decision and atomic
+single-use composition. Complete deployment activation, actual signature/registry
+adapters and all broader hand-back families remain separate requirements. Tests
+combine real signed native/readiness results with modeled grant and ledger facts;
+no production epoch durability or append-protocol claim is made.

@@ -34,4 +34,26 @@ def fixture(native_verifier,native_result,operation,deployment,now=1000):
     class Source:
         def resolve(self,**kw):return AuthenticatedClearanceContext(rfc8785.dumps(state),records["hand_back"],b"modeled authoritative current relation/grant/intent/stop registry")
     verifier=InstalledClearanceVerifier(native_verifier,tv,non_clear,rfc8785.dumps(p),Source())
-    return dict(verifier=verifier,state=state,template_state=ts,hand_back_state=hs,wire=wire,records=records)
+    return dict(verifier=verifier,state=state,template_state=ts,hand_back_state=hs,wire=wire,records=records,profiles=dict(non_clearance=np,clearance=p))
+
+
+def install_reissue(cf,operation,deployment,now=1000):
+    import rfc8785,json
+    from dataclasses import replace
+    from kinetic_trust_library.v3.demand_supplier import _digest
+    from tests.unit.core.test_v3_reissue import fixture as reissue_fixture
+    old=cf["verifier"]
+    rv,rs,lease,_,_,refresh=reissue_fixture(operation,deployment,now,
+        old.native_verifier.readiness_verifier.readiness_verifier.receiving_zone,cf["state"]["lease"])
+    hp=json.loads(old.template_verifier.hand_back_verifier.profile_bytes)
+    hp["hysteresis_profile_digest"]=_digest(json.loads(rv.hysteresis_verifier.profile_bytes),"sha256")
+    hb=replace(old.template_verifier.hand_back_verifier,profile_bytes=rfc8785.dumps(hp),hysteresis_verifier=rv.hysteresis_verifier)
+    cf["hand_back_state"].update(profile_digest=_digest(hp,"sha256"),stop_anchor="sha256:"+"e"*64)
+    cf["template_state"]["profile_digest"]=_digest(hp,"sha256")
+    np=cf["profiles"]["non_clearance"];np["hand_back_profile_digest"]=_digest(hp,"sha256")
+    nc=replace(old.non_clearance_verifier,hand_back_verifier=hb,profile_bytes=rfc8785.dumps(np))
+    cp=cf["profiles"]["clearance"];cp.update(non_clearance_profile_digest=_digest(np,"sha256"),reissue_profile_digest=_digest(json.loads(rv.profile_bytes),"sha256"))
+    cf["state"]["profile_digest"]=_digest(cp,"sha256")
+    cf["verifier"]=replace(old,template_verifier=replace(old.template_verifier,hand_back_verifier=hb),
+        non_clearance_verifier=nc,profile_bytes=rfc8785.dumps(cp),reissue_verifier=rv)
+    return rv,rs,refresh

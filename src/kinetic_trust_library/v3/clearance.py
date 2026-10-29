@@ -16,14 +16,16 @@ from .trust_proof_json import _parse_jcs_object
 from .demand_supplier import _digest
 from .demand_operation import canonical_demand_operation_bytes,digest_demand_operation
 from .supervision_rails import LEVELS
+from .reissue import InstalledHandBackReissueVerifier,HandBackReissueAssessment
 
 
 def _profile(p):
-    if (set(p)!={"id","version","zone","formula","non_clearance_profile_digest","relational_clear"}
+    if (set(p)-{"reissue_profile_digest"}!={"id","version","zone","formula","non_clearance_profile_digest","relational_clear"}
             or not _name(p["id"]) or not _name(p["zone"]) or not _time(p["version"]) or p["version"]==0
             or not is_digest(p["non_clearance_profile_digest"]) or p["formula"]!="native-template-lease-clearance-v1"
             or p["relational_clear"]!="unsupported"):
         raise ValidationError("invalid selected clearance policy or unsupported relational Clear claim")
+    if "reissue_profile_digest" in p and not is_digest(p["reissue_profile_digest"]):raise ValidationError("invalid selected reissue digest")
     return p
 
 
@@ -54,6 +56,7 @@ class ClearanceAssessment:
     expires_at: int | None
     authenticated_state_bytes: bytes | None
     source_evidence_bytes: bytes | None
+    reissue: HandBackReissueAssessment | None
 
     def __init__(self,*args,**kwargs):raise TypeError("clearance requires installed native/template/lease validation")
 
@@ -65,6 +68,7 @@ class InstalledClearanceVerifier:
     non_clearance_verifier: InstalledNonClearanceVerifier
     profile_bytes: bytes
     context_source: object
+    reissue_verifier: InstalledHandBackReissueVerifier | None = None
 
     def __post_init__(self):
         if (type(self.native_verifier) is not InstalledNativeEvaluationVerifier or type(self.template_verifier) is not InstalledHandBackTemplateVerifier
@@ -72,8 +76,12 @@ class InstalledClearanceVerifier:
                 or not callable(getattr(self.context_source,"resolve",None))):
             raise ValidationError("invalid installed clearance verifier")
         hb=self.template_verifier.hand_back_verifier;p=_profile(_parse_jcs_object(self.profile_bytes))
-        if hb.hysteresis_verifier is not None:
-            raise ValidationError("selected hysteresis requires grant-reissue integration before Clear")
+        rv=self.reissue_verifier
+        if ("reissue_profile_digest" in p)!=(rv is not None) or (hb.hysteresis_verifier is not None)!=(rv is not None):
+            raise ValidationError("Clear hysteresis and reissue selection must be symmetric")
+        if rv is not None and (type(rv) is not InstalledHandBackReissueVerifier or rv.hysteresis_verifier is not hb.hysteresis_verifier
+                or p["reissue_profile_digest"]!=_digest(_parse_jcs_object(rv.profile_bytes),hb.algorithm)):
+            raise ValidationError("Clear reissue differs from installed hand-back ledger/profile")
         if (self.non_clearance_verifier.hand_back_verifier is not hb
                 or self.native_verifier.readiness_verifier.readiness_verifier.deployment_profile_bytes!=hb.deployment_profile_bytes
                 or self.native_verifier.association_verifier.algorithm!=hb.algorithm
@@ -87,7 +95,7 @@ class InstalledClearanceVerifier:
             raise ValidationError("clearance requires an immutable native result and current time")
         hb=self.template_verifier.hand_back_verifier;p=_profile(_parse_jcs_object(self.profile_bytes))
         op_bytes=canonical_demand_operation_bytes(actual_operation);op=_parse_jcs_object(op_bytes)
-        source=None;lease=None;template=None;non_clearance=None
+        source=None;lease=None;template=None;non_clearance=None;reissue=None
         def result(reason,kind=None,expiry=None,hand_back_required=False):
             r=object.__new__(ClearanceAssessment)
             for k,v in dict(valid=kind is not None,kind=kind,reason=reason,conditional_clear=kind=="Clear",action_permitted=False,
@@ -96,7 +104,7 @@ class InstalledClearanceVerifier:
                     tightened_constraints_bytes=native_result.tightened_constraints_bytes if kind=="Clear" else None,
                     profile_bytes=self.profile_bytes,operation_bytes=op_bytes,evaluated_at=evaluated_at,expires_at=expiry,
                     authenticated_state_bytes=None if source is None else source.state_bytes,
-                    source_evidence_bytes=None if source is None else source.evidence_bytes).items():object.__setattr__(r,k,v)
+                    source_evidence_bytes=None if source is None else source.evidence_bytes,reissue=reissue).items():object.__setattr__(r,k,v)
             return r
         if native_result.verifier is not self.native_verifier:return result("CLEARANCE_NATIVE_POLICY",hand_back_required=True)
         if clock_healthy is not True or native_result.checked_at!=evaluated_at:return result("CLEARANCE_NATIVE_TIME",hand_back_required=True)
@@ -151,6 +159,11 @@ class InstalledClearanceVerifier:
         ready=native_result.readiness.readiness
         if (canonical_demand_operation_bytes(actual)!=op_bytes or ready is None or ready.deployment_profile_digest!=deployment):
             return result("CLEARANCE_NATIVE_BINDING",hand_back_required=True)
+        if self.reissue_verifier is not None:
+            reissue=self.reissue_verifier.evaluate(rfc8785.dumps(s["lease"]),actual_operation=op,evaluated_at=evaluated_at,clock_healthy=clock_healthy)
+            if (reissue.current_grant_epoch!=s["current_grant_epoch"] or reissue.lease_id!=lease.lease_id or reissue.issued_at!=lease.issued_at):
+                return result("CLEARANCE_REISSUE_BINDING",hand_back_required=True)
+            if not reissue.eligible:return result(reissue.reason,hand_back_required=True)
         try:
             template=self.template_verifier.evaluate(template_digest=lease.template_digest,actual_operation=op,
                 evaluated_at=evaluated_at,clock_healthy=clock_healthy)
@@ -158,5 +171,5 @@ class InstalledClearanceVerifier:
         if (template.subject_profile!="software" or template.consequence_class!=lease.consequence_class
                 or template.principal!=s["principal"] or template.registered_at>lease.issued_at):
             return result("CLEARANCE_TEMPLATE_BINDING",hand_back_required=True)
-        expiry=min(native_result.expires_at,lease.expires_at,template.expires_at,s["expires_at"])
+        expiry=min(native_result.expires_at,lease.expires_at,template.expires_at,s["expires_at"],reissue.expires_at if reissue is not None else s["expires_at"])
         return result("CLEARANCE_CONDITIONAL_CLEAR","Clear",expiry)

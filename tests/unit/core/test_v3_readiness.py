@@ -248,6 +248,23 @@ class ReadinessTests(unittest.TestCase):
         other_policy=replace(native)
         self.assertEqual(replace(cf["verifier"],native_verifier=other_policy).evaluate(combined,
             actual_operation=operation,evaluated_at=1000,clock_healthy=True).reason,"CLEARANCE_NATIVE_POLICY")
+        from tests.unit.core._v3_clearance_fixture import install_reissue
+        from tests.unit.core.test_v3_hand_back_hysteresis import event as hysteresis_event
+        rcf=clearance_fixture(native,combined,operation,deployment)
+        rv,rs,refresh_grant=install_reissue(rcf,operation,deployment)
+        def reissue_clear():return rcf["verifier"].evaluate(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        self.assertTrue(reissue_clear().conditional_clear)
+        prior=hysteresis_event(2,operation["actor"],occurred=940);prior["adjudications"][0]["decided_at"]=941
+        rs["history"].append(prior);rs["pricing_profiles"][prior["stop_anchor"]]=json.loads(rv.profile_bytes)["hysteresis_profile_digest"]
+        blocked=reissue_clear()
+        self.assertEqual(blocked.reason,"REISSUE_TOO_EARLY");self.assertTrue(blocked.hand_back_required)
+        rcf["state"]["lease"]["issued_at"]=970;refresh_grant()
+        self.assertTrue(reissue_clear().conditional_clear)
+        rs["expires_at"]=1002
+        self.assertEqual(reissue_clear().expires_at,1002)
+        rs["current_grant_epoch"]=6
+        self.assertEqual(reissue_clear().reason,"CLEARANCE_REISSUE_BINDING")
+        with self.assertRaisesRegex(ValidationError,"symmetric"):replace(rcf["verifier"],reissue_verifier=None)
         boundary_state["subject_class"]="outsider"
         denied_boundary=whole()
         self.assertEqual(denied_boundary.reason,"BOUNDARY_SUBJECT")

@@ -1,5 +1,28 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 grant-time historical reissue enforcement
+
+Added installed full-grant/audit-position/protected-epoch and complete historical
+policy validation, composing eligibility into conditional Clear. Surviving stops
+use their actual governing curve, not the latest one. A grant must follow each
+applicable stop in audit order and satisfy its corrected bound at issuance;
+current time passing cannot fix an early grant. Expunged history cannot impose
+subject delay or require obsolete pricing bodies. Corrections change the facts,
+not the grant epoch or requirement for current native evaluation.
+
+Elapsed historical caps can prove old bounds satisfied without an unavailable
+older window; active-window truncation is rejected. Same-tick zero Logistics
+delay still requires post-stop audit order. Source epoch disagreement, missing
+policy selection, substituted grant or governing profile cannot clear. Source
+revoker diagnostics expire at their next window boundary. All actual signatures,
+complete history, current registry and monotonic epoch continuity remain Source
+facts; Service owns durable mint/append and atomic commit fencing.
+
+Signed native integration exercises early rejection despite current time already
+past the bound, later proper issuance, shortest gate validity and mismatched
+epochs. Relational reissue/human/repair gates remain explicitly unsupported and
+next; no full hand-back capability/deployment conformance claim is made.
+
 ## 2026-10-29 adjudicated hysteresis pricing
 
 Added declared capped-linear history projection, installed complete current
