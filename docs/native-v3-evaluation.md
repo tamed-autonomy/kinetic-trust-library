@@ -1311,3 +1311,32 @@ an RFC exposure wire record: Service must deliver the authenticated exposure
 record under the selected protocol, preserve constraints and perform local review.
 No messages are sent, standing changed or delivery completion asserted. Complete
 deployment composition and production authenticated delivery adapters remain.
+
+### Execution observation
+
+`InstalledExecutionObservationVerifier` selects the private
+`decision-bound-boundary-observation-v1` profile and the zone's declared
+enforcement level. Source authenticates the complete historical decision and
+actual boundary observation records, their semantics and authority, actual route
+enforcement and authoritative absence. A failed lookup must raise unavailability,
+never manufacture `decision=None` or `observation=None` as authenticated absence.
+Library checks exact original record digests, whole operation (including parameters,
+request identity and replay domain), actor, zone, topology epoch, decision identity
+and time. Wrong-scope/binding observations are retained as evidence but supply no
+execution claim; missing observations remain `unverified`.
+
+Bound dispatch after any denial, including an independent gate denial with stable
+environmental supervision, returns a bypass with conformance-failure and breach
+record obligations. Authenticated absent decision plus observed dispatch on a
+route with no enforcement point is also a bypass, even if the observation
+references a nonexistent decision. Bound `non_dispatch` means `not-executed`
+even after a permit. Here `executed` is the EO contract's dispatch vocabulary;
+it does not confirm the downstream effect in optional proposal #139.
+
+All three retained EO source cases are exercised along with scope, substitution,
+clock, historical-byte and independent-gate cases. The installed tests model
+Source authority, not an actual production execution boundary. No failure or
+breach is persisted by the library; Service must record/open and enforce it.
+This post-decision classifier supplies no authorization and does not renew or
+extend the original proof. Full deployment selection and production boundary
+adapters remain separate release requirements.

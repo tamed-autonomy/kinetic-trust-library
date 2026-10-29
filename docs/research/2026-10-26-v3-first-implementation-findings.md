@@ -1,5 +1,25 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 execution observation
+
+Added immutable whole-operation decision/observation projections, pure
+classification and an installed authenticated Source wrapper for Core §7.6 and
+Audit §3.4 at `151cfe46e447be68794dfadf8bf11cfde79110d1`. Retained the exact
+three EO cases and exercised their Library-owned classification requirements.
+Missing or mismatched observations remain unverified, never proof of non-execution.
+Bound dispatch after denial yields bypass and breach/failure recording obligations;
+an unenforced-route dispatch with authenticated absent decision does likewise.
+A nonexistent decision reference cannot hide that bypass. Bound non-dispatch
+after a permit is not-executed. Dispatch does not mean downstream effect confirmed.
+
+The selected private profile binds exact raw historical records, actual complete
+operation, actor, zone/epoch, decision identity/digest and time. Source owns actual
+boundary/record authority and authoritative absence; lookup failure is not absence.
+The reference does not invent an audit wire, authorize dispatch, persist records,
+or claim actual Service boundary/signature interoperability. Service must actually
+record a conformance failure and open/enforce the breach. Broader #139 effect
+correlation and complete deployment/API composition remain pending.
+
 ## 2026-10-29 federation exposure and anchoring notifications
 
 Added a pure delivery planner and selected installed record verifier against
