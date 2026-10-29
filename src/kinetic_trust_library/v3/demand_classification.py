@@ -16,10 +16,11 @@ from .demand_operation import canonical_demand_operation_bytes, digest_demand_op
 from .demand_supplier import _digest
 from .installed_demand import DemandAssessment
 from .trust_proof_json import _parse_jcs_object
+from .schema_formats import installed_format_checker
 
 
 class DemandClassificationAdapter(Protocol):
-    def classify(self, operation_bytes: bytes, *, criticality: Decimal) -> DecimalLike:
+    def classify(self, operation_bytes: bytes, *, criticality: Decimal, classifier_profile_bytes: bytes) -> DecimalLike:
         """Return finite conservative A on the installed common scale."""
         ...
 
@@ -34,6 +35,9 @@ class NativeClassifiedDemand:
     evaluated_at: int
     conservative: bool
     evidence: DemandAssessment
+    classifier_profile_bytes: bytes
+    classification_profile_id: str
+    classification_profile_digest: str
 
     def __init__(self, *args, **kwargs):
         raise TypeError("NativeClassifiedDemand is derived by an installed classifier")
@@ -44,6 +48,7 @@ class InstalledDemandClassifier:
     deployment_profile_bytes: bytes
     adapter: DemandClassificationAdapter
     algorithm: str
+    classifier_profile_bytes: bytes
 
     def __post_init__(self):
         if (type(self.deployment_profile_bytes) is not bytes
@@ -51,6 +56,14 @@ class InstalledDemandClassifier:
                 or not callable(getattr(self.adapter, "classify", None))):
             raise ValidationError("installed demand classifier is invalid")
         _parse_jcs_object(self.deployment_profile_bytes)
+        if type(self.classifier_profile_bytes) is not bytes:
+            raise ValidationError("installed classifier profile must be immutable canonical bytes")
+        classifier = _parse_jcs_object(self.classifier_profile_bytes)
+        if (type(classifier.get("id")) is not str or not installed_format_checker().conforms(classifier["id"],"uri")
+                or classifier.get("unit")!="ktp-action-risk-points"
+                or type(classifier.get("version")) is not str or not classifier["version"]
+                or type(classifier.get("formula")) is not str or not classifier["formula"]):
+            raise ValidationError("installed classifier profile identity/unit/formula is invalid")
 
     def classify(self, assessment: DemandAssessment, *, actual_operation: dict,
                  evaluated_at: int) -> NativeClassifiedDemand:
@@ -71,7 +84,7 @@ class InstalledDemandClassifier:
         values = {}
         for criticality in sorted({Decimal(0), reading, Decimal(1)}):
             values[criticality] = as_decimal(
-                self.adapter.classify(operation_bytes, criticality=criticality),
+                self.adapter.classify(operation_bytes, criticality=criticality,classifier_profile_bytes=self.classifier_profile_bytes),
                 name="classified demand", minimum=0, maximum=100,
             )
         baseline, demand, maximum = values[Decimal(0)], values[reading], values[Decimal(1)]
@@ -83,6 +96,9 @@ class InstalledDemandClassifier:
             ("maximum_criticality_demand", maximum), ("operation_digest", operation_digest),
             ("deployment_digest", deployment_digest), ("evaluated_at", evaluated_at),
             ("conservative", assessment.state == "unavailable"), ("evidence", assessment),
+            ("classifier_profile_bytes",self.classifier_profile_bytes),
+            ("classification_profile_id",_parse_jcs_object(self.classifier_profile_bytes)["id"]),
+            ("classification_profile_digest",_digest(_parse_jcs_object(self.classifier_profile_bytes),self.algorithm)),
         ):
             object.__setattr__(result, name, value)
         return result

@@ -12,6 +12,7 @@ from ._trust_proof_preconditions import first_precondition_failure
 from .trust_proof_framing import parse_compact_framing
 from .trust_proof_json import parse_proof_json_objects, _parse_jcs_object
 from .trust_proof_invariants import _invariants_hold, trust_proof_stage7_reason
+from .schema_formats import installed_format_checker
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,7 +32,7 @@ class InstalledSchemaBundle:
             Draft202012Validator.check_schema(schema)
 
     def valid(self, payload_bytes: bytes) -> bool:
-        from jsonschema import Draft202012Validator, FormatChecker
+        from jsonschema import Draft202012Validator
         from referencing import Registry, Resource
         schemas = [_parse_jcs_object(s) for s in self.schemas]
         def no_network(uri):
@@ -39,7 +40,7 @@ class InstalledSchemaBundle:
         registry = Registry(retrieve=no_network).with_resources((s["$id"], Resource.from_contents(s)) for s in schemas)
         root = next(s for s in schemas if s["$id"] == self.root_id)
         try:
-            return Draft202012Validator(root, registry=registry, format_checker=FormatChecker()).is_valid(_parse_jcs_object(payload_bytes))
+            return Draft202012Validator(root, registry=registry, format_checker=installed_format_checker()).is_valid(_parse_jcs_object(payload_bytes))
         except Exception:
             return False
 

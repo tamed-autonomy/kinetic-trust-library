@@ -17,7 +17,8 @@ from .demand_operation import digest_demand_operation
 
 @lru_cache(maxsize=1)
 def _schemas():
-    from jsonschema import Draft202012Validator, FormatChecker
+    from .schema_formats import installed_format_checker
+    from jsonschema import Draft202012Validator
 
     root = files("kinetic_trust_library.v3")
     deployment = json.loads(root.joinpath("schemas/deployment-profile-v3.json").read_text("utf-8"))
@@ -25,8 +26,8 @@ def _schemas():
     # The published demand contract points to this local definition. Resolve
     # it here so a verification attempt never retrieves a remote schema.
     return (
-        Draft202012Validator(deployment["$defs"]["demand_input"], format_checker=FormatChecker()),
-        Draft202012Validator(value, format_checker=FormatChecker()),
+        Draft202012Validator(deployment["$defs"]["demand_input"], format_checker=installed_format_checker()),
+        Draft202012Validator(value, format_checker=installed_format_checker()),
     )
 
 

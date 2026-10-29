@@ -52,7 +52,7 @@ class CoreClaimsTests(unittest.TestCase):
             state="clear"
             def query(self, *, required_frameworks, **kwargs):
                 return tuple(AuthenticatedSoulResponse(f,self.state,b"fixture-authenticated",
-                    rfc8785.dumps(dict(soul=1,constraint_type="ocap",authority=f)) if self.state=="veto" else None)
+                    rfc8785.dumps(dict(soul=1,constraint_type="ocap",authority="urn:ktp:authority:fixture")) if self.state=="veto" else None)
                     for f in required_frameworks)
         soul_adapter=Soul()
         class Environment:
@@ -76,8 +76,9 @@ class CoreClaimsTests(unittest.TestCase):
         case=next(c for c in vectors["cases"] if c["id"]=="valid-value")
         assessed=demand_verifier.evaluate(case["jws"].encode(),actual_operation=operation,evaluated_at=1030,clock_healthy=True)
         class Classifier:
-            def classify(self,operation_bytes,*,criticality): return 10+criticality*10
-        demand=InstalledDemandClassifier(raw,Classifier(),"sha256").classify(assessed,actual_operation=operation,evaluated_at=1030)
+            def classify(self,operation_bytes,*,criticality,classifier_profile_bytes): return 10+criticality*10
+        classifier_profile=rfc8785.dumps(dict(id="urn:ktp:classifier:core-test",version="test-v1",unit="ktp-action-risk-points",formula="10 + 10 * moment_criticality"))
+        demand=InstalledDemandClassifier(raw,Classifier(),"sha256",classifier_profile).classify(assessed,actual_operation=operation,evaluated_at=1030)
         context=NativeCoreContext(raw,rfc8785.dumps(operation),1030,"sha256")
         metadata=rfc8785.dumps(dict(iss="https://oracle.example.com",aud=operation["audience"],jti="native-core-proof",exp=1040,zone="zone:alpha",advancement_floor=0))
         private=Ed25519PrivateKey.from_private_bytes(bytes(range(32)))
@@ -103,12 +104,75 @@ class CoreClaimsTests(unittest.TestCase):
                 self.assertEqual(claims["root_instrument"],dict(kind="none",status="none",reason="missing"))
                 self.assertEqual(claims["e_trust"],52.5 if expected=="TP_CLEAR" else None)
                 if absent: self.assertIsNone(claims["r"])
+                from kinetic_trust_library.v3.native_geometry import NativeGeometrySource, AuthenticatedGeometryAuthority
+                from kinetic_trust_library.v3.geometry_verifier import InstalledGeometryVerifier
+                geometry_profile=rfc8785.dumps(dict(id="urn:ktp:profile:native-geometry-test",release="unreleased-v3.0.0",
+                    evaluator="urn:ktp:evaluator:test",core_deployment_digest=_digest(profile,"sha256"),
+                    numeric_convention="exact-decimal-boundaries-binary64-margin-v1",constraint_policy="retain-grant-and-prior-v1",
+                    input_order="layer-then-name-v1",sources=dict(soul="urn:ktp:source:soul",core="urn:ktp:source:core",environment="urn:ktp:source:environment",
+                    demand="urn:ktp:source:demand",authority="urn:ktp:source:authority"),magnitudes={"max_calls":{"unit":"calls","direction":"maximum"}},
+                    thresholds=dict(veto=0,assisted_floor=.05,metacognitive_floor=.1,allow=.2)))
+                class Authority:
+                    prior="stable"
+                    prior_state="observed"
+                    grant_state="observed"
+                    calls=0
+                    def verify(self,**kwargs):
+                        self.calls+=1
+                        prior=(dict(state="observed",supervision=self.prior,ceilings={"max_calls":8}) if self.prior_state=="observed" else dict(state=self.prior_state))
+                        grant=(dict(state="observed",ceilings={"max_calls":10}) if self.grant_state=="observed" else dict(state=self.grant_state))
+                        return AuthenticatedGeometryAuthority(rfc8785.dumps(dict(prior=prior,grant=grant)),b"fixture-authenticated-grant-and-prior")
+                authority=Authority()
+                geometry=NativeGeometrySource(source,demand,issued.compact,verifier,geometry_profile,authority,"native-decision",True)
+                raw_body=geometry.produce(evaluated_at=1030)
+                body=json.loads(raw_body)
+                self.assertEqual(InstalledGeometryVerifier(geometry,verifier,"sha256").verify(raw_body,evaluated_at=1030).reason,"DG_VALID")
+                self.assertEqual(body["result"]["supervision"],"stable" if expected=="TP_CLEAR" else "silent_veto")
+                self.assertEqual(body["gates"]["binding"],"passed")
+                if expected=="TP_CLEAR":
+                    self.assertEqual(body["capacity"]["E"],52.5)
+                    self.assertEqual(body["result"]["tightenedConstraints"]["ceilings"],[{"magnitude":"max_calls","max":8}])
+                    authority.prior="regulated"
+                    regulated=json.loads(geometry.produce(evaluated_at=1030))
+                    self.assertEqual(regulated["result"]["supervision"],"regulated")
+                    authority.prior="silent_veto"
+                    veto=json.loads(geometry.produce(evaluated_at=1030))
+                    self.assertEqual(veto["gates"]["prior"],"failed")
+                    self.assertNotIn("capacity",veto)
+                    self.assertNotIn("margin",veto)
+                    authority.prior="stable"
+                    for missing in ("prior", "grant"):
+                        setattr(authority,missing+"_state","absent")
+                        unavailable=json.loads(geometry.produce(evaluated_at=1030))
+                        self.assertEqual(unavailable["result"]["supervision"],"silent_veto")
+                        self.assertNotIn("capacity",unavailable)
+                        self.assertIn(dict(input="prior_supervision" if missing=="prior" else "grant",layer="term",state="absent"),unavailable["undefined_inputs"])
+                        setattr(authority,missing+"_state","observed")
+                    for value,capacity_gate,has_margin in ((52.5,"passed",True),(60,"failed",False)):
+                        class FixedClassifier:
+                            def classify(self,*args,**kwargs): return value
+                        fixed_profile=rfc8785.dumps(dict(id="urn:ktp:classifier:fixed-test",version="test-v1",unit="ktp-action-risk-points",formula=str(value)))
+                        fixed=InstalledDemandClassifier(raw,FixedClassifier(),"sha256",fixed_profile).classify(assessed,actual_operation=operation,evaluated_at=1030)
+                        fixed_core=project_classified_native_core(soul,standing=standing,environment=environment,context=context,demand=fixed)
+                        fixed_source=NativeCoreClaimsSource(fixed_core,standing,context,metadata)
+                        stopped=json.loads(NativeGeometrySource(fixed_source,fixed,issued.compact,verifier,geometry_profile,authority,"boundary",True).produce(evaluated_at=1030))
+                        self.assertEqual(stopped["gates"]["capacity"],capacity_gate)
+                        self.assertEqual("margin" in stopped,has_margin)
+                        self.assertEqual(stopped["result"]["supervision"],"silent_veto")
+                    calls=authority.calls
+                    rejected=json.loads(NativeGeometrySource(source,demand,"bad.proof.bytes",verifier,geometry_profile,authority,"rejected",True).produce(evaluated_at=1030))
+                    self.assertEqual(rejected["gates"]["binding"],"failed")
+                    self.assertIsNone(rejected["association"])
+                    self.assertEqual(authority.calls,calls)
+                else:
+                    self.assertNotIn("capacity",body)
+                    self.assertNotIn("margin",body)
+                    if soul_state!="clear": self.assertEqual(authority.calls,0)
                 if expected == "TP_CLEAR":
                     from kinetic_trust_library.v3.request_association import InstalledRequestAssociationVerifier
                     from kinetic_trust_library.v3.request_binding import digest_canonical_request, digest_complete_proof
-                    request={**operation,"version":"request-binding-v1","demand":{"value":float(demand.demand),"unit":"ktp-action-risk-points"},
-                        "classification_profile":{"id":"urn:ktp:classification:test","digest":_digest(profile,"sha256")}}
-                    request_bytes=rfc8785.dumps(request)
+                    request_bytes=geometry.request_bytes
+                    request=json.loads(request_bytes)
                     association=rfc8785.dumps(dict(version="request-proof-association-v1",
                         request_digest=digest_canonical_request(request,algorithm="sha256"),
                         proof_digest=digest_complete_proof(issued.compact,algorithm="sha256"),proof_jti="native-core-proof"))
@@ -120,6 +184,26 @@ class CoreClaimsTests(unittest.TestCase):
                         request_bytes,association,issued.compact,invocation_evidence=b"fixture-verified-delegation",now=1030,clock_healthy=True)
                     self.assertEqual(bound.reason,"RB_BOUND")
                     self.assertNotEqual(request["subject"],request["actor"])
+                    from kinetic_trust_library.v3.geometry_carrier import InstalledGeometryCarrierVerifier
+                    from kinetic_trust_library.v3.geometry_issuance import InstalledGeometryCarrierIssuer
+                    from kinetic_trust_library.v3.carrier_association import AssociationGeometryCarrier
+                    evaluator=json.loads(geometry_profile)["evaluator"]
+                    carrier_key={**key,"kid":"native-carrier-test","role":"decision-geometry-evaluator",
+                        "issuer":evaluator,"audience":operation["audience"],"curve":"Ed25519"}
+                    carrier_context=rfc8785.dumps(dict(identity=dict(evaluator=evaluator,audience=operation["audience"],evaluated_at=1030),
+                        request=request,proof=issued.compact,profile_expires_at=1040,supporting_expiries=[1038]))
+                    carrier_verifier=InstalledGeometryCarrierVerifier(rfc8785.dumps({carrier_key["kid"]:carrier_key}),carrier_context,
+                        InstalledGeometryVerifier(geometry,verifier,"sha256"),("EdDSA",))
+                    carrier=InstalledGeometryCarrierIssuer(geometry,Signer(),carrier_verifier,"EdDSA",carrier_key["kid"]).issue(
+                        now=1030,clock_healthy=True)
+                    protected=InstalledRequestAssociationVerifier(Invocation(),verifier,Replay(),"sha256",True,
+                        AssociationGeometryCarrier(carrier.compact,carrier_verifier)).verify(request_bytes,association,issued.compact,
+                        invocation_evidence=b"fixture-verified-delegation",now=1030,clock_healthy=True)
+                    self.assertEqual(protected.reason,"RB_BOUND")
+                    self.assertEqual(json.loads(protected.carrier_binding.canonical_geometry_bytes),body)
+                    missing_units=rfc8785.dumps({**json.loads(geometry_profile),"magnitudes":["max_calls"]})
+                    with self.assertRaises(ValidationError):
+                        NativeGeometrySource(source,demand,issued.compact,verifier,missing_units,authority,"missing-units",True)
                     wrong_metadata=rfc8785.dumps({**json.loads(metadata),"aud":"urn:other-audience"})
                     with self.assertRaisesRegex(ValidationError,"audience"):
                         NativeCoreClaimsSource(core,standing,context,wrong_metadata)

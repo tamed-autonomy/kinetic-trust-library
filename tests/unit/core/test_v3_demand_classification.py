@@ -30,9 +30,10 @@ class DemandClassificationTests(unittest.TestCase):
             FixtureAdapter(vectors, vectors["context"]), "sha256",
         )
         class Classifier:
-            def classify(self, operation_bytes, *, criticality):
+            def classify(self, operation_bytes, *, criticality,classifier_profile_bytes):
                 return Decimal(10) + criticality * 10
-        classifier = InstalledDemandClassifier(raw_profile, Classifier(), "sha256")
+        classifier_profile=rfc8785.dumps(dict(id="urn:ktp:classifier:fixture",version="test-v1",unit="ktp-action-risk-points",formula="10 + 10 * moment_criticality"))
+        classifier = InstalledDemandClassifier(raw_profile, Classifier(), "sha256",classifier_profile)
         class SoulAdapter:
             def query(self, *, required_frameworks, **kwargs):
                 return tuple(AuthenticatedSoulResponse(f, "clear", b"authenticated clear") for f in required_frameworks)
@@ -66,6 +67,9 @@ class DemandClassificationTests(unittest.TestCase):
                                            evaluated_at=1030, clock_healthy=True)
             result = classifier.classify(assessment, actual_operation=vectors["operation"], evaluated_at=1030)
             self.assertEqual(result.demand, expected)
+            self.assertEqual(result.classifier_profile_bytes,classifier_profile)
+            self.assertEqual(result.classification_profile_id,"urn:ktp:classifier:fixture")
+            self.assertEqual(result.classification_profile_digest,_digest(json.loads(classifier_profile),"sha256"))
             self.assertEqual(result.operation_digest, assessment.operation_digest)
             self.assertEqual(result.conservative, case_id != "valid-value")
             core = project_classified_native_core(
@@ -95,10 +99,10 @@ class DemandClassificationTests(unittest.TestCase):
             with self.assertRaises(ValidationError):
                 classifier.classify(assessment, actual_operation=vectors["operation"], evaluated_at=1031)
         class LoweringClassifier:
-            def classify(self, operation_bytes, *, criticality):
+            def classify(self, operation_bytes, *, criticality,classifier_profile_bytes):
                 return 100 - criticality * 10
         with self.assertRaises(ValidationError):
-            InstalledDemandClassifier(raw_profile, LoweringClassifier(), "sha256").classify(
+            InstalledDemandClassifier(raw_profile, LoweringClassifier(), "sha256",classifier_profile).classify(
                 assessment, actual_operation=vectors["operation"], evaluated_at=1030)
 
 

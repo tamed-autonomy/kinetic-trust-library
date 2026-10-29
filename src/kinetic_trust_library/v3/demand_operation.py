@@ -19,12 +19,13 @@ _PREFIX = b"KTP/demand-operation-v1\x00"
 
 @lru_cache(maxsize=1)
 def _operation_validator():
-    from jsonschema import Draft202012Validator, FormatChecker
+    from .schema_formats import installed_format_checker
+    from jsonschema import Draft202012Validator
 
     schema = json.loads(files("kinetic_trust_library.v3").joinpath(
         "schemas/demand-operation-v1.json"
     ).read_text(encoding="utf-8"))
-    return Draft202012Validator(schema, format_checker=FormatChecker())
+    return Draft202012Validator(schema, format_checker=installed_format_checker())
 
 
 def canonical_demand_operation_bytes(operation: dict[str, object]) -> bytes:

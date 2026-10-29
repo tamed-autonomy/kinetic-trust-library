@@ -19,7 +19,8 @@ _PREFIX = b"KTP/decision-geometry-v1\x00"
 
 @lru_cache(maxsize=1)
 def _geometry_validator():
-    from jsonschema import Draft202012Validator, FormatChecker
+    from .schema_formats import installed_format_checker
+    from jsonschema import Draft202012Validator
     from referencing import Registry, Resource
 
     base = files("kinetic_trust_library.v3").joinpath("schemas")
@@ -34,7 +35,7 @@ def _geometry_validator():
         (schema["$id"], Resource.from_contents(schema)) for schema in schemas
     )
     return Draft202012Validator(
-        schemas[0], registry=registry, format_checker=FormatChecker()
+        schemas[0], registry=registry, format_checker=installed_format_checker()
     )
 
 

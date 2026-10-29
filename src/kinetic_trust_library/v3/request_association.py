@@ -58,9 +58,10 @@ def _parse(raw):
 
 @lru_cache(maxsize=1)
 def _association_validator():
-    from jsonschema import Draft202012Validator, FormatChecker
+    from .schema_formats import installed_format_checker
+    from jsonschema import Draft202012Validator
     schema=json.loads(files("kinetic_trust_library.v3").joinpath("schemas/request-proof-association-v1.json").read_text("utf-8"))
-    return Draft202012Validator(schema,format_checker=FormatChecker())
+    return Draft202012Validator(schema,format_checker=installed_format_checker())
 
 
 @dataclass(frozen=True,slots=True,init=False)
