@@ -25,6 +25,7 @@ from .trust_proof_json import _parse_jcs_object
 from .demand_supplier import _digest
 from .demand_operation import digest_demand_operation
 from .installed_standing import NativeStandingAssessment
+from .installed_soul import NativeSoulAssessment
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +52,7 @@ class NativeCoreProjection:
     capacity: NativeCapacityProjection | None
     classified_demand: NativeClassifiedDemand | None
     standing_assessment: NativeStandingAssessment | None
+    soul_assessment: NativeSoulAssessment | None
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         raise TypeError("NativeCoreProjection values are derived by project_native_core()")
@@ -92,6 +94,7 @@ def _projection(
     capacity: NativeCapacityProjection | None,
     classified_demand: NativeClassifiedDemand | None = None,
     standing_assessment: NativeStandingAssessment | None = None,
+    soul_assessment: NativeSoulAssessment | None = None,
 ) -> NativeCoreProjection:
     result = object.__new__(NativeCoreProjection)
     for name, value in (
@@ -99,13 +102,14 @@ def _projection(
         ("risk", risk), ("capacity", capacity),
         ("classified_demand", classified_demand),
         ("standing_assessment", standing_assessment),
+        ("soul_assessment", soul_assessment),
     ):
         object.__setattr__(result, name, value)
     return result
 
 
 def project_classified_native_core(
-    soul: SoulGate, *, standing: NativeStandingAssessment,
+    soul: NativeSoulAssessment, *, standing: NativeStandingAssessment,
     factors: tuple[FactorEvidenceState, ...], context: NativeCoreContext,
     demand: NativeClassifiedDemand,
 ) -> NativeCoreProjection:
@@ -114,17 +118,23 @@ def project_classified_native_core(
     This remains a projection until standing authentication, final precision,
     proof acceptance and all remaining authorization prerequisites are composed.
     """
-    if type(soul) is not SoulGate:
-        raise ValidationError("native Soul gate is required")
-    if soul.state is not SoulGateState.CLEAR:
-        return _projection(soul, None, None, None)
-    if type(demand) is not NativeClassifiedDemand:
-        raise ValidationError("installed classified demand is required")
     if type(context) is not NativeCoreContext:
         raise ValidationError("installed native Core context is required")
+    if type(soul) is not NativeSoulAssessment:
+        raise ValidationError("installed Soul assessment is required")
+    profile = _parse_jcs_object(context.deployment_profile_bytes)
+    deployment_digest = _digest(profile, context.algorithm)
+    operation_digest = digest_demand_operation(_parse_jcs_object(context.operation_bytes), algorithm=context.algorithm)
+    if (soul.deployment_digest != deployment_digest or soul.operation_digest != operation_digest
+            or soul.evaluated_at != context.evaluated_at
+            or soul.required_frameworks != tuple(profile.get("soul_veto", {}).get("frameworks", ()))):
+        raise ValidationError("Soul assessment belongs to another Core context")
+    if soul.gate.state is not SoulGateState.CLEAR:
+        return _projection(soul.gate, None, None, None, soul_assessment=soul)
+    if type(demand) is not NativeClassifiedDemand:
+        raise ValidationError("installed classified demand is required")
     if type(standing) is not NativeStandingAssessment:
         raise ValidationError("installed standing assessment is required")
-    profile = _parse_jcs_object(context.deployment_profile_bytes)
     if (demand.deployment_digest != _digest(profile, context.algorithm)
             or demand.operation_digest != digest_demand_operation(_parse_jcs_object(context.operation_bytes), algorithm=context.algorithm)
             or demand.evaluated_at != context.evaluated_at):
@@ -138,9 +148,9 @@ def project_classified_native_core(
     except (KeyError, TypeError, AttributeError) as exc:
         raise ValidationError("Core profile factor weights are unavailable") from exc
     projected = project_native_core(
-        soul, standing=standing.base, factors=factors, weights=weights, demand=demand.demand,
+        soul.gate, standing=standing.base, factors=factors, weights=weights, demand=demand.demand,
     )
-    return _projection(soul, projected.standing, projected.risk, projected.capacity, demand, standing)
+    return _projection(soul.gate, projected.standing, projected.risk, projected.capacity, demand, standing, soul)
 
 
 __all__ = ["NativeCoreContext", "NativeCoreProjection", "project_native_core", "project_classified_native_core"]
