@@ -16,6 +16,7 @@ from .demand_operation import canonical_demand_operation_bytes, digest_demand_op
 from .demand_supplier import _digest
 from .root_lifecycle import _time
 from .trust_proof_json import _parse_jcs_object
+from .installed_repair import InstalledRepairVerifier,RepairAssessment
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +33,7 @@ class NativeStandingAssessment:
     deployment_digest: str
     operation_digest: str
     evaluated_at: int
+    repair: RepairAssessment | None
 
     def __init__(self, *args, **kwargs):
         raise TypeError("NativeStandingAssessment is derived by an installed standing verifier")
@@ -42,12 +44,17 @@ class InstalledStandingVerifier:
     deployment_profile_bytes: bytes
     adapter: object
     algorithm: str
+    repair_verifier: InstalledRepairVerifier | None = None
 
     def __post_init__(self):
         if (type(self.deployment_profile_bytes) is not bytes or self.algorithm not in ("sha256", "sha384")
                 or not callable(getattr(self.adapter, "verify", None))):
             raise ValidationError("installed standing verifier is invalid")
         _parse_jcs_object(self.deployment_profile_bytes)
+        if self.repair_verifier is not None and (type(self.repair_verifier) is not InstalledRepairVerifier
+                or self.repair_verifier.deployment_profile_bytes!=self.deployment_profile_bytes
+                or self.repair_verifier.algorithm!=self.algorithm):
+            raise ValidationError("repair and standing policies must share a deployment/digest algorithm")
 
     def evaluate(self, evidence: bytes, *, roots: AssessedRootSelection,
                  actual_operation: dict, evaluated_at: int) -> NativeStandingAssessment:
@@ -57,6 +64,10 @@ class InstalledStandingVerifier:
         operation = _parse_jcs_object(operation_bytes)
         profile = _parse_jcs_object(self.deployment_profile_bytes)
         deployment_digest = _digest(profile, self.algorithm)
+        repair=None
+        if self.repair_verifier is not None:
+            repair=self.repair_verifier.evaluate(actual_operation=operation,evaluated_at=evaluated_at,clock_healthy=True)
+            if not repair.reentry_eligible:raise ValidationError(repair.reason)
         root_context = _parse_jcs_object(roots.context_bytes)
         if (roots.evaluated_at != evaluated_at or roots.algorithm != self.algorithm
                 or root_context.get("deployment_digest") != deployment_digest
@@ -84,12 +95,13 @@ class InstalledStandingVerifier:
             if type(crisis) is not bool or (crisis and friction < Decimal("0.9")):
                 raise ValidationError("standing adversity evidence is inconsistent")
             extra = body["additional_ceilings"]
-            if type(extra) is not dict or set(extra) & {"generation", "ial", "trajectory", "adversity", "external_root_missing"}:
+            if type(extra) is not dict or set(extra) & {"generation", "ial", "trajectory", "adversity", "external_root_missing","repair_reentry"}:
                 raise ValidationError("additional ceilings cannot replace built-in ceilings")
             ceilings = {**extra, "generation": (25,35,45,55,65,75,85)[generation] if generation < 7 else 100,
                         "ial": {1:40,2:80,3:95}[ial],
                         "trajectory": 50 if trajectory < 1000 else 70 if trajectory < 10000 else 100,
                         "adversity": 100 if crisis else 90 if friction > Decimal("0.7") else 80 if friction > Decimal("0.5") else 60}
+            if repair is not None and repair.standing_ceiling is not None:ceilings["repair_reentry"]=repair.standing_ceiling
             base = calculate_native_base_trust(
                 por_contribution=body["por_contribution"], root_score=0 if roots.selected is None else
                     Fraction(roots.selected.score_numerator,roots.selected.score_denominator),
@@ -101,7 +113,7 @@ class InstalledStandingVerifier:
                             ("authenticated_body_bytes", authenticated.body_bytes),
                             ("deployment_digest", deployment_digest),
                             ("operation_digest", digest_demand_operation(operation, algorithm=self.algorithm)),
-                            ("evaluated_at", evaluated_at)):
+                            ("evaluated_at", evaluated_at),("repair",repair)):
             object.__setattr__(result, name, value)
         return result
 

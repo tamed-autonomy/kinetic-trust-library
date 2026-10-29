@@ -117,6 +117,7 @@ class ReadinessTests(unittest.TestCase):
         ordinary.update(sub=operation["actor"],aud=operation["audience"],iat=998,exp=1008,jti="readiness-proof")
         ordinary["ktp"].update(subject_kind="software_agent",root_instrument=dict(kind="none",status="none",reason="missing"))
         ordinary["ktp"]["applicable_ceilings"].append(dict(ceiling="external_root_missing",value=70))
+        ordinary["ktp"]["applicable_ceilings"].append(dict(ceiling="repair_reentry",value=75))
         ordinary_key={**key,"kid":"ordinary-key","issuer":ordinary["iss"],"zone":"zone:alpha","role":"trust-proof-oracle"}
         signing=(segment(rfc8785.dumps(dict(alg="EdDSA",kid=ordinary_key["kid"],typ="ktp-trust-proof+jwt")))+"."+segment(rfc8785.dumps(ordinary))).encode()
         ordinary_compact=signing.decode()+"."+segment(private.sign(signing))
@@ -270,6 +271,43 @@ class ReadinessTests(unittest.TestCase):
         with self.assertRaises(ValidationError):whole(tokens=(("unknown",first["sign"]()),))
         with self.assertRaises(ValidationError):replace(native,adjudication_verifiers=(first["verifier"],first["verifier"]))
         with self.assertRaises(ValidationError):replace(native,adjudication_verifier=first["verifier"])
+        native=no_norm
+        from tests.unit.core.test_v3_installed_repair import fixture as repair_fixture
+        repair_verifier,repair_state,_,_,_=repair_fixture(operation,deployment)
+        native=replace(no_norm,repair_verifier=repair_verifier)
+        repair_state["breaches"][0]["standing_at_breach"]="40"
+        repair_state["breaches"][0]["record_facts"]["standing_at_breach"]="40"
+        # The accepted ordinary proof exceeds this repaired standing ceiling of 30.
+        self.assertEqual(whole().reason,"REPAIR_STANDING")
+        repair_state["breaches"][0]["standing_at_breach"]="100"
+        repair_state["breaches"][0]["record_facts"]["standing_at_breach"]="100"
+        def set_repair_ceiling(value):
+            nonlocal ordinary_compact,association_bytes
+            ordinary["ktp"]["applicable_ceilings"]=[item for item in ordinary["ktp"]["applicable_ceilings"] if item["ceiling"]!="repair_reentry"]
+            if value is not None:ordinary["ktp"]["applicable_ceilings"].append(dict(ceiling="repair_reentry",value=value))
+            message=(segment(rfc8785.dumps(dict(alg="EdDSA",kid=ordinary_key["kid"],typ="ktp-trust-proof+jwt")))+"."+segment(rfc8785.dumps(ordinary))).encode()
+            ordinary_compact=message.decode()+"."+segment(private.sign(message))
+            association_body=json.loads(association_bytes);association_body["proof_digest"]=digest_complete_proof(ordinary_compact,algorithm="sha256")
+            association_bytes=rfc8785.dumps(association_body);geometry["association"]=association_body
+            decision["proof_digest"]="sha256:"+hashlib.sha256(ordinary_compact.encode("ascii")).hexdigest()
+            seal_decision()
+        set_repair_ceiling(None)
+        self.assertEqual(whole().reason,"REPAIR_CEILING")
+        set_repair_ceiling(76)
+        self.assertEqual(whole().reason,"REPAIR_CEILING")
+        set_repair_ceiling(75)
+        # Current assessment at 940 predates the reconciliation anchor at 950.
+        self.assertEqual(whole().reason,"REPAIR_READINESS_STALE")
+        repair_state["breaches"][0]["breached_at"]=850
+        repair_state["breaches"][0]["record_facts"].update(breached_at=850,anchored_at=900)
+        repaired=whole()
+        self.assertEqual(repaired.reason,"NATIVE_PREREQUISITES_VALID")
+        self.assertTrue(repaired.repair.reentry_eligible)
+        self.assertEqual(repaired.canonical_geometry_bytes,combined.canonical_geometry_bytes)
+        repair_state["expires_at"]=1002
+        self.assertEqual(whole().expires_at,1002)
+        repair_state["breaches"][0]["record_facts"]=None
+        self.assertEqual(whole().reason,"REPAIR_UNRECONCILED")
         native=no_norm
         from kinetic_trust_library.v3.human_eligibility import InstalledHumanEligibilityVerifier,AuthenticatedHumanContext,combine_human_origin
         class HumanSource:

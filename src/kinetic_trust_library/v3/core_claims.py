@@ -55,6 +55,15 @@ class NativeCoreClaimsSource:
             raise ValidationError("proof audience differs from the actual operation")
         deployment = _digest(profile, self.context.algorithm)
         invocation = digest_demand_operation(operation, algorithm=self.context.algorithm)
+        repair=self.standing.repair
+        if (self.context.repair_profile_bytes is not None)!=(repair is not None):
+            raise ValidationError("Core claims disagree on repair policy selection")
+        if repair is not None:
+            if (repair.profile_bytes!=self.context.repair_profile_bytes or not repair.reentry_eligible
+                    or repair.deployment_digest!=deployment or repair.operation_digest!=invocation
+                    or repair.evaluated_at!=self.context.evaluated_at or repair.zone_id!=metadata["zone"]
+                    or type(metadata["exp"]) is not int or metadata["exp"]>repair.expires_at):
+                raise ValidationError("Core proof cannot omit, contradict or outlive repair evidence")
         boundary=self.core.boundary_assessment
         if ("boundary" in profile)!=(boundary is not None):
             raise ValidationError("Core claims disagree on boundary selection")

@@ -774,3 +774,52 @@ boundary and matching retained ingress parent/epoch. Passing the boundary
 merely allows ordinary evaluation to continue; it grants no standing or execution
 authority by itself. The authenticated source record is an internal adapter
 projection, not a universal RFC transport format.
+
+### Repair and re-entry records
+
+`InstalledRepairVerifier` consumes an independently authenticated complete
+current inventory of applicable actor/lineage breaches, including inherited
+post-breach descendant obligations. Its source owns actual lineage and party
+terminators, the required parties (including governing authority where only the
+zone is affected), current anchor verification under the current cryptographic
+profile, independence from every party at the record date, attendance and harm
+declarations. A retired record signature does not invalidate a currently valid
+anchor; a lawful disposition does not by itself reopen a reconciliation.
+These facts are a typed internal projection, not a new Flight Recorder wire.
+
+`project_reentry` validates the matching breach anchor, parties, terminator's
+acknowledgment, explicit residual harm and verifier independence. A declined
+party requires a published/followed route and an open right to attend/amend.
+Missing or invalid records leave the inventory unreconciled. The selected
+reference policy `fractional-reentry-with-additive-unrepaired-raise-v1` computes
+the exact ceiling as standing-at-breach times one minus the declared delta,
+with the previous lineage delta as a floor and the declared positive raise for
+unrepaired harm. It caps delta at one. This is an explicitly selected additive
+policy, not a universal RFC formula. Mandatory hard classes include acting
+outside a signed decision, withdrawal for cause, misattestation, and seeking
+reconciliation without attending; none may declare a delta below one tenth.
+No grace period, new sponsor or favorable token substitutes for a record.
+
+Select the installed repair verifier on `InstalledStandingVerifier` and its
+exact `profile_bytes` as `NativeCoreContext.repair_profile_bytes`. Standing
+rejects unreconciled re-entry and applies `repair_reentry` to E_base itself,
+before risk multiplication. Callers cannot replace that reserved ceiling in
+standing evidence. Core/claims reject asymmetric selection, foreign invocation,
+zone mismatch or support that expires before the proof. The assessment remains
+available at `NativeStandingAssessment.repair`.
+
+The native request facade can select the same deployment's repair verifier.
+It checks current re-entry status before geometry/readiness, requires both
+numerical standing compliance and the declared applicable repair ceiling in
+the accepted proof, and requires a fresh readiness assessment strictly after
+the latest reconciliation anchor time. The result retains the assessment as
+`NativeEvaluationResult.repair` and cannot outlive it. Final public composition
+must install all applicable policies; omission of an optional component from a
+partial fixture is not a complete repair conformance claim.
+
+This checkpoint implements record closure, the re-entry cost and current
+readiness/standing enforcement. Earned lifting by post-record ordinary acts,
+sponsorship restrictions, ambient breach/capacity/criticality and rule-repair
+amendments remain separate work. Neither an assessment nor a passing test
+proves that a real ceremony, attendance, anchoring or durable breach closure
+occurred; those are provider/Service responsibilities.

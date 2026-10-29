@@ -1,5 +1,29 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 repair precondition checkpoint
+
+Implemented anchored-reconciliation prerequisites, exact declared fractional
+re-entry ceilings and selected native standing/readiness integration against
+`e1f124b64de3234bc96f94fcd7c8ee612d965517`. Retained all 41 source vectors at
+`spec/proposals/breach-reconciliation-v1.json`, SHA-256
+`6caeef6485b362d6f417bf744888bc0ef4e216f1d949a6e8c423ab6cb9212a6a`.
+The additive residual-harm raise is a named internal reference policy, not a
+new RFC-mandated formula or wire object.
+
+Supplier review identified and verified two corrections: seeking reconciliation
+without attending is a mandatory hard entry, and a numerically compliant proof
+must also declare its applicable repair ceiling. Tests re-sign real fixture
+proofs and readiness decisions for the omitted/looser ceiling cases. Current
+inventory, anchor/independence/attendance authority and lineage truth are
+modeled source inputs; no runtime repair-ceremony claim follows. Earned ceiling
+lifting, sponsorship/ambient restrictions and complete 41-vector coverage remain
+pending.
+
+Validation: the full suite passes 951 tests after both corrections. Eleven
+focused repair/readiness tests pass from the final built wheel. Without optional
+proof dependencies, four pure repair tests pass and five installed cases skip;
+module imports remain lazy.
+
 ## 2026-10-29 boundary checkpoint
 
 Composed the required five-cell boundary declaration from RFC proposal

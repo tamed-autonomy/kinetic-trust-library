@@ -15,6 +15,7 @@ from kinetic_trust_library.proofs._jwt import _decode_segment
 from .root_lifecycle import _time
 from .adjudication import InstalledAdjudicationVerifier, AdjudicationAssessment
 from .boundary import InstalledBoundaryVerifier, BoundaryAssessment
+from .installed_repair import InstalledRepairVerifier,RepairAssessment
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -30,6 +31,7 @@ class NativeEvaluationResult:
     adjudication: AdjudicationAssessment | None
     adjudications: tuple[AdjudicationAssessment, ...]
     boundary: BoundaryAssessment | None
+    repair: RepairAssessment | None
 
     def __init__(self,*args,**kwargs):
         raise TypeError("native evaluation results are derived by an installed verifier")
@@ -45,6 +47,7 @@ class InstalledNativeEvaluationVerifier:
     adjudication_verifier: InstalledAdjudicationVerifier | None = None
     adjudication_verifiers: tuple[InstalledAdjudicationVerifier, ...] = ()
     boundary_verifier: InstalledBoundaryVerifier | None = None
+    repair_verifier: InstalledRepairVerifier | None = None
 
     def __post_init__(self):
         if (type(self.association_verifier) is not InstalledRequestAssociationVerifier
@@ -81,6 +84,9 @@ class InstalledNativeEvaluationVerifier:
             if proof_context["ring_depth"]>0 and self.boundary_verifier.enclosing_deployment_profile_bytes is None:
                 raise ValidationError("nested receiving boundary requires enclosing resources")
         elif self.boundary_verifier is not None:raise ValidationError("boundary policy requires a declared boundary")
+        if self.repair_verifier is not None and (type(self.repair_verifier) is not InstalledRepairVerifier
+                or self.repair_verifier.deployment_profile_bytes!=deployment):
+            raise ValidationError("repair policy differs from native deployment")
 
     def verify(self, request_bytes: bytes, association_bytes: bytes, compact_proof: str, *,
                decision_bytes: bytes, attestation_bytes: bytes, invocation_evidence: bytes,
@@ -106,12 +112,13 @@ class InstalledNativeEvaluationVerifier:
         adjudication=None
         adjudications=()
         boundary=None
+        repair=None
         def result(reason,supervision="silent_veto",expiry=None):
             value=object.__new__(NativeEvaluationResult)
             for name,member in (("reason",reason),("checked_at",now),("supervision",supervision),
                 ("tightened_constraints_bytes",constraints),("canonical_geometry_bytes",raw),
                 ("association",association),("readiness",readiness),("expires_at",expiry),("adjudication",adjudication),
-                ("adjudications",adjudications),("boundary",boundary)):
+                ("adjudications",adjudications),("boundary",boundary),("repair",repair)):
                 object.__setattr__(value,name,member)
             return value
         if association.reason!="RB_BOUND":return result(association.reason)
@@ -130,6 +137,18 @@ class InstalledNativeEvaluationVerifier:
             elif _parse_jcs_object(self.association_verifier.proof_verifier.expected_context_bytes)["ring_depth"]>0:
                 return result("BOUNDARY_TOPOLOGY")
             if not boundary.allowed:return result(boundary.reason)
+        if self.repair_verifier is not None:
+            operation={name:value for name,value in actual.items() if name not in ("version","demand","classification_profile")}
+            repair=self.repair_verifier.evaluate(actual_operation=operation,evaluated_at=now,clock_healthy=clock_healthy)
+            if repair.zone_id!=self.readiness_verifier.readiness_verifier.receiving_zone:return result("REPAIR_ZONE")
+            if not repair.reentry_eligible:return result(repair.reason)
+            current_claims=_parse_jcs_object(association.proof_verification.authenticated_payload_bytes)
+            if repair.standing_ceiling is not None and Decimal(str(current_claims["ktp"]["e_base"]))>repair.standing_ceiling:
+                return result("REPAIR_STANDING")
+            if repair.standing_ceiling is not None:
+                declared=[item for item in current_claims["ktp"]["applicable_ceilings"] if item["ceiling"]=="repair_reentry"]
+                if len(declared)!=1 or Decimal(str(declared[0]["value"]))>repair.standing_ceiling:
+                    return result("REPAIR_CEILING")
         if self.association_verifier.crosses_trust_boundary:
             binding=association.carrier_binding
             if binding is None or binding.verified_at!=now or geometry_body_bytes is not None:
@@ -179,9 +198,13 @@ class InstalledNativeEvaluationVerifier:
         readiness=self.readiness_verifier.verify(decision_bytes,attestation_bytes,association,
             evaluated_at=now,clock_healthy=clock_healthy)
         if not readiness.valid:return result(readiness.reason)
+        if repair is not None and repair.readiness_after is not None:
+            attestation=_parse_jcs_object(readiness.readiness.attestation_bytes)
+            if attestation["assessed_at"]<=repair.readiness_after:return result("REPAIR_READINESS_STALE")
         claims=_parse_jcs_object(readiness.proof_verification.authenticated_payload_bytes)
         expiry=min(expiry,readiness.expires_at,claims["exp"])
         if boundary is not None:expiry=min(expiry,boundary.expires_at)
+        if repair is not None:expiry=min(expiry,repair.expires_at)
         if now>=expiry:return result("NATIVE_EVALUATION_EXPIRED")
         policies=self.adjudication_verifiers if self.adjudication_verifier is None else (self.adjudication_verifier,)
         if policies:

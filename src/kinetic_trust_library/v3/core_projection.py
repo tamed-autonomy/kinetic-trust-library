@@ -29,6 +29,7 @@ from .installed_soul import NativeSoulAssessment
 from .installed_environment import NativeEnvironmentAssessment
 from .enclosure import EnclosureInputs, NativeEnclosureAssessment, _profile as _enclosure_profile
 from .boundary import BoundaryAssessment
+from .installed_repair import _profile as _repair_profile
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +39,7 @@ class NativeCoreContext:
     evaluated_at: int
     algorithm: str
     enclosure_profile_bytes: bytes | None = None
+    repair_profile_bytes: bytes | None = None
 
     def __post_init__(self):
         if (type(self.deployment_profile_bytes) is not bytes or type(self.operation_bytes) is not bytes
@@ -50,6 +52,9 @@ class NativeCoreContext:
             if type(self.enclosure_profile_bytes) is not bytes:
                 raise ValidationError("enclosure profile must be immutable installed bytes")
             _enclosure_profile(self.enclosure_profile_bytes)
+        if self.repair_profile_bytes is not None:
+            if type(self.repair_profile_bytes) is not bytes:raise ValidationError("repair profile must be immutable installed bytes")
+            _repair_profile(self.repair_profile_bytes)
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -173,6 +178,13 @@ def project_classified_native_core(
             or standing.operation_digest != demand.operation_digest
             or standing.evaluated_at != context.evaluated_at):
         raise ValidationError("standing belongs to another Core context")
+    repair=standing.repair
+    if context.repair_profile_bytes is not None:
+        if (repair is None or repair.profile_bytes!=context.repair_profile_bytes or not repair.reentry_eligible
+                or repair.deployment_digest!=deployment_digest or repair.operation_digest!=operation_digest
+                or repair.evaluated_at!=context.evaluated_at or repair.expires_at<=context.evaluated_at):
+            raise ValidationError("selected repair profile requires current bound standing evidence")
+    elif repair is not None:raise ValidationError("repair evidence requires an installed Core profile")
     if type(environment) is not NativeEnvironmentAssessment:
         raise ValidationError("installed environment assessment is required")
     if (environment.deployment_digest != demand.deployment_digest
