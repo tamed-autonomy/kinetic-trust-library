@@ -180,6 +180,34 @@ Level 3 because the ordinary proof verifier does not yet establish that
 cryptographic profile. Threshold, hybrid, key-custody and broader conformance
 requirements remain separate implementation gates.
 
+## Combined native evaluation
+
+`InstalledNativeEvaluationVerifier(association_verifier, readiness_verifier,
+local_geometry_verifier=None, local_evaluated_at=None,
+local_profile_expires_at=None)` composes the paths above. Association, readiness
+and local geometry must use the same installed ordinary proof verifier. Local
+use requires an independently installed geometry verifier, trusted evaluation
+time and profile-expiry ceiling. Protected use consumes the exact signed carrier
+retained by request association and rejects a supplied unsigned alternative.
+
+`verify` takes the canonical request and association, exact compact proof,
+readiness decision/attestation bytes, actual invocation evidence, current time
+and clock health; local use additionally supplies the geometry body bytes.
+The sealed `NativeEvaluationResult` retains association, current readiness/full
+proof/root evidence, original canonical geometry, effective supervision and
+immutable constraint bytes. Its expiry is the earliest record/profile, readiness
+sidecar or ordinary-proof expiry. Consumer projections must preserve all producer
+ceilings at the same or lower maxima and cannot lower supervision.
+
+`NATIVE_PREREQUISITES_VALID` means these independently installed prerequisites
+were verified for this invocation and snapshot. It is not execution permission.
+Readiness failure returns `silent_veto` while retaining verified constraints;
+record mismatch stops before readiness lookup. The service still establishes
+remaining ordinary authorization, applicable human approval/supervision,
+execution budgets and target semantics, and atomically fences source state with
+protected effects. No positive cached result permits continuing after lost
+conditions or expiry.
+
 ## Remaining release gates
 
 The source adapters in the integration tests are explicitly fixtures. Real

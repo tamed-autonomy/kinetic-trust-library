@@ -14,14 +14,14 @@
 - Library logic stays deterministic, immutable, and service independent. Providers authenticate and populate input evidence.
 - `moment_criticality` is demand-side and is never a sixth weighted Risk Factor.
 - An unobservable factor has no measured value; its decision stress is 1 while unknownness remains visible.
-- The unresolved PR #164 R/E precision discrepancy and PR #195 schema conflict cannot be silently resolved by Library code.
+- PR #164 now confirms exact intermediate R/E. The native development bundle explicitly composes its v3 Risk Factors schema with the pinned proof/root schemas; original source snapshots remain intact. Repeating root scores and lossless JCS wire-number policy remain separate reconciliation gates.
 
 ## Tasks
 
 1. **Compose the native risk boundary — implemented provisionally.** Add an immutable five-factor assessment that consumes sealed factor evidence states and exactly five weights. Preserve `measured_risk = None` when any factor is unobservable while calculating a separate restrictive `decision_risk`. Test complete, missing, duplicate and sixth-factor inputs against pinned proposal cases.
 2. **Replace the Core input model — in progress.** Define v3 Soul, standing and demand inputs with authenticated-source contracts. Exclude the v2.1 request-supplied moment criticality and sponsor-reference inference. Test missing and veto states before connecting arithmetic. Soul query-state projection, the PR #202 preclassification operation digest, and deterministic demand value/declaration/time/provenance/binding prechecks are implemented. Framework response authenticity, supplier authentication, independent source/provenance verification, and the installed demand formula remain prerequisites.
 3. **Assemble Core stage order — non-authorizing projection implemented.** Evaluate Soul first, then standing/evidence/risk, capacity and envelope. Early stops must leave later values uncomputed. The native projection returns no later stage after Soul veto or unknownness, requires a derived base-trust result before risk, and carries measured versus restrictive E separately. It does not authenticate the source contributions or classify A. Hold the authorizing result behind the RFC precision decision, demand/standing evidence verification and accepted proof schema.
-4. **Replace native proof and record surfaces.** Compose the tested v3 proof stages with the corrected merged schema/root union, then bind the actual request and Decision Geometry. Reject v2 proof types and old record shapes on the native path.
+4. **Native proof and record surfaces — implemented provisionally.** Full ordered verification/issuance, actual request/replay/carriage binding, native Core-to-claims/geometry, current root/readiness and combined conditional evaluation now exist. Native v3 does not select a v2 fallback. Remaining selected profiles and source contracts are tracked in the release-readiness audit.
 5. **Cut over the package.** Move accepted v3 APIs to the primary public package, remove incompatible v2.1 exports/behavior, refresh migration and traceability docs, update version and RFC pin from the final tag, and run full package/Service compatibility checks.
 
 ## Immediate review focus

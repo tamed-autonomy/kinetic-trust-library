@@ -14,9 +14,9 @@
 
 ## Current dependency order
 
-1. Complete whole-evaluation authorization composition around native Core/proof/record/carrier and the new current readiness/sidecar verifier. Signed readiness is bound to ordinary request association and rechecked through a live resolver on each use. Record production preserves grant/prior boundaries and restrictive unknowns; none of these modules alone grants permission.
+1. The native combined prerequisite verifier now composes ordinary request association, local or signed-carrier geometry, current readiness/sidecar and retained proof/root evidence. It preserves tightening, veto and expiry boundaries without execution permission. Finish the remaining Library contract inventory and consuming Service's ordinary authorization/fencing integration; do not treat a valid component result as a complete deployment claim.
 2. Finish remaining proof arithmetic/source invariants, nested ingress and stronger cryptographic profiles. Current-use root refresh and signed root/witness/event fixtures now exist; production source/fencing validation remains external integration work.
-3. Compose accepted proof, actual request, durable replay boundary, prior supervision, grants/readiness and Decision Geometry into one immutable evaluation result, then replace the public v2 APIs. Product adapters retain persistence, source access and execution ownership.
+3. Prepare public API replacements, migration and traceability for the immutable native evaluation result. Product adapters retain persistence, source access and execution ownership. Reconcile other selected v3 Library contracts (trajectory, person/eligibility/privacy and topology) before declaring pre-tag implementation complete.
 4. Run the Library and Service suites against the final RFC tag, update the RFC pin and package version, and exercise installed-wheel examples.
 
 Validation results belong to the individual pushed checkpoints; the latest count is not itself evidence of production source truth or complete RFC coverage. The package remains version 2.1.0 pending the deliberate public v3 cutover.

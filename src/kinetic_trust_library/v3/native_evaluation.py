@@ -1,0 +1,127 @@
+"""Compose native request, geometry and current readiness prerequisites.
+
+A valid result is an immutable conditional evaluation, never execution
+permission. Products still establish remaining ordinary authorization and fence
+all current source state with protected effects. No legacy format is selected.
+"""
+from dataclasses import dataclass
+from decimal import Decimal
+from kinetic_trust_library.errors import ValidationError
+from .request_association import InstalledRequestAssociationVerifier,RequestAssociationResult
+from .readiness_decision import InstalledReadinessDecisionVerifier,ReadinessDecisionResult
+from .geometry_verifier import InstalledGeometryVerifier
+from .trust_proof_json import _parse_jcs_object
+from kinetic_trust_library.proofs._jwt import _decode_segment
+from .root_lifecycle import _time
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class NativeEvaluationResult:
+    reason: str
+    checked_at: int
+    supervision: str
+    tightened_constraints_bytes: bytes | None
+    canonical_geometry_bytes: bytes | None
+    association: RequestAssociationResult
+    readiness: ReadinessDecisionResult | None
+    expires_at: int | None
+
+    def __init__(self,*args,**kwargs):
+        raise TypeError("native evaluation results are derived by an installed verifier")
+
+
+@dataclass(frozen=True, slots=True)
+class InstalledNativeEvaluationVerifier:
+    association_verifier: InstalledRequestAssociationVerifier
+    readiness_verifier: InstalledReadinessDecisionVerifier
+    local_geometry_verifier: InstalledGeometryVerifier | None = None
+    local_evaluated_at: int | None = None
+    local_profile_expires_at: int | None = None
+
+    def __post_init__(self):
+        if (type(self.association_verifier) is not InstalledRequestAssociationVerifier
+                or type(self.readiness_verifier) is not InstalledReadinessDecisionVerifier
+                or self.association_verifier.proof_verifier is not self.readiness_verifier.proof_verifier):
+            raise ValidationError("native evaluation requires one installed ordinary proof policy")
+        if not self.association_verifier.crosses_trust_boundary:
+            if (type(self.local_geometry_verifier) is not InstalledGeometryVerifier
+                    or self.local_geometry_verifier.proof_verifier is not self.association_verifier.proof_verifier
+                    or not _time(self.local_evaluated_at) or not _time(self.local_profile_expires_at)
+                    or self.local_evaluated_at>=self.local_profile_expires_at):
+                raise ValidationError("local native geometry requires an installed verifier, evaluation time and profile expiry")
+        elif any(v is not None for v in (self.local_geometry_verifier,self.local_evaluated_at,self.local_profile_expires_at)):
+            raise ValidationError("protected carriage cannot select a local unsigned geometry alternative")
+
+    def verify(self, request_bytes: bytes, association_bytes: bytes, compact_proof: str, *,
+               decision_bytes: bytes, attestation_bytes: bytes, invocation_evidence: bytes,
+               now: int, clock_healthy: bool, geometry_body_bytes: bytes | None = None) -> NativeEvaluationResult:
+        import rfc8785
+        if not _time(now):raise ValidationError("native evaluation requires trusted current time")
+        association=self.association_verifier.verify(request_bytes,association_bytes,compact_proof,
+            invocation_evidence=invocation_evidence,now=now,clock_healthy=clock_healthy)
+        raw=constraints=None
+        readiness=None
+        def result(reason,supervision="silent_veto",expiry=None):
+            value=object.__new__(NativeEvaluationResult)
+            for name,member in (("reason",reason),("checked_at",now),("supervision",supervision),
+                ("tightened_constraints_bytes",constraints),("canonical_geometry_bytes",raw),
+                ("association",association),("readiness",readiness),("expires_at",expiry)):
+                object.__setattr__(value,name,member)
+            return value
+        if association.reason!="RB_BOUND":return result(association.reason)
+        if self.association_verifier.crosses_trust_boundary:
+            binding=association.carrier_binding
+            if binding is None or binding.verified_at!=now or geometry_body_bytes is not None:
+                return result("DG_BINDING")
+            raw=binding.canonical_geometry_bytes
+            carrier=_parse_jcs_object(_decode_segment(binding.compact_carrier.split(".")[1],name="verified geometry payload"))
+            expiry=carrier["expires_at"]
+        else:
+            if not self.local_evaluated_at<=now<self.local_profile_expires_at:
+                return result("DG_CONTEXT")
+            if type(geometry_body_bytes) is not bytes:return result("DG_BINDING")
+            verified=self.local_geometry_verifier.verify(geometry_body_bytes,evaluated_at=self.local_evaluated_at)
+            if verified.reason!="DG_VALID":return result(verified.reason)
+            raw=verified.canonical_body_bytes
+            expiry=self.local_profile_expires_at
+        body=_parse_jcs_object(raw)
+        actual=_parse_jcs_object(association.canonical_request_bytes)
+        if (rfc8785.dumps(body["association"])!=association.canonical_association_bytes
+                or any(body[name]!=actual[name] for name in ("subject","actor","audience"))):
+            return result("DG_BINDING")
+        projected=body.get("consumer_result",body["result"])
+        levels=("stable","metacognitive","assisted","regulated","silent_veto")
+        capacity=body.get("capacity")
+        if capacity is not None:
+            claims=_parse_jcs_object(association.proof_verification.authenticated_payload_bytes)
+            a,e=Decimal(str(capacity["A"])),Decimal(str(capacity["E"]))
+            if a!=Decimal(str(actual["demand"]["value"])) or e>Decimal(str(claims["ktp"]["e_trust"])):
+                return result("DG_INPUTS")
+            relation="zero" if e==0 else "over" if a>e else "within"
+            if capacity["relation"]!=relation or (e==0 or a>=e) and body["result"]["supervision"]!="silent_veto":
+                return result("DG_ORDER")
+            if not capacity["capacityKnown"] and levels.index(body["result"]["supervision"])<levels.index("assisted"):
+                return result("DG_CONSTRAINTS")
+        def ceilings(value):
+            items=value["tightenedConstraints"]["ceilings"]
+            values={item["magnitude"]:Decimal(str(item["max"])) for item in items}
+            return values if len(values)==len(items) else None
+        producer_caps,consumer_caps=ceilings(body["result"]),ceilings(projected)
+        if (producer_caps is None or consumer_caps is None
+                or projected["tightenedConstraints"]["profile"]!=body["evaluation_profile"]["id"]
+                or body["result"]["tightenedConstraints"]["profile"]!=body["evaluation_profile"]["id"]
+                or levels.index(projected["supervision"])<levels.index(body["result"]["supervision"])
+                or any(name not in consumer_caps or consumer_caps[name]>limit for name,limit in producer_caps.items())):
+            return result("DG_CONSTRAINTS")
+        constraints=rfc8785.dumps(projected["tightenedConstraints"])
+        if projected["supervision"]=="silent_veto":return result("NATIVE_EVALUATION_RESTRICTED")
+        readiness=self.readiness_verifier.verify(decision_bytes,attestation_bytes,association,
+            evaluated_at=now,clock_healthy=clock_healthy)
+        if not readiness.valid:return result(readiness.reason)
+        claims=_parse_jcs_object(readiness.proof_verification.authenticated_payload_bytes)
+        expiry=min(expiry,readiness.expires_at,claims["exp"])
+        if now>=expiry:return result("NATIVE_EVALUATION_EXPIRED")
+        return result("NATIVE_PREREQUISITES_VALID",projected["supervision"],expiry)
+
+
+__all__=["InstalledNativeEvaluationVerifier","NativeEvaluationResult"]

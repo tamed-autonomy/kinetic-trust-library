@@ -13,9 +13,12 @@ from .demand_classification import InstalledDemandClassifier, NativeClassifiedDe
 from .native_envelope import NativeEnvelopeThresholds, NativeEnvelopeProjection, project_native_envelope
 from .evidence_state import FactorEvidenceState, assess_required_factor
 from .soul import SoulGate, SoulGateState, SoulQueryState, assess_soul_queries
+from .native_evaluation import InstalledNativeEvaluationVerifier, NativeEvaluationResult
 
 
 __all__ = (
+    "InstalledNativeEvaluationVerifier",
+    "NativeEvaluationResult",
     "FactorEvidenceState",
     "NativeCorePreflight",
     "NativeCapacityProjection",

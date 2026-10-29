@@ -169,6 +169,79 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(current.reason,"READINESS_DECISION_VALID")
         self.assertEqual(current.proof_verification.root_verification.checked_at,1001)
         state["checked_at"]=1000
+        from kinetic_trust_library.v3 import InstalledNativeEvaluationVerifier
+        from kinetic_trust_library.v3.geometry_verifier import InstalledGeometryVerifier,AuthenticatedGeometryReproduction
+        geometry=json.loads((root/"spec/proposals/decision-geometry-v1.json").read_text())["bodies"]["complete"]
+        geometry.update(evaluated_at=1000,ktp_release="unreleased-v3.0.0",subject=operation["subject"],actor=operation["actor"],
+            audience=operation["audience"],association=json.loads(association_bytes))
+        class Reproduction:
+            def reproduce(self,*,evaluated_at):
+                return AuthenticatedGeometryReproduction(rfc8785.dumps(geometry),actual_bytes,ordinary_compact,True)
+        gv=InstalledGeometryVerifier(Reproduction(),pv,"sha256")
+        av=InstalledRequestAssociationVerifier(Invocation(),pv,Replay(),"sha256")
+        native=InstalledNativeEvaluationVerifier(av,dv,gv,1000,1006)
+        def whole(body=None):
+            return native.verify(actual_bytes,association_bytes,ordinary_compact,
+                decision_bytes=rfc8785.dumps(decision),attestation_bytes=rfc8785.dumps(attestation),
+                invocation_evidence=b"fixture-actual-invocation",now=1000,clock_healthy=True,
+                geometry_body_bytes=rfc8785.dumps(geometry if body is None else body))
+        combined=whole()
+        self.assertEqual(combined.reason,"NATIVE_PREREQUISITES_VALID")
+        self.assertEqual(combined.supervision,"stable")
+        self.assertEqual(combined.expires_at,1006)
+        self.assertEqual(combined.readiness.proof_verification.root_verification.checked_at,1000)
+        state["status"]="revoked"
+        restricted=whole()
+        self.assertEqual(restricted.supervision,"silent_veto")
+        self.assertEqual(restricted.reason,"READINESS_INVALID")
+        self.assertEqual(restricted.tightened_constraints_bytes,combined.tightened_constraints_bytes)
+        state["status"]="active"
+        calls=adapter.calls
+        wrong={**geometry,"association":{**geometry["association"],"request_digest":d("different-request")}}
+        self.assertEqual(whole(wrong).reason,"DG_BINDING")
+        self.assertEqual(adapter.calls,calls)
+        geometry["gates"]["consumer"]="passed"
+        geometry["consumer_result"]={"supervision":"stable","tightenedConstraints":{
+            "profile":geometry["evaluation_profile"]["id"],"ceilings":[{"magnitude":"max_calls","max":9}]}}
+        self.assertEqual(whole().reason,"DG_CONSTRAINTS")
+        geometry["consumer_result"]["supervision"]="assisted"
+        geometry["consumer_result"]["tightenedConstraints"]["ceilings"][0]["max"]=5
+        tightened=whole()
+        self.assertEqual(tightened.supervision,"assisted")
+        self.assertEqual(json.loads(tightened.tightened_constraints_bytes)["ceilings"][0]["max"],5)
+        geometry.pop("consumer_result");geometry["gates"]["consumer"]="not_evaluated"
+        geometry["capacity"]["capacityKnown"]=False
+        self.assertEqual(whole().reason,"DG_CONSTRAINTS")
+        geometry["capacity"]["capacityKnown"]=True
+        geometry["capacity"]["E"]=46
+        self.assertEqual(whole().reason,"DG_INPUTS")
+        geometry["capacity"]["E"]=45
+        geometry["capacity"]["A"]=34
+        self.assertEqual(whole().reason,"DG_INPUTS")
+        geometry["capacity"]["A"]=35
+        from kinetic_trust_library.v3.geometry_carrier import InstalledGeometryCarrierVerifier
+        from kinetic_trust_library.v3.geometry_issuance import InstalledGeometryCarrierIssuer
+        from kinetic_trust_library.v3.carrier_association import AssociationGeometryCarrier
+        carrier_key={**key,"kid":"geometry-key","curve":"Ed25519","role":"decision-geometry-evaluator",
+            "issuer":geometry["evaluator"],"audience":operation["audience"]}
+        carrier_context=rfc8785.dumps(dict(identity=dict(evaluator=geometry["evaluator"],audience=operation["audience"],evaluated_at=1000),
+            request=actual,proof=ordinary_compact,profile_expires_at=1006))
+        cv=InstalledGeometryCarrierVerifier(rfc8785.dumps({carrier_key["kid"]:carrier_key}),carrier_context,gv,("EdDSA",))
+        class GeometrySource:
+            def produce(self,*,evaluated_at):return rfc8785.dumps(geometry)
+        class GeometrySigner:
+            def sign(self,message,**kwargs):return private.sign(message)
+        carrier=InstalledGeometryCarrierIssuer(GeometrySource(),GeometrySigner(),cv,"EdDSA",carrier_key["kid"]).issue(now=1000,clock_healthy=True)
+        protected_av=InstalledRequestAssociationVerifier(Invocation(),pv,Replay(),"sha256",True,AssociationGeometryCarrier(carrier.compact,cv))
+        protected=InstalledNativeEvaluationVerifier(protected_av,dv)
+        protected_result=protected.verify(actual_bytes,association_bytes,ordinary_compact,decision_bytes=rfc8785.dumps(decision),
+            attestation_bytes=rfc8785.dumps(attestation),invocation_evidence=b"fixture-actual-invocation",now=1000,clock_healthy=True)
+        self.assertEqual(protected_result.reason,"NATIVE_PREREQUISITES_VALID")
+        self.assertEqual(protected_result.expires_at,1006)
+        substitution=protected.verify(actual_bytes,association_bytes,ordinary_compact,decision_bytes=rfc8785.dumps(decision),
+            attestation_bytes=rfc8785.dumps(attestation),invocation_evidence=b"fixture-actual-invocation",now=1000,clock_healthy=True,
+            geometry_body_bytes=rfc8785.dumps(geometry))
+        self.assertEqual(substitution.reason,"DG_BINDING")
         state["status"]="revoked"
         self.assertEqual(check_decision().reason,"READINESS_INVALID")
         state["status"]="active"
