@@ -3,8 +3,11 @@
 Source: repair draft `e1f124b64de3234bc96f94fcd7c8ee612d965517`,
 Sections 4.6 and 5.5. No final tag or full conformance claim.
 
-The pure `repair_recovery` projection is implemented. Next, bind its inputs to
-the installed ambient profile and authenticated current evidence:
+The pure `repair_recovery` projection and selected installed integration are
+implemented. Items 1–3 are implemented for the selected component path; item 4
+and complete deployment selection remain pending. Item 5 has producer/current-use
+coverage for hosting denial and focused history/policy boundaries; fuller
+rule-repair cases remain pending:
 
 1. Require published recovery margin, stock target, both strict rate limits,
    crisis invariant capability and a closed contingency declaration. Reject

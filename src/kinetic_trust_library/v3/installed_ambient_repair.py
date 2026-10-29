@@ -14,6 +14,7 @@ from kinetic_trust_library.errors import ValidationError
 from .ambient_repair import project_ambient_window,reference_criticality_valid,ratio
 from .repair_capacity import RepairCapacityRecord,RepairCapacityWindow,project_repair_capacity,project_capacity_by_class
 from .installed_repair import HARD_ENTRIES
+from .installed_repair_recovery import validate_recovery_declaration,project_installed_recovery
 from .trust_proof_json import _parse_jcs_object
 from .demand_supplier import _digest
 from .demand_operation import canonical_demand_operation_bytes,digest_demand_operation
@@ -32,7 +33,7 @@ def _rational(value):
 
 def _profile(raw):
     profile=_parse_jcs_object(raw)
-    if (set(profile)!={"id","version","zone_id","formula","criticality_model","window_seconds","recovery_windows","declared_capacity",
+    if (set(profile)-{"recovery"}!={"id","version","zone_id","formula","criticality_model","window_seconds","recovery_windows","declared_capacity",
             "criticality","single_lineage_share","repairer_interval","retirement_credit_per_weight","source_signals","entry_classes","normalizer"}
             or any(type(profile[name]) is not str or not profile[name] for name in ("id","zone_id"))
             or not _time(profile["version"]) or profile["version"]==0
@@ -59,6 +60,8 @@ def _profile(raw):
     if profile["declared_capacity"] is not None and all(value is not None for value in class_limits):
         if _rational(profile["declared_capacity"])>sum((_rational(value) for value in class_limits),Fraction(0)):
             raise ValidationError("pooled capacity exceeds all declared class capacities combined")
+    if "recovery" in profile:
+        validate_recovery_declaration(profile["recovery"],criticality=profile["criticality"],recovery_windows=profile["recovery_windows"],parse=_rational)
     return profile
 
 
@@ -85,6 +88,8 @@ class AmbientRepairAssessment:
     class_metrics: tuple
     maximum_utilization: Fraction | None
     maximum_banked_excess: Fraction | None
+    recovery: object
+    available_contingency: tuple
     criticality_valid: bool | None
     pressure_floor: Decimal | None
     supervision_floor: str
@@ -99,10 +104,15 @@ class AmbientRepairAssessment:
 
     def geometry_value(self):
         value=None if self.pressure_floor is None else Fraction(self.pressure_floor)
-        return dict(profile_digest=self.profile_digest,frame_digest=self.frame_digest,
+        result=dict(profile_digest=self.profile_digest,frame_digest=self.frame_digest,
             pressure_floor=None if value is None else dict(n=str(value.numerator),d=str(value.denominator)),
             criticality_valid=self.criticality_valid,supervision_floor=self.supervision_floor,
             consequential_hosting_forbidden=self.consequential_hosting_forbidden)
+        if self.recovery is not None:
+            result["recovery"]=dict(tier=self.recovery.tier,recovered=self.recovery.recovered,
+                measurement_complete=self.recovery.measurement_complete,rule_repair_required=self.recovery.rule_repair_required,
+                emergency_authorized=False,available_contingency=list(self.available_contingency))
+        return result
 
 
 @dataclass(frozen=True,slots=True)
@@ -148,7 +158,7 @@ class InstalledAmbientRepairVerifier:
             raise ValidationError("ambient source must authenticate complete current zone-wide evidence")
         state=_parse_jcs_object(source.state_bytes)
         if (set(state)!={"deployment_digest","profile_digest","operation_digest","checked_at","expires_at","zone_id","topology_epoch",
-                "parent","ledger_head","window_ledger_head","accountable_roots","consequential","reproduction_at_idle","prior_hard_times","capacity_windows","current"}
+                "parent","ledger_head","window_ledger_head","accountable_roots","consequential","reproduction_at_idle","prior_hard_times","capacity_windows","current"}|({"recovery"} if "recovery" in profile else set())
                 or state["deployment_digest"]!=deployment or state["profile_digest"]!=policy or state["operation_digest"]!=invocation
                 or not _time(state["checked_at"]) or state["checked_at"]!=evaluated_at or not _time(state["expires_at"]) or state["expires_at"]<=evaluated_at
                 or state["zone_id"]!=profile["zone_id"] or not _time(state["topology_epoch"]) or not _time(state["accountable_roots"])
@@ -249,6 +259,17 @@ class InstalledAmbientRepairVerifier:
             if all(value is not None for value in pressures):pressure=max(pressures)
         utilizations=tuple(view.utilization for view in views)
         banks=tuple(view.banked_excess for view in views)
+        maximum_utilization=None if any(value is None for value in utilizations) else max(utilizations)
+        maximum_bank=None if any(value is None for value in banks) else max(banks)
+        recovery=None;available_contingency=()
+        if "recovery" in profile:
+            recovery=project_installed_recovery(profile["recovery"],state["recovery"],capacity_windows=tuple(windows),
+                criticality=profile["criticality"],recovery_windows=profile["recovery_windows"],
+                utilization=None if any(entry["declared_capacity"] is None for entry in profile["entry_classes"].values()) else maximum_utilization,
+                stock=metrics.open_stock,bank=maximum_bank,parse=_rational)
+            contingency=profile["recovery"]["contingency"]
+            if recovery.tier in ("debt-growth","crisis") and contingency is not None:
+                available_contingency=tuple(name for name in ("triage_order","verifier_mutual_aid","admission_tightening") if contingency[name])
         result=object.__new__(AmbientRepairAssessment)
         import rfc8785
         frame={name:value for name,value in state.items() if name not in ("checked_at","expires_at")}
@@ -256,10 +277,10 @@ class InstalledAmbientRepairVerifier:
             evaluated_at=evaluated_at,expires_at=state["expires_at"],zone_id=state["zone_id"],parent_zone=None if parent is None else parent["zone_id"],
             topology_epoch=state["topology_epoch"],capacity=capacity,metrics=metrics,criticality_valid=criticality,pressure_floor=pressure,
             class_capacities=class_capacities,class_metrics=tuple(class_metrics),
-            maximum_utilization=None if any(value is None for value in utilizations) else max(utilizations),
-            maximum_banked_excess=None if any(value is None for value in banks) else max(banks),
+            maximum_utilization=maximum_utilization,maximum_banked_excess=maximum_bank,recovery=recovery,available_contingency=available_contingency,
             supervision_floor="assisted" if pressure is None else metrics.supervision_floor,
-            consequential_hosting_forbidden=any(view.consequential_hosting_forbidden for view in views) and state["consequential"],profile_digest=policy,
+            consequential_hosting_forbidden=(any(view.consequential_hosting_forbidden for view in views)
+                or recovery is not None and recovery.consequential_hosting_forbidden) and state["consequential"],profile_digest=policy,
             frame_digest=_digest(frame,self.algorithm),frame_bytes=rfc8785.dumps(frame),
             authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes).items():object.__setattr__(result,name,value)
         return result

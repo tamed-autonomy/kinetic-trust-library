@@ -57,6 +57,61 @@ def fixture(operation=None,deployment=None,now=1030,zone="zone-1",parent="zone-0
 
 @unittest.skipUnless(all(find_spec(name) for name in ("rfc8785","jsonschema","cryptography")),"install v3-proofs")
 class InstalledAmbientTests(unittest.TestCase):
+    def test_recovery_selection_requires_symmetric_complete_current_evidence(self):
+        import rfc8785
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        v,state,op,profile,calls=fixture()
+        state["recovery"]={}
+        with self.assertRaises(ValidationError):
+            v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
+        profile["recovery"]=dict(margin="0.1",stock_target=1,amendment_rate_limit="0.1",nonattendance_rate_limit="0.1",
+            crisis_invariants_preserved=True,contingency=None)
+        state["profile_digest"]=_digest(profile,"sha256");v=replace(v,profile_bytes=rfc8785.dumps(profile))
+        with self.assertRaisesRegex(ValidationError,"recovery"):
+            v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
+        del state["recovery"]
+        with self.assertRaises(ValidationError):
+            v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
+
+    def test_selected_recovery_binds_current_metrics_history_and_capability(self):
+        import rfc8785
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        v,state,op,profile,calls=fixture()
+        profile["recovery"]=dict(margin="0.1",stock_target=1,amendment_rate_limit="0.1",
+            nonattendance_rate_limit="0.1",crisis_invariants_preserved=True,
+            contingency=dict(triage_order="residual_harm,criticality",verifier_mutual_aid=True,admission_tightening=True))
+        state["profile_digest"]=_digest(profile,"sha256")
+        state["recovery"]=dict(previous_tier="debt-growth",history=[dict(starts_at=1010,ends_at=1020,
+            utilization="0.4",open_stock=0,banked_excess=0,amendment_rate=0,nonattendance_rate=0)],
+            amendment_rate=0,nonattendance_rate=0)
+        v=replace(v,profile_bytes=rfc8785.dumps(profile))
+        result=v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
+        self.assertEqual(result.recovery.tier,"debt-growth")
+        self.assertTrue(result.recovery.rule_repair_required)
+        self.assertEqual(result.available_contingency,("triage_order","verifier_mutual_aid","admission_tightening"))
+        self.assertFalse(result.geometry_value()["recovery"]["emergency_authorized"])
+        self.assertFalse(result.recovery.recovered)  # Actual current utilization/debt overrides calm history.
+        state["current"].update(prior_stock=2,arrivals=[])
+        state["current"]["prior_stock_by_class"]["act-outside-decision"]=2
+        result=v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
+        self.assertTrue(result.recovery.recovered)
+        self.assertEqual(result.recovery.tier,"normal")
+        self.assertEqual(result.available_contingency,())
+        profile["entry_classes"]["misattestation"]["declared_capacity"]=None
+        state["profile_digest"]=_digest(profile,"sha256");v=replace(v,profile_bytes=rfc8785.dumps(profile))
+        self.assertFalse(v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True).recovery.recovered)
+        profile["entry_classes"]["misattestation"]["declared_capacity"]=4
+        profile["recovery"]["crisis_invariants_preserved"]=False
+        state["profile_digest"]=_digest(profile,"sha256");v=replace(v,profile_bytes=rfc8785.dumps(profile))
+        result=v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
+        self.assertTrue(result.consequential_hosting_forbidden)
+        state["recovery"]["history"][0]["ends_at"]=1021
+        with self.assertRaisesRegex(ValidationError,"recovery"):
+            v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
+        profile["recovery"]["contingency"]["lower_delta"]=True
+        with self.assertRaisesRegex(ValidationError,"contingency"):
+            replace(v,profile_bytes=rfc8785.dumps(profile))
+
     def test_class_declarations_stock_and_old_debt_cannot_disappear(self):
         import rfc8785
         from kinetic_trust_library.v3.demand_supplier import _digest
@@ -228,3 +283,13 @@ class InstalledAmbientTests(unittest.TestCase):
         prohibited=json.loads(current_geometry(zero).produce(evaluated_at=1030))
         self.assertEqual(prohibited["reason_codes"],["INPUT_UNAVAILABLE"])
         self.assertTrue(next(item for item in prohibited["inputs"] if item["name"]=="ambient_repair")["value"]["consequential_hosting_forbidden"])
+        profile["declared_capacity"]=4
+        profile["recovery"]=dict(margin="0.1",stock_target=1,amendment_rate_limit="0.1",nonattendance_rate_limit="0.1",
+            crisis_invariants_preserved=False,contingency=None)
+        state["profile_digest"]=_digest(profile,"sha256")
+        state["recovery"]=dict(previous_tier="normal",history=[dict(starts_at=1010,ends_at=1020,
+            utilization=0,open_stock=0,banked_excess=0,amendment_rate=0,nonattendance_rate=0)],amendment_rate=0,nonattendance_rate=0)
+        incapable=replace(v,profile_bytes=rfc8785.dumps(profile))
+        blocked=json.loads(current_geometry(incapable).produce(evaluated_at=1030))
+        self.assertEqual(blocked["reason_codes"],["INPUT_UNAVAILABLE"])
+        self.assertEqual(blocked["result"]["supervision"],"silent_veto")

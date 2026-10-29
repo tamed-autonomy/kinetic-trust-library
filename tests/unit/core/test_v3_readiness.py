@@ -346,6 +346,14 @@ class ReadinessTests(unittest.TestCase):
         ambient_state["profile_digest"]=_digest(ambient_profile,"sha256")
         native=replace(native,ambient_verifier=zero)
         self.assertEqual(whole().reason,"AMBIENT_HOSTING_FORBIDDEN")
+        ambient_profile["declared_capacity"]=4
+        ambient_profile["recovery"]=dict(margin="0.1",stock_target=1,amendment_rate_limit="0.1",nonattendance_rate_limit="0.1",
+            crisis_invariants_preserved=False,contingency=None)
+        ambient_state["recovery"]=dict(previous_tier="normal",history=[dict(starts_at=980,ends_at=990,
+            utilization=0,open_stock=0,banked_excess=0,amendment_rate=0,nonattendance_rate=0)],amendment_rate=0,nonattendance_rate=0)
+        ambient_state["profile_digest"]=_digest(ambient_profile,"sha256")
+        native=replace(native,ambient_verifier=replace(ambient_verifier,profile_bytes=rfc8785.dumps(ambient_profile)))
+        self.assertEqual(whole().reason,"AMBIENT_HOSTING_FORBIDDEN")
         geometry["inputs"].remove(item);native=no_norm
         from kinetic_trust_library.v3.human_eligibility import InstalledHumanEligibilityVerifier,AuthenticatedHumanContext,combine_human_origin
         class HumanSource:

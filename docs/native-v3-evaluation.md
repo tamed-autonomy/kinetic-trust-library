@@ -1020,6 +1020,25 @@ requires utilization at least two throughout that window. Missing measurements
 cannot establish recovery. The result carries the rule-repair obligation but
 neither writes its record nor authorizes an emergency. A declared inability to
 preserve the repair invariants in crisis prohibits consequential hosting even
-outside crisis. The installed ambient current-evidence path does not yet consume
-this projection; source binding, contingency declarations and rule-repair record
-validation remain implementation work.
+outside crisis.
+
+The installed ambient reference can select a closed `recovery` declaration with
+margin, stock target, amendment/nonattendance rate limits, crisis capability and
+an optional contingency. Its only permitted measures are published triage order,
+independent federation verifier mutual aid and admission tightening. The sealed
+assessment exposes which declared measures are available in debt growth/crisis;
+it executes none and does not waive normal verifier independence.
+
+Selection requires matching authenticated `recovery` state: persisted prior tier,
+complete historical aggregate windows aligned with capacity periods, and current
+amendment/nonattendance rates. The latest utilization and bank use the maximum
+of pooled and active class views, and current stock comes from actual anchored
+closure accounting. Unknown required class declarations cannot prove recovery.
+Historical summaries cannot replace the latest computed measures. The semantic
+frame and modeled geometry retain the selected tier and obligations; capability
+hosting denial follows the existing ordered producer and current-use gates.
+
+Recovery selection is optional for component assembly, not a claim that an
+ambient-only component is a complete repair deployment. Full deployment policy
+must select it. Rule-repair record validation and amendment citation remain
+implementation work; an obligation flag is not a produced or anchored record.

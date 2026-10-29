@@ -1,5 +1,23 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 installed sustained recovery
+
+Bound selected recovery declarations to the installed ambient source and exact
+current pooled/class measures. Complete historical aggregates align to declared
+capacity periods; the Library derives the latest utilization, stock and bank.
+Unknown required class declarations cannot prove recovery. Closed contingency
+declarations expose only permitted available measures, never emergency authority.
+The sealed assessment and geometry retain tier/obligations, while the existing
+producer and current-use gates enforce declared crisis incapability.
+
+Supplier review found no actionable integration defect. Focused fixtures cover
+calm history overridden by current debt, sustained recovery, unknown class
+capacity, mismatched periods, asymmetric/missing evidence, prohibited measures,
+and real signed producer/current-use hosting denials. Full deployment selection
+and rule-repair records/amendment citations are still pending; the component
+option is not a claim of complete repair conformance. RFC fetch and tag query
+showed no new 3.0 tag at this checkpoint.
+
 ## 2026-10-29 sustained recovery primitive
 
 Added an exact pure tier projection and regression coverage for BR33's sustained
