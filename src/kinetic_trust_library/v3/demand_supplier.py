@@ -42,7 +42,9 @@ def precheck_demand_value(
     declaration: dict[str, object] | None,
     deployment_profile: dict[str, object],
     actual_operation: dict[str, object] | None,
-    provenance_payload: dict[str, object] | None,
+    provenance_bytes: bytes | None,
+    provenance_reference: str | None,
+    provenance_source: str | None,
     evaluated_at: int,
     clock_healthy: bool,
     algorithm: str,
@@ -52,6 +54,9 @@ def precheck_demand_value(
     The declaration, profile, actual invocation, provenance bytes, clock and
     algorithm must be supplied from independently established local context.
     Never derive authority or an invocation from the candidate payload.
+    Provenance bytes are hashed exactly, including any signature envelope.
+    Reference/source metadata must come from the installed verifier; this
+    function does not infer their authenticity from a matching digest.
     """
     try:
         if (
@@ -63,7 +68,9 @@ def precheck_demand_value(
             or type(declaration) is not dict
             or type(deployment_profile) is not dict
             or type(actual_operation) is not dict
-            or type(provenance_payload) is not dict
+            or type(provenance_bytes) is not bytes
+            or type(provenance_reference) is not str
+            or type(provenance_source) is not str
         ):
             return False
         declaration_validator, value_validator = _schemas()
@@ -88,11 +95,12 @@ def precheck_demand_value(
         if evaluated_at - observed > declaration["freshness"]["max_age_seconds"]:
             return False
         provenance = payload["provenance"]
-        if provenance["reference"] != provenance_payload.get("reference"):
+        if provenance["reference"] != provenance_reference:
             return False
-        if provenance_payload.get("source") != declaration["source"]:
+        if provenance_source != declaration["source"]:
             return False
-        if provenance["digest"] != _digest(provenance_payload, algorithm):
+        evidence_digest = f"{algorithm}:{hashlib.new(algorithm, provenance_bytes).hexdigest()}"
+        if provenance["digest"] != evidence_digest:
             return False
         return True
     except (KeyError, TypeError, ValueError, OverflowError, ImportError):

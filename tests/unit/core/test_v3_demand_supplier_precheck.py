@@ -1,6 +1,7 @@
 """Deterministic candidate checks from unreleased RFC PR #202."""
 
 import json
+import hashlib
 import unittest
 from importlib.util import find_spec
 from pathlib import Path
@@ -11,11 +12,35 @@ from kinetic_trust_library.v3.demand_supplier import precheck_demand_value
 VECTORS = Path(__file__).parents[3] / "spec/proposals/demand-supplier-v1.json"
 
 
+def provenance(payload):
+    import rfc8785
+    return dict(provenance_bytes=rfc8785.dumps(payload),
+                provenance_reference=payload["reference"],
+                provenance_source=payload["source"])
+
+
 @unittest.skipUnless(
     find_spec("rfc8785") and find_spec("jsonschema"),
     "install the v3-proofs extra for demand supplier checks",
 )
 class ProposedDemandSupplierPrecheck(unittest.TestCase):
+    def test_provenance_digest_covers_exact_non_json_evidence_bytes(self):
+        vectors = json.loads(VECTORS.read_text())
+        payload = vectors["cases"][0]["payload"]
+        evidence = b"signed evidence\x00\xff\r\n"
+        payload["provenance"]["digest"] = "sha256:" + hashlib.sha256(evidence).hexdigest()
+        arguments = dict(
+            payload=payload, declaration=vectors["declaration"],
+            deployment_profile=vectors["deployment_profile"],
+            actual_operation=vectors["operation"],
+            provenance_reference=payload["provenance"]["reference"],
+            provenance_source=vectors["declaration"]["source"],
+            evaluated_at=vectors["context"]["evaluated_at"],
+            clock_healthy=True, algorithm="sha256",
+        )
+        self.assertTrue(precheck_demand_value(**arguments, provenance_bytes=evidence))
+        self.assertFalse(precheck_demand_value(**arguments, provenance_bytes=evidence + b"\n"))
+
     def test_missing_installed_demand_contract_is_unavailable(self):
         vectors = json.loads(VECTORS.read_text())
         self.assertFalse(precheck_demand_value(
@@ -23,7 +48,7 @@ class ProposedDemandSupplierPrecheck(unittest.TestCase):
             declaration=vectors["declaration"],
             deployment_profile={"demand_inputs": None},
             actual_operation=vectors["operation"],
-            provenance_payload=vectors["provenance_payload"],
+            **provenance(vectors["provenance_payload"]),
             evaluated_at=vectors["context"]["evaluated_at"],
             clock_healthy=True,
             algorithm="sha256",
@@ -38,7 +63,7 @@ class ProposedDemandSupplierPrecheck(unittest.TestCase):
             declaration=vectors["declaration"],
             deployment_profile=vectors["deployment_profile"],
             actual_operation=context["actual_operation"],
-            provenance_payload=context["provenance_payload"],
+            **provenance(context["provenance_payload"]),
             evaluated_at=context["evaluated_at"],
             clock_healthy=True,
             algorithm=context["digest_algorithm"],
@@ -55,7 +80,7 @@ class ProposedDemandSupplierPrecheck(unittest.TestCase):
                         declaration=case["declaration"],
                         deployment_profile=vectors["deployment_profile"],
                         actual_operation=vectors["operation"],
-                        provenance_payload=vectors["provenance_payload"],
+                        **provenance(vectors["provenance_payload"]),
                         evaluated_at=vectors["context"]["evaluated_at"],
                         clock_healthy=True,
                         algorithm="sha256",
@@ -91,7 +116,7 @@ class ProposedDemandSupplierPrecheck(unittest.TestCase):
                     declaration=vectors["declaration"] if context["declaration_installed"] else None,
                     deployment_profile=vectors["deployment_profile"],
                     actual_operation=context["actual_operation"],
-                    provenance_payload=context["provenance_payload"],
+                    **provenance(context["provenance_payload"]),
                     evaluated_at=context["evaluated_at"],
                     clock_healthy=context["clock_healthy"],
                     algorithm=context["digest_algorithm"],
