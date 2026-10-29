@@ -1012,3 +1012,14 @@ this reference leaves a positive declaration without qualifying demonstration
 unknown; it does not claim that the RFC universally requires startup denial or
 that an unmeasured declaration is measured throughput. A final approved policy
 can resolve that selection without changing the Core measurement boundary.
+
+`repair_recovery.project_recovery` now provides a pure exact recovery-tier
+projection. It requires the full declared trailing window to leave a tier, with
+strict utilization margin and rate bounds, stock at target and zero bank. Crisis
+requires utilization at least two throughout that window. Missing measurements
+cannot establish recovery. The result carries the rule-repair obligation but
+neither writes its record nor authorizes an emergency. A declared inability to
+preserve the repair invariants in crisis prohibits consequential hosting even
+outside crisis. The installed ambient current-evidence path does not yet consume
+this projection; source binding, contingency declarations and rule-repair record
+validation remain implementation work.

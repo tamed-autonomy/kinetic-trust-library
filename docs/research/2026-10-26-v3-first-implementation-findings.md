@@ -1,5 +1,18 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 sustained recovery primitive
+
+Added an exact pure tier projection and regression coverage for BR33's sustained
+recovery predicate, crisis duration, strict boundary rates, unknown measurements
+and retained tier state. The output requires rule repair and grants no emergency
+authority. Supplier review caught a capability interpretation error: a zone that
+declares it cannot preserve repair invariants in crisis must prohibit hosting in
+every tier. Corrected and covered with a calm-window regression.
+
+This is a primitive checkpoint; installed evidence binding, declared contingency
+validation and actual rule-repair audit records remain pending. It does not
+establish full repair conformance or deployed recovery behaviour.
+
 ## 2026-10-29 per-class ambient capacity checkpoint
 
 The installed reference now binds complete per-class declarations, backlog,
