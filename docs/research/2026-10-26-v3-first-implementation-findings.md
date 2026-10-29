@@ -1,5 +1,21 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 supervision-rail checkpoint
+
+Implemented L11 own-rail signed increments/releases against the pinned
+`c8f912e27108d1493672a5787d98d31f95d0659a` proposal. Installed verification
+requires independently authenticated complete hold inventory and exact frame
+bindings. Native geometry preserves environment/prior floors, measured capacity
+and grant ceilings. Signed carriers expire with their release support. Supplier
+review found and verified the correction of a decision-ID reuse gap: released
+assessments now bind the exact native geometry decision ID.
+
+The full suite passes 937 tests. Seven focused tests pass from source and the built wheel, using real fixture
+Ed25519 signatures with modeled external authority/current state. The optional
+dependency baseline passes six pure cases and skips the installed test. This is
+partial L11 coverage, not a complete 23-vector or production authority claim.
+Importance/supplied-input handling and multi-gate composition remain pending.
+
 **Status:** Development evidence only, refreshed 2026-10-28. Library remains released and pinned as v2.1.0. The RFC PRs below are open and have not been approved or tagged.
 
 ## Pinned proposal inputs

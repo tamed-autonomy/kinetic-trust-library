@@ -694,5 +694,32 @@ The source token schema retains its published draft `$id` (under `/v2/`) and
 SHA-256 payload bindings unchanged. Stronger profiles and a final interoperable
 token JOSE profile remain explicit reconciliation work. The test Ed25519/JWS
 profile is unsafe fixture material, not a new wire standard. Unexpected provider
-failures propagate without a successful evaluation. Multiple gates, rail-owned
-increments/releases and all 23 source-vector semantics are not claimed complete.
+failures propagate without a successful evaluation. Multiple gates and all 23
+source-vector semantics are not claimed complete.
+
+### Evaluation-scoped supervision rails
+
+`InstalledSupervisionRailVerifier` verifies signed increments and accountable
+own-increment releases through a selected external signature/schema adapter.
+Its independent current-state source supplies the complete active hold inventory,
+bound to exact signed-token digests, deployment, operation, geometry profile and
+evaluation time. Omitting a hold fails verification. The semantic adapter record
+is an internal Library contract, not a proposed universal RFC wire format.
+
+Each act binds an evaluation ID, actor, whole-action digest, possession key,
+grant/evidence digests, zone and topology epoch. Only the original rail and issuer
+may release that increment. Invalid releases retain holds. Requested releases
+below the environment or increment's original floor clamp to that floor; other
+rails retain their holds. Multiple valid releases compose without order effects.
+The installed source owns freshness, authority and actual action/session facts.
+
+Native geometry selects the assessment with the internal
+`supervision_rail_profile_digest` profile field. Selection requires matching sealed
+evidence; evidence cannot be silently added to an unselected profile. The Core
+instance, operation, profile, time and decision ID must match. Geometry retains
+the underlying environment and non-releasable prior floor, capacity and grant/prior
+ceilings. Providers must distinguish retained prior restrictions from the rail's
+releasable increment; a previous aggregate supplied as prior remains conservatively
+binding. Signed carrier issuance caps expiry to the rail assessment's earliest
+supporting expiry. No result authorizes execution. Importance/supplied-input and
+multi-gate normative composition remain separate implementation work.

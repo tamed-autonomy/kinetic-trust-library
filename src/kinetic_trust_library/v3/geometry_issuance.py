@@ -58,6 +58,9 @@ class InstalledGeometryCarrierIssuer:
             raise ValidationError("geometry issuance supporting proof failed: "+proof.reason)
         claims=_parse_jcs_object(parse_compact_framing(context["proof"]).payload_bytes)
         limits=[claims["exp"],key["not_after"],context.get("profile_expires_at")]
+        from .native_geometry import NativeGeometrySource
+        if type(self.body_source) is NativeGeometrySource and self.body_source.supervision_rails is not None:
+            limits.append(self.body_source.supervision_rails.expires_at)
         supporting=context.get("supporting_expiries",[])
         if type(supporting) is not list:
             raise ValidationError("installed geometry validity ceilings are invalid")

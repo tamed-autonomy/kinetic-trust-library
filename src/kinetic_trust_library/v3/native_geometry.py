@@ -19,6 +19,8 @@ from .complete_proof_verifier import InstalledProofVerifier
 from .geometry_verifier import AuthenticatedGeometryReproduction
 from .decision_geometry import _geometry_validator
 from .native_envelope import NativeEnvelopeThresholds, project_native_envelope
+from .supervision_rails import SupervisionRailAssessment
+from .demand_supplier import _digest
 
 
 _LEVELS = ("stable", "metacognitive", "assisted", "regulated", "silent_veto")
@@ -48,6 +50,7 @@ class NativeGeometrySource:
     authority_adapter: object
     decision_id: str
     clock_healthy: bool
+    supervision_rails: SupervisionRailAssessment | None = None
 
     def __post_init__(self):
         if (type(self.claim_source) is not NativeCoreClaimsSource or type(self.demand) is not NativeClassifiedDemand
@@ -63,7 +66,8 @@ class NativeGeometrySource:
                 or self.claim_source.core.classified_demand is not None and self.claim_source.core.classified_demand is not self.demand):
             raise ValidationError("geometry demand belongs to another Core invocation")
         profile=_parse_jcs_object(self.evaluation_profile_bytes)
-        if (set(profile)!={"id","release","evaluator","core_deployment_digest","input_order","sources","magnitudes","thresholds","numeric_convention","constraint_policy"}
+        required={"id","release","evaluator","core_deployment_digest","input_order","sources","magnitudes","thresholds","numeric_convention","constraint_policy"}
+        if (not required<=set(profile) or set(profile)-required-{"supervision_rail_profile_digest"}
                 or profile["core_deployment_digest"]!=self.demand.deployment_digest
                 or profile["input_order"]!="layer-then-name-v1"
                 or profile["numeric_convention"]!="exact-decimal-boundaries-binary64-margin-v1"
@@ -76,6 +80,17 @@ class NativeGeometrySource:
                        for spec in profile["magnitudes"].values())
                 or type(profile["release"]) is not str or len(profile["release"])>255 or "unreleased" not in profile["release"].lower()):
             raise ValidationError("installed native geometry profile is invalid")
+        if self.supervision_rails is not None:
+            rails=self.supervision_rails
+            if (type(rails) is not SupervisionRailAssessment or rails.core is not self.claim_source.core
+                    or rails.projection.scope.evaluation_id!=self.decision_id
+                    or rails.operation_bytes!=context.operation_bytes or rails.checked_at!=context.evaluated_at
+                    or rails.expires_at<=context.evaluated_at
+                    or rails.evaluation_profile_digest!=_digest(profile,context.algorithm)
+                    or profile.get("supervision_rail_profile_digest")!=_digest(_parse_jcs_object(rails.profile_bytes),context.algorithm)):
+                raise ValidationError("supervision rail evidence differs from native geometry context/profile")
+        elif "supervision_rail_profile_digest" in profile:
+            raise ValidationError("selected supervision rail profile requires current evidence")
         from .schema_formats import installed_format_checker
         for uri in (profile["id"],profile["evaluator"],*profile["sources"].values()):
             if type(uri) is not str or not 1<=len(uri)<=2048 or not installed_format_checker().conforms(uri,"uri"):
@@ -246,6 +261,13 @@ class NativeGeometrySource:
             return finish("TRUST_INSUFFICIENT")
         gates["envelope"]="passed"
         level=max((envelope.supervision,prior_level),key=_LEVELS.index)
+        if self.supervision_rails is not None:
+            rails=self.supervision_rails
+            if rails.projection.environment_supervision!=envelope.supervision:
+                raise ValidationError("rail environment floor differs from native envelope")
+            add("supervision_rails","term","modeled",profile["sources"]["authority"],
+                (rails.authenticated_state_bytes,rails.source_evidence_bytes,*rails.increment_tokens,*rails.release_tokens),rails.projection.supervision)
+            level=max((level,rails.projection.supervision),key=_LEVELS.index)
         combined={name:min(value,prior_caps.get(name,value)) for name,value in grant_caps.items()}
         combined.update({name:value for name,value in prior_caps.items() if name not in combined})
         body["result"]={"supervision":level,"tightenedConstraints":{"profile":profile["id"],
