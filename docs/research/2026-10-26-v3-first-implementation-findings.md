@@ -1,5 +1,25 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 distinct imported-standing arithmetic
+
+Source federation `8a733c4ab9e9063eb9cd64f92bc2cd34b4f84169`, Sections 4.5
+and 6.5, requires a distinct crossing calculation, not a ceiling on a locally
+recomposed PoR/root/peer amount. The new imported result retains source/receiver,
+authenticated exportable operand, factor and receiver ceilings without fabricating
+component shares. The shared bounded-standing Core seam preserves local Soul/R.
+FD17's 85 × 0.8 yields 68 and local R 0.05 yields 64.6. FD20's class ceiling 0.7
+is applied once, yielding 56 from 80; unsigned/above-one factors and invalid high
+floors cannot widen it. Missing-root and repair ceilings remain independent.
+
+Supplier review found no actionable defect in this pure checkpoint. Installed
+authentication, one-link provenance, claims and current-use/bond integration
+remain implementation work. The draft leaves exportable standing extraction
+from compound base standing and later mixed local/imported accumulation undefined;
+neither is inferred. Retained the exact 40-vector source suite at
+`spec/proposals/federation-v1.json`, SHA-256
+`a077228d983e8aba960c500a655e4233a1cb3d17859365c7a49124ac2e003013`.
+The source count is not a passing coverage claim.
+
 ## 2026-10-29 rule-repair records and amendment citations
 
 Added deterministic recurring-pattern and tier-caused rule-repair record checks,

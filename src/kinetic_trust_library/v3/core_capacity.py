@@ -16,6 +16,7 @@ from kinetic_trust_library.errors import ValidationError
 
 from .core import NativeCorePreflight
 from .base_trust import NativeBaseTrust
+from .imported_standing import BoundedStanding,BOUNDED_STANDING_TYPES
 
 
 
@@ -39,7 +40,7 @@ class NativeCapacityProjection:
 def project_native_capacity(
     preflight: NativeCorePreflight,
     *,
-    standing: NativeBaseTrust,
+    standing: BoundedStanding,
     demand: DecimalLike,
 ) -> NativeCapacityProjection | None:
     """Project exact E and A/E relation after clear Soul; never authorize.
@@ -53,7 +54,7 @@ def project_native_capacity(
         raise ValidationError("native Core preflight is required")
     if preflight.risk is None:
         return None
-    if type(standing) is not NativeBaseTrust:
+    if type(standing) not in BOUNDED_STANDING_TYPES:
         raise ValidationError("native derived base trust is required")
     base = standing.base_trust
     action_demand = as_decimal(demand, name="autonomy demand", minimum=0, maximum=100)

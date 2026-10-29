@@ -13,6 +13,7 @@ from kinetic_trust_library._decimal import DecimalLike
 from kinetic_trust_library.errors import ValidationError
 
 from .base_trust import NativeBaseTrust
+from .imported_standing import BoundedStanding,BOUNDED_STANDING_TYPES
 from .core import preflight_core
 from .core_capacity import NativeCapacityProjection, project_native_capacity
 from .core_risk import NativeRiskAssessment
@@ -65,7 +66,7 @@ class NativeCoreContext:
 @dataclass(frozen=True, slots=True, init=False)
 class NativeCoreProjection:
     soul: SoulGate
-    standing: NativeBaseTrust | None
+    standing: BoundedStanding | None
     risk: NativeRiskAssessment | None
     capacity: NativeCapacityProjection | None
     classified_demand: NativeClassifiedDemand | None
@@ -87,7 +88,7 @@ class NativeCoreProjection:
 def project_native_core(
     soul: SoulGate,
     *,
-    standing: NativeBaseTrust,
+    standing: BoundedStanding,
     factors: tuple[FactorEvidenceState, ...],
     weights: dict[str, DecimalLike],
     demand: DecimalLike,
@@ -102,7 +103,7 @@ def project_native_core(
         raise ValidationError("native Soul gate is required")
     if soul.state is not SoulGateState.CLEAR:
         return _projection(soul, None, None, None)
-    if type(standing) is not NativeBaseTrust:
+    if type(standing) not in BOUNDED_STANDING_TYPES:
         raise ValidationError("native standing is required before risk")
     preflight = preflight_core(soul, factors=factors, weights=weights, enclosure=enclosure)
     capacity = project_native_capacity(preflight, standing=standing, demand=demand)
@@ -111,7 +112,7 @@ def project_native_core(
 
 def _projection(
     soul: SoulGate,
-    standing: NativeBaseTrust | None,
+    standing: BoundedStanding | None,
     risk: NativeRiskAssessment | None,
     capacity: NativeCapacityProjection | None,
     classified_demand: NativeClassifiedDemand | None = None,

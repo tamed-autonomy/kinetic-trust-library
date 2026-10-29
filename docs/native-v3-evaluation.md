@@ -1069,3 +1069,29 @@ not a new audit wire format or a mechanism for writing/ratifying amendments.
 An open rule yields an obligation rather than an invented automatic action
 veto. Full deployment policy must select both recovery and rule-repair evidence;
 the component options alone do not establish complete repair conformance.
+
+### Crossing-time imported standing
+
+`imported_standing` provides a distinct pure software crossing route rather than
+rebuilding local PoR/root/peer contributions and adding an import ceiling.
+`derive_federation_factor` uses one factor bounded by the receiver-signed term,
+applicable Enforcement Class ceiling and declared lowering result. An invalid
+high floor is reported and ignored; an unsigned/unavailable direction provides
+no factor, and a factor above one is a void clause. The agreement itself is not
+voided and a missing import is not a universal ban on local evaluation.
+
+`calculate_imported_standing` consumes the independently authenticated amount
+earned within the sending zone, applies that factor once and then applies all
+receiver software ceilings, including repair where selected and the missing-root
+restriction. `NativeImportedStanding` retains origin, exportable amount, factor,
+raw result and receiver ceilings without inventing local allocation shares.
+Native Core/capacity accept the shared bounded-standing union and keep their
+existing local Soul and risk calculation. No foreign R or E_trust is an operand.
+
+This checkpoint is pure arithmetic only. Installed agreement/signature/registry,
+one-link/export provenance, claims, current-use revalidation and sponsorship
+integration remain pending. It does not enable federation admission through an
+installed producer. The draft does not define how to extract exportable standing
+from root/peer-containing E_base or combine an import with later locally earned
+standing: require actual authenticated exportable evidence, and keep mixed
+accumulation unsupported until a separately selected policy defines it.
