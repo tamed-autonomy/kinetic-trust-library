@@ -1,5 +1,27 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 sponsorship capital and permanent liability
+
+Cross-zone source review exposed a prerequisite absent from native Library
+accounting: Identity Sections 6.3, 6.4 and 8.2 at federation source
+`8a733c4ab9e9063eb9cd64f92bc2cd34b4f84169` retain ancestral liability after
+bond closure. Summing only active face-value stakes would misstate home capacity.
+
+Added an exact pure projection for the taper and positive floor, closure and
+expiry, nonrenewable termination, unresolved for-cause expiry, sustained-finding
+release and unchanged transferred residual values. Persisted prior closure
+prevents a subsequent intrinsic-standing loss from reopening the active charge.
+Complete home inventory subtraction detects duplicates and overcommitment, never
+producing negative available capacity. FD24's 90 minus stakes 20 and 15 yields 55;
+closing the 20-point direct bond retains 2 rather than releasing all 20.
+
+Supplier review found no actionable defect in the five pure tests. This is reserve
+accounting only: it does not taper the constant External Root share, authenticate
+facts, reserve capital or establish active bond/genesis credit. Current source,
+cross-zone agreement/sponsor admission, root/standing and complete deployment
+composition remain implementation work. Active, inherited and permanent residual
+inventory completeness and actual adjudication/transfer truth remain source-owned.
+
 ## 2026-10-29 federation native production and current use
 
 Connected the selected federation source to an explicit imported-only standing

@@ -1171,3 +1171,28 @@ standing amount does not excuse a stale frame after lowering changes. A marked
 proof without the selected policy is rejected. The result retains `.federation`
 and expires no later than its support. Current invalidity, severance or a changed
 admission cannot silently turn an old imported proof into local standing.
+
+### Sponsorship capital before cross-zone bond admission
+
+`sponsorship_capital` supplies exact pure Identity accounting for a complete
+home-zone inventory. The input sponsor base is current base standing before
+reserve deductions. Each active liability contributes the greater of its
+depth-decayed ancestral floor and `stake * (1 - intrinsic_base / 80)`. Expiry,
+maturity and previously established closure retain the floor. A later standing
+loss does not reopen a closed bond's active capital charge.
+
+Termination without cause does not release capital. A pending for-cause claim at
+expiry remains visible as unresolved and retains the residual; only a sustained
+finding discharges it. A transferred residual retains its authenticated current
+amount rather than being recalculated at the receiving ancestor's depth. Complete
+inventory subtraction includes active, residual and inherited liabilities and
+rejects duplicate bond IDs. Overcommitment remains visible and available staking
+capacity is bounded below by zero.
+
+This taper is accounting, never an External Root or E_base composition input.
+The projection neither verifies anchors/adjudication/ownership nor reserves funds,
+creates genesis or grants root credit. An installed source must establish complete
+ownership across zones, actual original stakes/intrinsic standing, prior closure,
+transfer history and current adjudication. Cross-zone bond source/root/standing
+composition remains next implementation work; bond or agreement end cannot be
+implemented as release of permanent residual liability.

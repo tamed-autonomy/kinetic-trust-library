@@ -19,6 +19,13 @@ the admission-digest-ceiling profile, Core/claims/geometry and current-use refre
 Real signed native production and modeled current-use tests cover that route.
 Item 5, additional item 4 routes and full deployment/API selection remain pending.
 
+Item 5 prerequisite: `sponsorship_capital` now implements the exact home reserve
+taper and permanent ancestral floor, prior closure, transferred residual value,
+for-cause discharge and complete inventory/overcommit arithmetic. It has no source
+or root integration yet. The cross-zone implementation must apply the earliest
+bond/agreement/severance end without releasing permanent residuals, and must
+preserve the receiving subject's independently earned standing.
+
 Next implementation:
 
 1. Install a closed current source for actual agreement/version/directional
