@@ -9,6 +9,28 @@ from kinetic_trust_library.v3.live_root import InstalledLiveRootVerifier, Authen
 
 @unittest.skipUnless(all(find_spec(n) for n in ("rfc8785","jsonschema","cryptography")), "install v3-proofs")
 class LiveRootTests(unittest.TestCase):
+    def test_unaccepted_stronger_foreign_bond_cannot_displace_local_candidate(self):
+        import rfc8785
+        from copy import deepcopy
+        from kinetic_trust_library.v3.installed_root import InstalledRootVerifier,AuthenticatedRootInstrument
+        from tests.unit.core.test_v3_federated_sponsorship import fixture
+        _,_,foreign,foreign_raw,raw_context=fixture()
+        context=json.loads(raw_context);context.pop("receiving_zone");context.pop("federated_sponsorship_profile_digest")
+        local=deepcopy(foreign);local.update(id="local:bond",issuer="urn:local:sponsor");local["inputs"]["sponsor_e_base"]=50
+        class Adapter:
+            def verify(self,evidence,**kwargs):return AuthenticatedRootInstrument(rfc8785.dumps(local if evidence==b"local" else foreign),(),
+                issuer_zone="zone-b" if evidence==b"local" else "zone-a")
+        root=InstalledRootVerifier(Adapter(),"sha256")
+        selected=root.evaluate(b"local",context_bytes=rfc8785.dumps({**context,"receiving_zone":"zone-b"}),evaluated_at=1000)
+        payload=rfc8785.dumps(dict(sub=local["subject"],exp=1007,ktp=dict(zone="zone-b",subject_kind="software_agent",generation=0,
+            lineage="sponsored",sponsor=local["issuer"],root_instrument=json.loads(selected.projection_bytes),applicable_ceilings=[])))
+        class Inventory:
+            def resolve(self,*,context_bytes,evaluated_at):return AuthenticatedRootInventory((foreign_raw,b"local"),b"modeled-complete-inventory",context_bytes,evaluated_at)
+        live=InstalledLiveRootVerifier(root,Inventory(),rfc8785.dumps(context),"zone-b")
+        result=live.evaluate(payload,evaluated_at=1000)
+        self.assertTrue(result.valid)
+        self.assertEqual(json.loads(result.selection.selected.projection_bytes)["bond_id"],"local:bond")
+
     def test_refresh_within_proof_lifetime_and_current_withdrawal(self):
         import rfc8785
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -42,6 +64,7 @@ class LiveRootTests(unittest.TestCase):
                     now if self.stale else evaluated_at,"missing")
         inventory=Inventory()
         live=InstalledLiveRootVerifier(iv,inventory,root_context,context["zone"])
+        self.assertEqual(json.loads(live.context_bytes)["receiving_zone"],context["zone"])
         verifier=InstalledProofVerifier(native_schema_bundle(),rfc8785.dumps({k["kid"]:k for k in proofs["keys"]}),rfc8785.dumps(context),
             ("ES256","EdDSA"),live)
         def signed():

@@ -13,6 +13,37 @@ from kinetic_trust_library.v3.installed_root import InstalledRootVerifier, Authe
 
 @unittest.skipUnless(all(find_spec(m) for m in ("rfc8785","jsonschema","cryptography")), "install v3-proofs")
 class NativeProofProfileTests(unittest.TestCase):
+    def test_signed_foreign_bond_proof_refreshes_current_support(self):
+        import rfc8785
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from kinetic_trust_library.v3.live_root import InstalledLiveRootVerifier,AuthenticatedRootInventory
+        from tests.unit.core.test_v3_federated_sponsorship import fixture
+        vectors=json.loads((Path(__file__).parents[3]/"spec/proposals/trust-proof-v3.json").read_text())
+        ctx={**vectors["context"],"subject_kind":"software_agent","required_ceilings":{"generation":25,"zone_mass":90}}
+        now=ctx["now"]
+        cross,state,body,instrument,root_context=fixture(subject="agent:sponsored:acme:aria:1234",receiving_zone=ctx["zone"],now=now)
+        class Adapter:
+            def verify(self,*args,**kwargs):return AuthenticatedRootInstrument(rfc8785.dumps(body),(),issuer_zone=state["home_zone"])
+        policy=InstalledRootVerifier(Adapter(),"sha256",federated_sponsorship_verifier=cross)
+        assessed=policy.evaluate(instrument,context_bytes=root_context,evaluated_at=now)
+        payload=json.loads(base64.urlsafe_b64decode(next(c["jws"] for c in vectors["cases"] if c["id"]=="clear").split(".")[1]+"=="))
+        payload.update(sub=body["subject"],iat=now,exp=now+5)
+        payload["ktp"].update(subject_kind="software_agent",generation=0,lineage="sponsored",sponsor=body["issuer"],
+            e_base=20,e_trust=15,root_instrument=json.loads(assessed.projection_bytes),applicable_ceilings=[dict(ceiling="generation",value=25),
+            dict(ceiling="zone_mass",value=90),dict(ceiling="federated_sponsor",value=72),dict(ceiling=assessed.federated_sponsorship.credit_ceiling_name,value=72)])
+        ctx["subject"]=body["subject"]
+        class Inventory:
+            def resolve(self,*,context_bytes,evaluated_at):return AuthenticatedRootInventory((instrument,),b"modeled-complete-current-inventory",context_bytes,evaluated_at)
+        live=InstalledLiveRootVerifier(policy,Inventory(),root_context,ctx["zone"])
+        verifier=InstalledProofVerifier(native_schema_bundle(),rfc8785.dumps({k["kid"]:k for k in vectors["keys"]}),rfc8785.dumps(ctx),("EdDSA",),live)
+        enc=lambda value:base64.urlsafe_b64encode(value).rstrip(b"=")
+        message=enc(rfc8785.dumps(dict(alg="EdDSA",kid="TEST-ed25519",typ="ktp-trust-proof+jwt")))+b"."+enc(rfc8785.dumps(payload))
+        compact=(message+b"."+enc(Ed25519PrivateKey.from_private_bytes(bytes(range(32))).sign(message))).decode()
+        verified=verifier.verify(compact,now=now,clock_healthy=True)
+        self.assertEqual(verified.reason,"TP_CLEAR",str((json.loads(assessed.projection_bytes),verified.root_verification)))
+        state["current"]["lent_withdrawn"]=True
+        self.assertEqual(verifier.verify(compact,now=now,clock_healthy=True).reason,"TP_INVARIANT")
+
     def test_fresh_native_signed_proof_closed_root_and_no_credit_cap(self):
         import rfc8785
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -48,7 +79,7 @@ class NativeProofProfileTests(unittest.TestCase):
         instrument = root_vectors["instruments"]["attestation"]
         class Adapter:
             def verify(self, *args, **kwargs):
-                return AuthenticatedRootInstrument(rfc8785.dumps(instrument["body"]), ())
+                return AuthenticatedRootInstrument(rfc8785.dumps(instrument["body"]), (), issuer_zone=context["zone"])
         root_context = rfc8785.dumps(dict(subject=context["subject"], subject_profile="software", lineage="guarantor", generation=7, hop_bound=4))
         raw = instrument["complete_bytes_base64url"]
         assessed = InstalledRootVerifier(Adapter(), "sha256").evaluate(

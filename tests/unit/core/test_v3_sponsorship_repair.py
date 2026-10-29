@@ -71,7 +71,7 @@ class SponsorshipRepairTests(unittest.TestCase):
         from kinetic_trust_library.v3.installed_root import InstalledRootVerifier,AuthenticatedRootInstrument
         v,state,context,raw,body,profile=fixture()
         class Adapter:
-            def verify(self,*args,**kwargs):return AuthenticatedRootInstrument(rfc8785.dumps(body),())
+            def verify(self,*args,**kwargs):return AuthenticatedRootInstrument(rfc8785.dumps(body),(),issuer_zone="zone:alpha")
         root=InstalledRootVerifier(Adapter(),"sha256",sponsorship_repair_verifier=v)
         allowed=root.evaluate(raw,context_bytes=rfc8785.dumps(context),evaluated_at=1800000004)
         self.assertGreater(allowed.score,0)

@@ -19,6 +19,8 @@ from .trust_proof_json import _parse_jcs_object
 from .installed_repair import InstalledRepairVerifier,RepairAssessment
 from .federation import InstalledFederationVerifier,FederationAssessment,FEDERATION_CEILING_PREFIX
 from .imported_standing import BoundedStanding
+from ._exact import finite_decimal
+from .federated_sponsorship import SPONSOR_CREDIT_PREFIX
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,13 +110,21 @@ class InstalledStandingVerifier:
                 raise ValidationError("standing adversity evidence is inconsistent")
             extra = body["additional_ceilings"]
             if (type(extra) is not dict or set(extra) & {"generation", "ial", "trajectory", "adversity", "external_root_missing","repair_reentry"}
-                    or any(type(name) is not str or name.startswith(FEDERATION_CEILING_PREFIX) for name in extra)):
+                    or "federated_sponsor" in extra
+                    or any(type(name) is not str or name.startswith((FEDERATION_CEILING_PREFIX,SPONSOR_CREDIT_PREFIX)) for name in extra)):
                 raise ValidationError("additional ceilings cannot replace built-in ceilings")
             ceilings = {**extra, "generation": (25,35,45,55,65,75,85)[generation] if generation < 7 else 100,
                         "ial": {1:40,2:80,3:95}[ial],
                         "trajectory": 50 if trajectory < 1000 else 70 if trajectory < 10000 else 100,
                         "adversity": 100 if crisis else 90 if friction > Decimal("0.7") else 80 if friction > Decimal("0.5") else 60}
             if repair is not None and repair.standing_ceiling is not None:ceilings["repair_reentry"]=repair.standing_ceiling
+            cross=None if roots.selected is None else roots.selected.federated_sponsorship
+            if cross is not None:
+                if (not cross.active or cross.checked_at!=evaluated_at or cross.subject!=operation["actor"]
+                        or cross.expires_at<=evaluated_at):raise ValidationError("current cross-zone sponsor support is unavailable")
+                ceilings["federated_sponsor"]=finite_decimal(cross.sponsor_measure)
+                if cross.credit_ceiling_name is None:raise ValidationError("current cross-zone root credit lacks its declared binding")
+                ceilings[cross.credit_ceiling_name]=ceilings["federated_sponsor"]
             base = federation.derive_standing(ceilings=ceilings,root_available=roots.selected is not None) if federation is not None else calculate_native_base_trust(
                 por_contribution=body["por_contribution"], root_score=0 if roots.selected is None else
                     Fraction(roots.selected.score_numerator,roots.selected.score_denominator),

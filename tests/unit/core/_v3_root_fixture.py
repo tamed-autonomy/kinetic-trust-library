@@ -54,4 +54,4 @@ class RootFixtureAdapter:
                 raise RootVerificationFailure("unverifiable")
             events.append(RootLifecycleEvent("sha256:"+hashlib.sha256(compact.encode("ascii")).hexdigest(),
                 complete_digest,event["subject"],event["event_time"],event["action"],event.get("claim_digest"),event.get("finding")))
-        return AuthenticatedRootInstrument(rfc8785.dumps(body),tuple(events))
+        return AuthenticatedRootInstrument(rfc8785.dumps(body),tuple(events),issuer_zone="zone:fixture" if role=="sponsor" else None)

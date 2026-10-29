@@ -29,7 +29,7 @@ class InstalledRootTests(unittest.TestCase):
         body["inputs"]["anchored_capacity"] = 3
         class Adapter:
             def verify(self, evidence, **kwargs):
-                return AuthenticatedRootInstrument(rfc8785.dumps(body), ())
+                return AuthenticatedRootInstrument(rfc8785.dumps(body), (), issuer_zone="zone:fixture")
         verifier = InstalledRootVerifier(Adapter(), "sha256")
         context = dict(hop_bound=4, subject_profile="software", lineage="guarantor", generation=7, subject=body["subject"])
         result = verifier.evaluate(b"authenticated fixture", context_bytes=rfc8785.dumps(context), evaluated_at=1800000004)
@@ -61,7 +61,7 @@ class InstalledRootTests(unittest.TestCase):
                         body["action"], body.get("claim_digest"), body.get("finding")))
                 class Adapter:
                     def verify(self, evidence, *, context_bytes, evaluated_at):
-                        return AuthenticatedRootInstrument(rfc8785.dumps(instrument["body"]), tuple(events))
+                        return AuthenticatedRootInstrument(rfc8785.dumps(instrument["body"]), tuple(events), issuer_zone="zone:fixture")
                 verifier = InstalledRootVerifier(Adapter(), "sha256")
                 raw = instrument["complete_bytes_base64url"]
                 evidence = base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4))

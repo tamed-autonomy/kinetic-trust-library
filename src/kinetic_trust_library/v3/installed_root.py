@@ -15,6 +15,8 @@ from .root_lifecycle import RootLifecycleEvent, project_root_lifecycle, _time
 from .root_projection import validate_root_projection
 from .trust_proof_json import _parse_jcs_object
 from .sponsorship_repair import InstalledSponsorshipRepairVerifier,SponsorshipRepairAssessment
+from .federated_sponsorship import InstalledFederatedSponsorshipVerifier,FederatedSponsorshipAssessment
+from .demand_supplier import _digest
 
 
 class RootVerificationFailure(Exception):
@@ -25,6 +27,7 @@ class RootVerificationFailure(Exception):
 class AuthenticatedRootInstrument:
     body_bytes: bytes
     events: tuple[RootLifecycleEvent, ...]
+    issuer_zone: str | None = None
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -39,6 +42,8 @@ class RootAssessment:
     score_numerator: int
     score_denominator: int
     sponsorship_repair: SponsorshipRepairAssessment | None
+    federated_sponsorship: FederatedSponsorshipAssessment | None
+    issuer_zone: str | None
 
     def __init__(self, *args, **kwargs):
         raise TypeError("RootAssessment is derived by an installed root verifier")
@@ -49,6 +54,7 @@ class InstalledRootVerifier:
     adapter: object
     algorithm: str
     sponsorship_repair_verifier: InstalledSponsorshipRepairVerifier | None = None
+    federated_sponsorship_verifier: InstalledFederatedSponsorshipVerifier | None = None
 
     def __post_init__(self):
         if self.algorithm not in ("sha256", "sha384") or not callable(getattr(self.adapter, "verify", None)):
@@ -56,6 +62,10 @@ class InstalledRootVerifier:
         if self.sponsorship_repair_verifier is not None and (type(self.sponsorship_repair_verifier) is not InstalledSponsorshipRepairVerifier
                 or self.sponsorship_repair_verifier.algorithm!=self.algorithm):
             raise ValidationError("root and sponsorship repair policies differ")
+        if self.federated_sponsorship_verifier is not None and (type(self.federated_sponsorship_verifier) is not InstalledFederatedSponsorshipVerifier
+                or self.federated_sponsorship_verifier.algorithm!=self.algorithm
+                or _parse_jcs_object(self.federated_sponsorship_verifier.profile_bytes).get("root_binding")!="credit-digest-ceiling-v1"):
+            raise ValidationError("root and cross-zone sponsorship policies differ")
 
     def evaluate(self, evidence: bytes, *, context_bytes: bytes, evaluated_at: int) -> RootAssessment:
         import rfc8785
@@ -67,6 +77,7 @@ class InstalledRootVerifier:
         exact_score = Fraction(0)
         authenticated = None
         sponsorship_repair=None
+        federated_sponsorship=None
         in_adapter = False
         try:
             if not evidence:
@@ -115,6 +126,26 @@ class InstalledRootVerifier:
                         raise RootVerificationFailure("invalid_instrument")
                     if "proof_sponsor" in context and context["proof_sponsor"] != body["issuer"]:
                         raise RootVerificationFailure("invalid_instrument")
+                    if type(authenticated.issuer_zone) is not str or not authenticated.issuer_zone:
+                        raise RootVerificationFailure("unverifiable")
+                    receiver=context.get("receiving_zone")
+                    if receiver is None and self.federated_sponsorship_verifier is not None:
+                        receiver=_parse_jcs_object(self.federated_sponsorship_verifier.profile_bytes)["receiving_zone"]
+                    if receiver is None:receiver=authenticated.issuer_zone
+                    if type(receiver) is not str or not receiver:raise RootVerificationFailure("invalid_instrument")
+                    if receiver!=authenticated.issuer_zone:
+                        policy=self.federated_sponsorship_verifier
+                        if (policy is None or context.get("federated_sponsorship_profile_digest")!=_digest(_parse_jcs_object(policy.profile_bytes),self.algorithm)):
+                            raise RootVerificationFailure("invalid_instrument")
+                        in_adapter=True
+                        federated_sponsorship=policy.evaluate(evidence,context_bytes=context_bytes,evaluated_at=evaluated_at,clock_healthy=True)
+                        in_adapter=False
+                        if (not federated_sponsorship.active or federated_sponsorship.receiving_zone!=receiver
+                                or federated_sponsorship.home_zone!=authenticated.issuer_zone
+                                or federated_sponsorship.authenticated_bond_body_bytes!=authenticated.body_bytes
+                                or "proof_exp" in context and context["proof_exp"]>federated_sponsorship.expires_at):
+                            raise RootVerificationFailure("invalid_instrument")
+                        projection["end_time"]=min(body["end_time"],federated_sponsorship.ends_at)
                     if self.sponsorship_repair_verifier is not None:
                         in_adapter=True
                         sponsorship_repair=self.sponsorship_repair_verifier.evaluate(evidence,context_bytes=context_bytes,
@@ -127,7 +158,8 @@ class InstalledRootVerifier:
                         raise RootVerificationFailure("invalid_instrument")
                     sponsor = as_decimal(inputs["sponsor_e_base"], name="sponsor standing", minimum=0, maximum=100)
                     stake = as_decimal(inputs["stake_percentage"], name="stake", minimum=1, maximum=50)
-                    exact_score = Fraction(sponsor) * Fraction(stake) / 50
+                    basis=Fraction(sponsor) if federated_sponsorship is None else federated_sponsorship.root_sponsor_basis
+                    exact_score = basis * Fraction(stake) / 50
                     score = Decimal(exact_score.numerator) / Decimal(exact_score.denominator)
                     projection.update(bond_id=body["id"], bond_digest=digest, sponsor_id=body["issuer"], bond_inputs=inputs)
                 elif kind == "external_attestation":
@@ -170,6 +202,7 @@ class InstalledRootVerifier:
                             ("evaluated_at", evaluated_at),
                             ("score_numerator", exact_score.numerator), ("score_denominator", exact_score.denominator),
                             ("authenticated_body_bytes", None if authenticated is None else authenticated.body_bytes),
-                            ("events", () if authenticated is None else authenticated.events),("sponsorship_repair",sponsorship_repair)):
+                            ("events", () if authenticated is None else authenticated.events),("sponsorship_repair",sponsorship_repair),
+                            ("federated_sponsorship",federated_sponsorship),("issuer_zone",None if authenticated is None else authenticated.issuer_zone)):
             object.__setattr__(result, name, value)
         return result

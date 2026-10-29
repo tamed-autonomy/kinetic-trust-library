@@ -12,6 +12,7 @@ from .complete_proof_verifier import InstalledSchemaBundle
 from .assessed_root_selection import AssessedRootSelection
 from .trust_proof_json import _parse_jcs_object
 from .trust_proof_invariants import _number
+from .federated_sponsorship import SPONSOR_CREDIT_PREFIX
 
 
 def native_schema_bundle() -> InstalledSchemaBundle:
@@ -63,8 +64,21 @@ class RootProofBinding:
         if any(name in source and ktp.get(name) != source[name] for name in ("generation", "lineage")):
             return False
         selected = self.selection.selected
+        cross=None if selected is None else selected.federated_sponsorship
+        credits=[item for item in ktp.get("applicable_ceilings",[]) if item["ceiling"].startswith(SPONSOR_CREDIT_PREFIX)]
+        caps=[item for item in ktp.get("applicable_ceilings",[]) if item["ceiling"]=="federated_sponsor"]
+        if cross is None and (credits or caps):return False
         if selected is not None:
             expected = _parse_jcs_object(selected.projection_bytes)
+            if expected["kind"]=="sponsorship_bond":
+                if selected.issuer_zone is None or selected.issuer_zone!=self.expected_zone and cross is None:return False
+            if cross is not None:
+                if (not cross.active or cross.receiving_zone!=self.expected_zone or cross.checked_at!=now or payload["exp"]>cross.expires_at
+                        or len(caps)!=1 or not 0<=_number(caps[0]["value"])<=cross.sponsor_measure
+                        or len(credits)!=1 or credits[0]["ceiling"]!=cross.credit_ceiling_name or not 0<=_number(credits[0]["value"])<=cross.sponsor_measure
+                        or ktp.get("e_base") is not None and _number(ktp["e_base"])>_number(credits[0]["value"])
+                        or ktp.get("e_base") is not None and _number(ktp["e_base"])>_number(caps[0]["value"])):
+                    return False
             sponsorship=selected.sponsorship_repair
             if sponsorship is not None and (not sponsorship.eligible or sponsorship.zone_id!=self.expected_zone
                     or sponsorship.checked_at!=now or payload["exp"]>sponsorship.expires_at):

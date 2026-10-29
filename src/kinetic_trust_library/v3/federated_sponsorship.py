@@ -19,13 +19,17 @@ from .federation_terms import profile_terms,agreement_terms,name,identifiers
 from .sponsorship_capital import BondCapital,project_sponsor_capital
 from .sponsorship_repair import _profile as repair_profile,sponsorship_counts_eligible
 
+SPONSOR_CREDIT_PREFIX="federated_sponsor_credit."
+
 
 def _profile(raw):
     value=_parse_jcs_object(raw)
-    if (set(value)!={"id","version","receiving_zone","formula","federation_profile_digest","sponsor_admission_floor"}
+    if (set(value)-{"root_binding"}!={"id","version","receiving_zone","formula","federation_profile_digest","sponsor_admission_floor"}
             or not name(value["id"]) or not name(value["receiving_zone"]) or not _time(value["version"]) or value["version"]==0
             or value["formula"]!="home-reserve-and-receiver-measure-v1"):
         raise ValidationError("invalid selected cross-zone sponsorship profile")
+    if "root_binding" in value and value["root_binding"]!="credit-digest-ceiling-v1":
+        raise ValidationError("unsupported cross-zone root credit binding")
     ratio(value["sponsor_admission_floor"],name="receiver sponsor admission floor",maximum=100)
     return value
 
@@ -65,6 +69,7 @@ class FederatedSponsorshipAssessment:
     source_evidence_bytes: bytes
     frame_digest: str
     frame_bytes: bytes
+    credit_ceiling_name: str | None
 
     def __init__(self,*args,**kwargs):raise TypeError("cross-zone sponsorship requires installed verification")
 
@@ -199,6 +204,11 @@ class InstalledFederatedSponsorshipVerifier:
         expiry=state["expires_at"] if not active else min(state["expires_at"],latest["expires_at"],ends)
         import rfc8785
         def exact(value):return None if value is None else dict(n=str(value.numerator),d=str(value.denominator))
+        credit=None
+        if active and profile.get("root_binding")=="credit-digest-ceiling-v1":
+            credit=SPONSOR_CREDIT_PREFIX+_digest(dict(deployment_digest=deployment,profile_digest=policy,
+                instrument_digest=state["instrument_digest"],sponsor=state["sponsor"],subject=state["subject"],home_zone=state["home_zone"],
+                receiving_zone=state["receiving_zone"],root_sponsor_basis=exact(basis),ends_at=ends),self.algorithm)
         frame=dict(source={key:value for key,value in state.items() if key not in ("checked_at","expires_at")},
             projection=dict(opening_valid=bool(valid),active=active,ends_at=ends,sponsor_measure=exact(measure),root_sponsor_basis=exact(basis),
                 receiver_collateral=exact(collateral),subject_intrinsic_base=exact(intrinsic),available_home_base=exact(capital.available_base),
@@ -212,7 +222,8 @@ class InstalledFederatedSponsorshipVerifier:
                 opened_at=state["opened_at"],home_zone=state["home_zone"],receiving_zone=state["receiving_zone"],sponsor=state["sponsor"],
                 subject=state["subject"],bond_id=state["bond_id"],context_bytes=context_bytes,complete_instrument_bytes=instrument_bytes,
                 authenticated_bond_body_bytes=source.bond_body_bytes,profile_bytes=self.profile_bytes,federation_profile_bytes=self.federation_profile_bytes,
-                authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes,frame_digest=_digest(frame,self.algorithm),frame_bytes=rfc8785.dumps(frame)).items():
+                authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes,frame_digest=_digest(frame,self.algorithm),
+                frame_bytes=rfc8785.dumps(frame),credit_ceiling_name=credit).items():
             object.__setattr__(result,key,value)
         return result
 

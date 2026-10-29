@@ -13,6 +13,7 @@ from kinetic_trust_library.errors import ValidationError,ProofFormatError
 from .trust_proof_json import _parse_jcs_object
 from .root_lifecycle import _time
 from .sponsorship_repair import InstalledSponsorshipRepairVerifier,SponsorshipRepairAssessment
+from .federated_sponsorship import InstalledFederatedSponsorshipVerifier,FederatedSponsorshipAssessment
 from .demand_supplier import _digest
 
 
@@ -46,6 +47,7 @@ class TrajectoryVerificationResult:
     trusted_keys_bytes: bytes | None
     source_evidence_bytes: bytes | None
     genesis_sponsorship: SponsorshipRepairAssessment | None
+    genesis_federated_sponsorship: FederatedSponsorshipAssessment | None
 
     def __init__(self,*args,**kwargs):
         raise TypeError("trajectory results are derived by an installed verifier")
@@ -54,7 +56,7 @@ class TrajectoryVerificationResult:
 def _expected(value):
     from . import _trajectory_reference as t
     required={"trusted_level","trusted_profile_digest","expected_agent","expected_zone","expected_chain","minimum_record_format"}
-    if (type(value) is not dict or not required<=set(value) or set(value)-required-{"sponsorship_repair_profile_digest"}
+    if (type(value) is not dict or not required<=set(value) or set(value)-required-{"sponsorship_repair_profile_digest","federated_sponsorship_profile_digest"}
             or type(value["trusted_level"]) is not int or value["trusted_level"] not in (1,2,3)
             or value["minimum_record_format"]!=t.VERSION):
         raise ValidationError("installed native trajectory expectations are invalid")
@@ -63,7 +65,7 @@ def _expected(value):
         raise ValidationError("installed trajectory profile digest does not meet the trusted level")
     for field in ("expected_agent","expected_zone","expected_chain"):
         t.literal(value[field])
-    return {k:v for k,v in value.items() if k not in ("minimum_record_format","sponsorship_repair_profile_digest")}
+    return {k:v for k,v in value.items() if k not in ("minimum_record_format","sponsorship_repair_profile_digest","federated_sponsorship_profile_digest")}
 
 
 def _seconds(text):
@@ -94,6 +96,7 @@ class InstalledTrajectoryVerifier:
     expected_context_bytes: bytes
     adapter: object
     sponsorship_repair_verifier: InstalledSponsorshipRepairVerifier | None = None
+    federated_sponsorship_verifier: InstalledFederatedSponsorshipVerifier | None = None
 
     def __post_init__(self):
         if type(self.expected_context_bytes) is not bytes or not callable(getattr(self.adapter,"resolve",None)):
@@ -108,6 +111,14 @@ class InstalledTrajectoryVerifier:
                 raise ValidationError("selected trajectory sponsorship policy differs from installed profile/zone")
         elif self.sponsorship_repair_verifier is not None:
             raise ValidationError("trajectory sponsorship checks require an explicit profile binding")
+        if "federated_sponsorship_profile_digest" in expected:
+            policy=self.federated_sponsorship_verifier;algorithm="sha384" if expected["trusted_level"]==3 else "sha256"
+            if (type(policy) is not InstalledFederatedSponsorshipVerifier or policy.algorithm!=algorithm
+                    or _parse_jcs_object(policy.profile_bytes)["receiving_zone"]!=expected["expected_zone"]
+                    or _digest(_parse_jcs_object(policy.profile_bytes),algorithm)!=expected["federated_sponsorship_profile_digest"]):
+                raise ValidationError("selected trajectory cross-zone sponsorship differs from installed profile/zone")
+        elif self.federated_sponsorship_verifier is not None:
+            raise ValidationError("trajectory cross-zone sponsorship requires an explicit profile binding")
 
     def verify(self, record_bytes: bytes, *, now: int, clock_healthy: bool) -> TrajectoryVerificationResult:
         from . import _trajectory_reference as t
@@ -115,7 +126,7 @@ class InstalledTrajectoryVerifier:
         if type(record_bytes) is not bytes or not _time(now):
             raise ValidationError("trajectory verification requires immutable bytes and trusted time")
         values=dict(reason="TRAJECTORY_UNAVAILABLE",checked_at=now,canonical_record_bytes=None,record_hash=None,
-            commit_intent=None,authenticated_state_bytes=None,trusted_keys_bytes=None,source_evidence_bytes=None,genesis_sponsorship=None)
+            commit_intent=None,authenticated_state_bytes=None,trusted_keys_bytes=None,source_evidence_bytes=None,genesis_sponsorship=None,genesis_federated_sponsorship=None)
         def result():
             value=object.__new__(TrajectoryVerificationResult)
             for name,member in values.items():object.__setattr__(value,name,member)
@@ -159,22 +170,34 @@ class InstalledTrajectoryVerifier:
                         or t.instant(record["timestamp"])<=t.instant(previous["timestamp"])):
                     raise t.InvalidRecord("trajectory continuity failed")
             birth=record if record["sequence"]==0 else previous if previous["sequence"]==0 else None
-            if self.sponsorship_repair_verifier is not None and birth is not None and birth["migration_checkpoint"] is None:
+            sponsorship_selected=self.sponsorship_repair_verifier is not None or self.federated_sponsorship_verifier is not None
+            if sponsorship_selected and birth is not None and birth["migration_checkpoint"] is None:
                 binding=source.genesis_sponsorship
                 if (type(binding) is not AuthenticatedGenesisSponsorship or binding.record_hash!=birth["record_hash"]
                         or type(binding.bond_bytes) is not bytes or type(binding.context_bytes) is not bytes):
                     raise t.InvalidRecord("authenticated genesis sponsorship binding is unavailable")
-                in_sponsorship_provider=True
-                sponsorship=self.sponsorship_repair_verifier.evaluate(binding.bond_bytes,context_bytes=binding.context_bytes,
-                    evaluated_at=now,clock_healthy=clock_healthy)
-                in_sponsorship_provider=False
-                bond=_parse_jcs_object(sponsorship.authenticated_bond_body_bytes)
                 birth_time=_seconds(birth["timestamp"])
-                if (not sponsorship.eligible or sponsorship.subject!=birth["agent_id"] or sponsorship.zone_id!=birth["zone_id"]
-                        or sponsorship.opened_at>birth_time or not bond["start_time"]<=birth_time<bond["end_time"]):
-                    raise t.InvalidRecord("genesis bond was not eligible at the actor's birth")
-                values["genesis_sponsorship"]=sponsorship
-            elif self.sponsorship_repair_verifier is None and source.genesis_sponsorship is not None:
+                if self.sponsorship_repair_verifier is not None:
+                    in_sponsorship_provider=True
+                    sponsorship=self.sponsorship_repair_verifier.evaluate(binding.bond_bytes,context_bytes=binding.context_bytes,
+                        evaluated_at=now,clock_healthy=clock_healthy)
+                    in_sponsorship_provider=False
+                    bond=_parse_jcs_object(sponsorship.authenticated_bond_body_bytes)
+                    if (not sponsorship.eligible or sponsorship.subject!=birth["agent_id"] or sponsorship.zone_id!=birth["zone_id"]
+                            or sponsorship.opened_at>birth_time or not bond["start_time"]<=birth_time<bond["end_time"]):
+                        raise t.InvalidRecord("genesis bond was not eligible at the actor's birth")
+                    values["genesis_sponsorship"]=sponsorship
+                if self.federated_sponsorship_verifier is not None:
+                    in_sponsorship_provider=True
+                    cross=self.federated_sponsorship_verifier.evaluate(binding.bond_bytes,context_bytes=binding.context_bytes,
+                        evaluated_at=now,clock_healthy=clock_healthy)
+                    in_sponsorship_provider=False
+                    bond=_parse_jcs_object(cross.authenticated_bond_body_bytes)
+                    if (not cross.opening_valid or cross.subject!=birth["agent_id"] or cross.receiving_zone!=birth["zone_id"]
+                            or cross.opened_at>birth_time or not bond["start_time"]<=birth_time<min(bond["end_time"],cross.ends_at)):
+                        raise t.InvalidRecord("cross-zone genesis bond was not eligible at the actor's birth")
+                    values["genesis_federated_sponsorship"]=cross
+            elif not sponsorship_selected and source.genesis_sponsorship is not None:
                 raise t.InvalidRecord("genesis sponsorship source cannot select an uninstalled policy")
             migration=state["migration"]
             if record["migration_checkpoint"] is not None or record["sequence"]==0 and migration is not None:

@@ -5,7 +5,7 @@ from importlib.util import find_spec
 import unittest
 
 
-def fixture():
+def fixture(subject=None,receiving_zone="zone-b",now=1000):
     import rfc8785
     import hashlib
     from kinetic_trust_library.v3.federated_sponsorship import InstalledFederatedSponsorshipVerifier,AuthenticatedFederatedSponsorshipContext
@@ -20,10 +20,12 @@ def fixture():
     import copy
     opening_admission=copy.deepcopy(subset);current_admission=copy.deepcopy(subset)
     body=dict(id="bond:new",kind="sponsorship_bond",issuer=op["actor"],subject="urn:agent:new",start_time=900,end_time=1100,
+        terminator=dict(kind="employer",reference="urn:test:accountable"),root_person="person:root:1",chain_length=2,
         inputs=dict(sponsor_e_base=90,stake_percentage=20))
     profile=dict(id="urn:test:cross-zone-bond",version=1,receiving_zone="zone-b",formula="home-reserve-and-receiver-measure-v1",
-        federation_profile_digest=_digest(fed_profile,"sha256"),sponsor_admission_floor=50)
-    context=dict(subject=body["subject"],subject_profile="software",deployment_digest=_digest(dict(id="urn:test:deployment"),"sha256"),
+        federation_profile_digest=_digest(fed_profile,"sha256"),sponsor_admission_floor=50,root_binding="credit-digest-ceiling-v1")
+    context=dict(subject=body["subject"],subject_profile="software",generation=0,lineage="sponsored",hop_bound=4,receiving_zone="zone-b",
+        deployment_digest=_digest(dict(id="urn:test:deployment"),"sha256"),
         federated_sponsorship_profile_digest=_digest(profile,"sha256"))
     instrument=b"modeled-complete-signed-bond"
     legacy=asdict(BondCapital("bond:legacy",20,0,1,800,1200))
@@ -32,11 +34,31 @@ def fixture():
         context_digest=_digest(context,"sha256"),instrument_digest="sha256:"+hashlib.sha256(instrument).hexdigest(),body_digest=_digest(body,"sha256"),
         checked_at=1000,expires_at=1007,receiving_zone="zone-b",home_zone="zone-a",root="root:sponsor",sponsor=body["issuer"],
         subject=body["subject"],bond_id=body["id"],opened_at=900,
-        opening=dict(home_base=90,commitments=[legacy],repair_zones=[],sponsor_admission=opening_admission,
+        opening=dict(home_base=90,commitments=[copy.deepcopy(legacy)],repair_zones=[],sponsor_admission=opening_admission,
             sponsor_otherwise_admissible=True,home_recorded=True,receiving_anchor_verified=True),
         current=dict(home_base=90,commitments=[legacy,current],sponsor_admission=current_admission,
             sponsor_otherwise_admissible=True,home_recorded=True,receiving_anchor_verified=True,subject_intrinsic_base=12,
             severance_at=None,lent_withdrawn=False))
+    if subject is not None:body["subject"]=state["subject"]=context["subject"]=subject
+    if receiving_zone!="zone-b":
+        mapping={"zone-b":receiving_zone}
+        if receiving_zone=="zone-a":mapping["zone-a"]="zone-home"
+        def zone(value):
+            if type(value) is dict:return {mapping.get(key,key):zone(item) for key,item in value.items()}
+            if type(value) is list:return [zone(item) for item in value]
+            return mapping.get(value,value)
+        profile=zone(profile);fed_profile=zone(fed_profile);state=zone(state);context=zone(context)
+    shift=now-1000
+    state["checked_at"]+=shift;state["expires_at"]+=shift;state["opened_at"]+=shift
+    body["start_time"]+=shift;body["end_time"]+=shift
+    for part in ("opening","current"):
+        for item in state[part]["commitments"]:item["opened_at"]+=shift;item["expires_at"]+=shift
+        admission=state[part]["sponsor_admission"];admission["ingress_at"]+=shift
+        admission["agreement"]["starts_at"]+=shift;admission["agreement"]["expires_at"]+=shift
+        admission["attestation"]["attested_at"]+=shift;admission["attestation"]["expires_at"]+=shift
+    profile["federation_profile_digest"]=_digest(fed_profile,"sha256")
+    state["profile_digest"]=context["federated_sponsorship_profile_digest"]=_digest(profile,"sha256")
+    state["context_digest"]=_digest(context,"sha256");state["body_digest"]=_digest(body,"sha256")
     class Source:
         def resolve(self,**kw):return AuthenticatedFederatedSponsorshipContext(rfc8785.dumps(state),rfc8785.dumps(body),
             b"modeled-complete-opening/current-home-capital/all-zone-breach/registry/bond-anchor")
@@ -133,6 +155,76 @@ class FederatedSponsorshipTests(unittest.TestCase):
         self.assertTrue(ended.opening_valid);self.assertFalse(ended.active)
         self.assertEqual(dict(ended.home_capital.bonds)["bond:new"].effective_reserve,Fraction(9,5))
         self.assertNotEqual(active.frame_digest,ended.frame_digest)
+
+    def test_foreign_root_requires_selected_policy_and_whole_standing_ceiling(self):
+        import rfc8785
+        import json
+        from kinetic_trust_library.v3.installed_root import InstalledRootVerifier,AuthenticatedRootInstrument
+        from kinetic_trust_library.v3.assessed_root_selection import select_assessed_roots
+        from kinetic_trust_library.v3.native_proof_profile import RootProofBinding
+        v,state,body,instrument,context=fixture()
+        class Adapter:
+            def verify(self,*args,**kwargs):return AuthenticatedRootInstrument(rfc8785.dumps(body),(),issuer_zone="zone-a")
+        policy=InstalledRootVerifier(Adapter(),"sha256",federated_sponsorship_verifier=v)
+        result=policy.evaluate(instrument,context_bytes=context,evaluated_at=1000)
+        self.assertEqual(result.score,Fraction(144,5))
+        self.assertTrue(result.federated_sponsorship.active)
+        roots=select_assessed_roots((result,),context_bytes=context,evaluated_at=1000,algorithm="sha256")
+        claims=dict(sub=body["subject"],exp=1007,ktp=dict(zone="zone-b",subject_kind="software_agent",generation=0,lineage="sponsored",
+            sponsor=body["issuer"],root_instrument=json.loads(result.projection_bytes),e_base=70,
+            applicable_ceilings=[dict(ceiling="federated_sponsor",value=72),dict(ceiling=result.federated_sponsorship.credit_ceiling_name,value=72)]))
+        binding=RootProofBinding(roots,"zone-b")
+        self.assertTrue(binding(rfc8785.dumps(claims),1000))
+        for cap in claims["ktp"]["applicable_ceilings"]:cap["value"]=1
+        claims["ktp"]["e_base"]=1
+        state["current"]["home_base"]=80
+        state["current"]["sponsor_admission"]["attestation"].update(attested_base=80,exportable_base=80)
+        refreshed=policy.evaluate(instrument,context_bytes=context,evaluated_at=1000)
+        selected=select_assessed_roots((refreshed,),context_bytes=context,evaluated_at=1000,algorithm="sha256")
+        self.assertFalse(RootProofBinding(selected,"zone-b")(rfc8785.dumps(claims),1000))
+        for cap in claims["ktp"]["applicable_ceilings"]:cap["value"]=72
+        claims["ktp"]["e_base"]=73
+        self.assertFalse(binding(rfc8785.dumps(claims),1000))
+        claims["ktp"]["e_base"]=70;claims["ktp"]["applicable_ceilings"]=[]
+        self.assertFalse(binding(rfc8785.dumps(claims),1000))
+        missing=InstalledRootVerifier(Adapter(),"sha256").evaluate(instrument,context_bytes=context,evaluated_at=1000)
+        self.assertEqual(missing.score,0)
+
+    def test_installed_standing_applies_sponsor_ceiling_to_the_whole_base(self):
+        import json
+        import rfc8785
+        from dataclasses import replace
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        from kinetic_trust_library.v3.installed_root import InstalledRootVerifier,AuthenticatedRootInstrument
+        from kinetic_trust_library.v3.assessed_root_selection import select_assessed_roots
+        from kinetic_trust_library.v3.installed_standing import InstalledStandingVerifier,AuthenticatedStandingEvidence
+        from tests.unit.core.test_v3_federation import fixture as federation_fixture
+        v,state,body,instrument,context_bytes=fixture();context=json.loads(context_bytes)
+        deployment=json.loads(v.deployment_profile_bytes);deployment.update(peer_share=0,external_root=dict(hop_bound=4))
+        profile=json.loads(v.profile_bytes);profile["sponsor_admission_floor"]=10
+        state["deployment_digest"]=context["deployment_digest"]=_digest(deployment,"sha256")
+        state["profile_digest"]=context["federated_sponsorship_profile_digest"]=_digest(profile,"sha256")
+        context_bytes=rfc8785.dumps(context);state["context_digest"]=_digest(context,"sha256")
+        for part in ("opening","current"):
+            state[part]["sponsor_admission"]["agreement"]["directions"][0]["factor"]="0.2"
+        v=replace(v,deployment_profile_bytes=rfc8785.dumps(deployment),profile_bytes=rfc8785.dumps(profile))
+        class Root:
+            def verify(self,*args,**kwargs):return AuthenticatedRootInstrument(rfc8785.dumps(body),(),issuer_zone="zone-a")
+        assessed=InstalledRootVerifier(Root(),"sha256",federated_sponsorship_verifier=v).evaluate(instrument,context_bytes=context_bytes,evaluated_at=1000)
+        roots=select_assessed_roots((assessed,),context_bytes=context_bytes,evaluated_at=1000,algorithm="sha256")
+        _,_,operation,_,_=federation_fixture();operation["actor"]=body["subject"]
+        standing_body=dict(subject=body["subject"],generation=0,identity_assurance_level=3,trajectory_length=20000,
+            por_contribution=70,peer_score=0,maximum_adversity_friction="0.9",crisis_exposure=True,additional_ceilings={})
+        class Standing:
+            def verify(self,*args,**kwargs):return AuthenticatedStandingEvidence(rfc8785.dumps(standing_body))
+        verifier=InstalledStandingVerifier(v.deployment_profile_bytes,Standing(),"sha256")
+        result=verifier.evaluate(b"modeled-local-standing",roots=roots,actual_operation=operation,evaluated_at=1000)
+        self.assertEqual(result.base.base_trust,18)
+        self.assertEqual(dict(result.base.ceilings)["federated_sponsor"],18)
+        self.assertTrue(any(name.startswith("federated_sponsor_credit.") for name,_ in result.base.ceilings))
+        standing_body["additional_ceilings"]["federated_sponsor"]=100
+        from kinetic_trust_library.errors import ValidationError
+        with self.assertRaises(ValidationError):verifier.evaluate(b"same",roots=roots,actual_operation=operation,evaluated_at=1000)
 
 
 if __name__=="__main__":unittest.main()

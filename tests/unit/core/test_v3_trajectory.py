@@ -149,6 +149,26 @@ class TrajectoryTests(unittest.TestCase):
         self.assertEqual(verify(records[0]).reason,"TRAJECTORY_INVALID")
         with self.assertRaises(ValidationError):replace(verifier,sponsorship_repair_verifier=None)
         expected.pop("sponsorship_repair_profile_digest");verifier=original_verifier;adapter.genesis_binding=None
+        from tests.unit.core.test_v3_federated_sponsorship import fixture as cross_fixture
+        cross,cross_state,cross_body,cross_bond,cross_context=cross_fixture(records[0]["agent_id"],records[0]["zone_id"],birth+1)
+        cross_state.update(checked_at=now,expires_at=now+7)
+        cross_body["end_time"]=birth+2;cross_state["body_digest"]=_digest(cross_body,"sha256")
+        cross_state["current"]["commitments"][1]["expires_at"]=birth+2
+        expected["federated_sponsorship_profile_digest"]=_digest(json.loads(cross.profile_bytes),"sha256")
+        verifier=replace(original_verifier,expected_context_bytes=rfc8785.dumps(expected),federated_sponsorship_verifier=cross)
+        adapter.genesis_binding=AuthenticatedGenesisSponsorship(records[0]["record_hash"],cross_bond,cross_context)
+        historical=verify(records[0])
+        self.assertEqual(historical.reason,"TRAJECTORY_VERIFIED")
+        self.assertTrue(historical.genesis_federated_sponsorship.opening_valid)
+        self.assertFalse(historical.genesis_federated_sponsorship.active)
+        cross_state["current"]["severance_at"]=birth
+        self.assertEqual(verify(records[0]).reason,"TRAJECTORY_INVALID")
+        cross_state["current"]["severance_at"]=birth+1
+        self.assertEqual(verify(records[0]).reason,"TRAJECTORY_VERIFIED")
+        state.update(head=t.head_binding(records[1]),predecessor=records[0],predecessor_context=expected)
+        self.assertEqual(verify(records[1]).reason,"TRAJECTORY_VERIFIED")
+        state.update(head=t.head_binding(records[0]),predecessor=None,predecessor_context=None)
+        expected.pop("federated_sponsorship_profile_digest");verifier=original_verifier;adapter.genesis_binding=None
         self.assertEqual(verify(cases[0]["record"]).reason,"TRAJECTORY_INVALID")
         state.update(head=t.head_binding(records[1]),predecessor=records[0],predecessor_context=expected)
         self.assertEqual(verify(records[1]).reason,"TRAJECTORY_VERIFIED")

@@ -26,9 +26,12 @@ for-cause discharge and complete inventory/overcommit arithmetic.
 historical opening/current home capital, all-zone repair limits, exact instrument
 and context, sponsor receiver measure and earliest effective end. Its frame binds
 derived state across time-driven closure, preserving intrinsic standing and
-residuals. Root, total-standing and genesis integration are still pending. That
-integration must apply the current sponsor ceiling to total standing and validate
-actual genesis time against both the signed interval and `ends_at`.
+residuals. Root, total-standing and genesis integration now apply the current
+sponsor ceiling and exact credit identity, reject unknown/unselected foreign home,
+and validate actual genesis against the signed interval and `ends_at` independently
+of current activity. Fresh signed proof and trajectory fixtures cover these paths.
+Remaining work is broader record/person/multilateral routes, full deployment/API
+selection and production source adapters/Service fencing.
 
 The reference requires opening home standing to be exportable and does not
 automatically rebase an old loan onto another agreement. Resolve the FD27

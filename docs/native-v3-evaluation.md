@@ -1237,3 +1237,49 @@ Draft reconciliation remains at the maturity boundary: federation FD27 caps
 capital at intrinsic E_base 80. The vector does not define whether that earned
 field is the same intrinsic quantity. This helper treats its explicitly named
 intrinsic input according to Identity closure and does not claim FD27 is resolved.
+
+Cross-zone sponsorship now composes through root credit, total standing and
+genesis. `AuthenticatedRootInstrument.issuer_zone` is required for sponsorship:
+the installed authority must bind the home responsible for this exact instrument
+to its actual signing issuer/registry, never copy a candidate's zone claim.
+Unknown home gives no sponsorship credit. A known foreign home requires the
+selected `InstalledRootVerifier.federated_sponsorship_verifier`, matching policy,
+home/receiver and complete authenticated body. The root retains raw signed inputs
+while using the receiver-measured basis for its exact score and the earlier
+effective end. The liability taper never becomes a root composition input.
+
+Current root verification supplies the receiving zone from its independently
+installed expected zone when absent and rejects a conflicting explicit context.
+Inventory and candidate sources receive those normalized context bytes, so their
+scope/digest/caching must use that exact context. Foreign candidates without the
+applicable policy are ineligible before strongest-single selection; a stronger
+unaccepted foreign bond cannot displace a valid local alternative.
+
+The selected root profile declares `root_binding: credit-digest-ceiling-v1`.
+Native standing adds the reserved `federated_sponsor` total-standing ceiling and
+one `federated_sponsor_credit.<digest>` ceiling carrying the same bound. The digest
+uses canonical exact root basis, deployment/profile, complete bond identity,
+parties/zones and effective end. It binds current credit without inventing a
+local contribution or double-applying a factor. These are further-declared
+ceilings under a named provisional Library profile, not RFC-standard new wire
+fields. Providers cannot replace either convention. Proof binding rejects stale,
+duplicate or unselected markers, even if an unrelated tighter cap would conceal
+a changed root contribution. Unrelated capital changes need not alter an unchanged
+credit identity, but current eligibility and support still require revalidation.
+
+Whole standing is bounded at the receiver's sponsor measure in addition to every
+ordinary ceiling. An integration fixture makes sponsor measure 18 bind below the
+generation ceiling of 25. A fresh Ed25519 proof passes all eight verification
+stages with selected foreign support and fails current verification after that
+support is withdrawn within the proof lifetime. Expiry remains bounded by the
+supporting assessment and effective bond end.
+
+`InstalledTrajectoryVerifier.federated_sponsorship_verifier` has a symmetric
+`federated_sponsorship_profile_digest` selection and retains
+`.genesis_federated_sponsorship`. Genesis or a first successor's genesis predecessor
+must match the actual bond, historical opening, receiving zone and birth time
+inside both the signed interval and `ends_at`. Current activity is not required
+to establish an otherwise valid historical birth. Signed trajectory tests accept
+an expired-today bond valid at birth, reject birth at its effective end and retain
+the same restriction through the predecessor path. This creates no genesis record
+and does not supply durable capital reservation or operational penalty enforcement.

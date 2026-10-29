@@ -59,6 +59,11 @@ class InstalledLiveRootVerifier:
         context=_parse_jcs_object(self.context_bytes)
         if context.get("subject_profile") not in ("software","person") or type(context.get("subject")) is not str:
             raise ValidationError("current root source subject class/scope is invalid")
+        if context.get("receiving_zone",self.expected_zone)!=self.expected_zone:
+            raise ValidationError("current root context differs from the installed receiving zone")
+        if "receiving_zone" not in context:
+            import rfc8785
+            object.__setattr__(self,"context_bytes",rfc8785.dumps({**context,"receiving_zone":self.expected_zone}))
 
     def __call__(self, payload_bytes: bytes, now: int) -> RootProofVerificationResult:
         return self.evaluate(payload_bytes,evaluated_at=now)

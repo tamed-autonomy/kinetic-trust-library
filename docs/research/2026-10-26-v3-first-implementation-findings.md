@@ -1,5 +1,35 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 cross-zone root, whole standing and genesis
+
+Integrated the selected bond assessment with exact root scoring/effective end,
+receiver total-standing ceilings, current proof binding and historical genesis.
+Sponsorship adapters now supply authenticated issuer home metadata for the exact
+instrument; unknown home has no credit and foreign home cannot silently use the
+local route. Current root scope is normalized from the installed receiving zone
+before inventory/candidate evaluation, preserving valid local alternatives when
+an unaccepted foreign candidate is stronger. V3-only modeled fixtures were updated;
+released v2 runtime and source snapshots remain unchanged.
+
+An explicit provisional `credit-digest-ceiling-v1` profile uses further-declared
+ceilings for current whole standing and exact root-credit identity. The second
+ceiling has the same standing bound and no additional contribution. It prevents
+an old root calculation from passing merely because a tighter whole cap conceals
+its change. Provider overrides, duplicate/stale and unselected markers reject.
+Exact-ratio-to-decimal conversion for the sponsor ceiling was exposed by the new
+standing integration test and corrected; sponsor measure 18 now actually binds
+below generation cap 25.
+
+A fresh Ed25519 proof passes the eight-stage verifier with foreign bond support
+and fails after current lending withdrawal within its lifetime. Signed trajectory
+tests separately validate the historical opening and effective birth interval,
+accept an expired-today loan valid at birth, reject birth at effective end, and
+check genesis through the first predecessor path. Supplier review found no
+actionable issues. Actual signatures/registry/home inventory/adjudication are still
+the installed sources' authority; actual reservation, birth recording, delivery
+and enforcement remain Service work. Remaining federation record/person/multilateral
+routes, complete deployment/API selection and FD27 maturity interpretation remain.
+
 ## 2026-10-29 current cross-zone sponsorship evidence
 
 Added an installed semantic source/verifier for the complete signed bond,

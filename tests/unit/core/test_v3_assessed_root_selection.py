@@ -17,7 +17,7 @@ class AssessedRootSelectionTests(unittest.TestCase):
         context = rfc8785.dumps(dict(hop_bound=4, subject_profile="software", lineage="sponsored", generation=2, subject=body["subject"]))
         class Adapter:
             def verify(self, *args, **kwargs):
-                return AuthenticatedRootInstrument(rfc8785.dumps(body), ())
+                return AuthenticatedRootInstrument(rfc8785.dumps(body), (), issuer_zone="zone:fixture")
         root = InstalledRootVerifier(Adapter(), "sha256").evaluate(b"zero bond", context_bytes=context, evaluated_at=1800000004)
         self.assertEqual(json.loads(root.projection_bytes)["kind"], "sponsorship_bond")
         result = select_assessed_roots((root,), context_bytes=context, evaluated_at=1800000004, algorithm="sha256")
@@ -36,7 +36,7 @@ class AssessedRootSelectionTests(unittest.TestCase):
             candidate["inputs"]["anchored_capacity"] = 3*n+1
             class Adapter:
                 def verify(self, *args, **kwargs):
-                    return AuthenticatedRootInstrument(rfc8785.dumps(candidate), ())
+                    return AuthenticatedRootInstrument(rfc8785.dumps(candidate), (), issuer_zone="zone:fixture")
             return InstalledRootVerifier(Adapter(), "sha256").evaluate(label.encode(), context_bytes=context, evaluated_at=now)
         weaker, stronger = assess(10**14, "weaker"), assess(10**14+1, "stronger")
         for ordered in ((weaker, stronger), (stronger, weaker)):
