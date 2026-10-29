@@ -73,3 +73,50 @@ passed 1,115 tests. Source and built-wheel focused runs passed 34 tests across
 relational/historical reissue and shared/actor repair. The pure repair projections
 also passed 10 tests with site-package loading disabled. RFC refresh still found
 no final 3.0 tag; released package version and normative baseline remain unchanged.
+
+## Implemented checkpoint: accountable decision and endogenous refusal
+
+`InstalledRelationalDecisionVerifier` combines the exact installed relational
+reissue gate with a required signed adjudication policy. Its selected private
+`accountable-adjudication-endogenous-v1` profile is SHA-256/Standard-endogenous;
+it rejects optional adjudication and Full-exogenous claims. This is an additional
+gate, not a score, capacity measurement, approval to execute or nonce consumer.
+
+Source separately authenticates the current person/key registry, signed liability
+reference and anchor, actual signed decision record and declared certification
+run. The verified token issuer/key must resolve to that person/key holder, never
+the acting agent. Liability and current key registration must precede the run and
+decision; revocation or expiry blocks the gate. The actual decision record binds
+the full signed token hash, whole operation, exact lease, current evidence, grant
+epoch, topology epoch and registered repair route. Current ledger head and grant
+epoch must agree with relational reissue. Acknowledgment is distinguished from
+review, and the recorded decision must have offered refusal as well as approval.
+
+Every deployment-declared refusal case is pinned by case digest, whole-operation
+digest and enforcement-boundary identifier. The complete anchored run must use
+the current registered principal/key, precede this decision and remain within its
+declared age. Its case records must show substantive review and actual refusal.
+The shared execution-observation projection additionally requires an actual
+denial record and an explicitly bound non-dispatch observation at that boundary,
+within the run's time and topology epoch. Missing observation, actual dispatch,
+wrong operation/decision hash or another boundary cannot certify refusal. These
+are authenticated historical facts, not an absence-of-dispatch shortcut. Neither
+the run nor acknowledgment substitutes for the current signed favorable decision.
+
+The result expires at the earliest of reissue, adjudication token/context, human
+Source, principal registration and refusal-run validity. Operational Source
+failures propagate; they are not converted into authenticated human evidence.
+Tests use real test-profile token signatures; identity/liability, audit anchors,
+key custody and actual certification runs are modeled Source evidence. Protocol
+does not attest humanity, review quality, physical agency or production refusal
+rates. Full stochastic sampling, outcome-triggered review and uniform-approval
+findings are still pending. So are the atomic single-use commit contract and
+conditional relational Clear composition. No full HB-10 or deployment claim is
+made by this selected endogenous checkpoint.
+
+Decision checkpoint verification: supplier review found no actionable defects;
+all 1,129 regression tests passed. The built distribution passed 41 focused
+decision/reissue/adjudication/execution-observation tests. The new module also
+imports with site-package loading disabled. Source cases HB-10-001, HB-10-002
+and HB-10-004 motivate the implemented semantic checks; HB-10-003's production
+exogenous schedule remains unsupported rather than silently claimed complete.
