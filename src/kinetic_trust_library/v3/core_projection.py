@@ -24,6 +24,7 @@ from .demand_classification import NativeClassifiedDemand
 from .trust_proof_json import _parse_jcs_object
 from .demand_supplier import _digest
 from .demand_operation import digest_demand_operation
+from .installed_standing import NativeStandingAssessment
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +50,7 @@ class NativeCoreProjection:
     risk: NativeRiskAssessment | None
     capacity: NativeCapacityProjection | None
     classified_demand: NativeClassifiedDemand | None
+    standing_assessment: NativeStandingAssessment | None
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         raise TypeError("NativeCoreProjection values are derived by project_native_core()")
@@ -89,19 +91,21 @@ def _projection(
     risk: NativeRiskAssessment | None,
     capacity: NativeCapacityProjection | None,
     classified_demand: NativeClassifiedDemand | None = None,
+    standing_assessment: NativeStandingAssessment | None = None,
 ) -> NativeCoreProjection:
     result = object.__new__(NativeCoreProjection)
     for name, value in (
         ("soul", soul), ("standing", standing),
         ("risk", risk), ("capacity", capacity),
         ("classified_demand", classified_demand),
+        ("standing_assessment", standing_assessment),
     ):
         object.__setattr__(result, name, value)
     return result
 
 
 def project_classified_native_core(
-    soul: SoulGate, *, standing: NativeBaseTrust,
+    soul: SoulGate, *, standing: NativeStandingAssessment,
     factors: tuple[FactorEvidenceState, ...], context: NativeCoreContext,
     demand: NativeClassifiedDemand,
 ) -> NativeCoreProjection:
@@ -118,19 +122,25 @@ def project_classified_native_core(
         raise ValidationError("installed classified demand is required")
     if type(context) is not NativeCoreContext:
         raise ValidationError("installed native Core context is required")
+    if type(standing) is not NativeStandingAssessment:
+        raise ValidationError("installed standing assessment is required")
     profile = _parse_jcs_object(context.deployment_profile_bytes)
     if (demand.deployment_digest != _digest(profile, context.algorithm)
             or demand.operation_digest != digest_demand_operation(_parse_jcs_object(context.operation_bytes), algorithm=context.algorithm)
             or demand.evaluated_at != context.evaluated_at):
         raise ValidationError("classified demand belongs to another Core context")
+    if (standing.deployment_digest != demand.deployment_digest
+            or standing.operation_digest != demand.operation_digest
+            or standing.evaluated_at != context.evaluated_at):
+        raise ValidationError("standing belongs to another Core context")
     try:
         weights = {name: factor["weight"] for name, factor in profile["risk_factors"].items()}
     except (KeyError, TypeError, AttributeError) as exc:
         raise ValidationError("Core profile factor weights are unavailable") from exc
     projected = project_native_core(
-        soul, standing=standing, factors=factors, weights=weights, demand=demand.demand,
+        soul, standing=standing.base, factors=factors, weights=weights, demand=demand.demand,
     )
-    return _projection(soul, projected.standing, projected.risk, projected.capacity, demand)
+    return _projection(soul, projected.standing, projected.risk, projected.capacity, demand, standing)
 
 
 __all__ = ["NativeCoreContext", "NativeCoreProjection", "project_native_core", "project_classified_native_core"]

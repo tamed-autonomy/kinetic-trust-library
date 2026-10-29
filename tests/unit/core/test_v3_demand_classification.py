@@ -9,6 +9,9 @@ from kinetic_trust_library.v3.installed_demand import InstalledDemandVerifier
 from kinetic_trust_library.v3.demand_classification import InstalledDemandClassifier
 from kinetic_trust_library.v3.core_projection import project_classified_native_core, NativeCoreContext
 from tests.unit.core.test_v3_native_core_projection import soul, standing, factors, FACTORS
+from kinetic_trust_library.v3.installed_standing import InstalledStandingVerifier, AuthenticatedStandingEvidence
+from kinetic_trust_library.v3.assessed_root_selection import select_assessed_roots
+from kinetic_trust_library.v3.demand_supplier import _digest
 from tests.unit.core.test_v3_installed_demand_verifier import FixtureAdapter, VECTORS
 
 
@@ -28,6 +31,20 @@ class DemandClassificationTests(unittest.TestCase):
             def classify(self, operation_bytes, *, criticality):
                 return Decimal(10) + criticality * 10
         classifier = InstalledDemandClassifier(raw_profile, Classifier(), "sha256")
+        profile = vectors["deployment_profile"]
+        root_context = rfc8785.dumps(dict(subject=vectors["operation"]["subject"], subject_profile="software",
+            generation=7, lineage="guarantor", hop_bound=profile["external_root"]["hop_bound"], deployment_digest=_digest(profile,"sha256")))
+        roots = select_assessed_roots((), context_bytes=root_context, evaluated_at=1030, algorithm="sha256")
+        class StandingAdapter:
+            def verify(self, *args, **kwargs):
+                return AuthenticatedStandingEvidence(rfc8785.dumps(dict(
+                    subject=vectors["operation"]["subject"], generation=7, identity_assurance_level=3,
+                    trajectory_length=20000, por_contribution=70, peer_score=0,
+                    maximum_adversity_friction=.9, crisis_exposure=True, additional_ceilings={})))
+        verified_standing = InstalledStandingVerifier(raw_profile, StandingAdapter(), "sha256").evaluate(
+            b"standing", roots=roots, actual_operation=vectors["operation"], evaluated_at=1030)
+        other_standing = InstalledStandingVerifier(raw_profile, StandingAdapter(), "sha256").evaluate(
+            b"standing", roots=roots, actual_operation={**vectors["operation"], "resource": "urn:other"}, evaluated_at=1030)
         for case_id, expected in (("valid-value", 18), ("wrong-signature", 20)):
             case = next(c for c in vectors["cases"] if c["id"] == case_id)
             assessment = verifier.evaluate(case["jws"].encode(), actual_operation=vectors["operation"],
@@ -37,14 +54,21 @@ class DemandClassificationTests(unittest.TestCase):
             self.assertEqual(result.operation_digest, assessment.operation_digest)
             self.assertEqual(result.conservative, case_id != "valid-value")
             core = project_classified_native_core(
-                soul("clear"), standing=standing(), factors=factors(),
+                soul("clear"), standing=verified_standing, factors=factors(),
                 context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"), demand=result,
             )
             self.assertEqual(core.capacity.demand, expected)
             self.assertIs(core.classified_demand, result)
+            self.assertIs(core.standing_assessment, verified_standing)
+            with self.assertRaisesRegex(ValidationError, "standing belongs"):
+                project_classified_native_core(soul("clear"), standing=other_standing, factors=factors(), demand=result,
+                    context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"))
+            with self.assertRaises(ValidationError):
+                project_classified_native_core(soul("clear"), standing=standing(), factors=factors(), demand=result,
+                    context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"))
             with self.assertRaises(ValidationError):
                 project_classified_native_core(
-                    soul("clear"), standing=standing(), factors=factors(), demand=result,
+                    soul("clear"), standing=verified_standing, factors=factors(), demand=result,
                     context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1031, "sha256"),
                 )
             with self.assertRaises(ValidationError):
