@@ -265,6 +265,47 @@ class ReadinessTests(unittest.TestCase):
         rs["current_grant_epoch"]=6
         self.assertEqual(reissue_clear().reason,"CLEARANCE_REISSUE_BINDING")
         with self.assertRaisesRegex(ValidationError,"symmetric"):replace(rcf["verifier"],reissue_verifier=None)
+        from tests.unit.core._v3_clearance_fixture import install_relational
+        relational_cf=clearance_fixture(native,combined,operation,deployment)
+        commit_fixture,relational_history=install_relational(relational_cf,operation,deployment)
+        human=commit_fixture["f"]
+        def relational_clear(token=True):
+            return relational_cf["verifier"].evaluate(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True,
+                relational_token_bytes=human["f"]["sign"]() if token else None)
+        relational=relational_clear()
+        self.assertTrue(relational.conditional_clear);self.assertFalse(relational.action_permitted)
+        self.assertTrue(relational.relational_commit.conditional_commit)
+        self.assertEqual(relational.expires_at,1005)
+        self.assertEqual(relational.supervision,combined.supervision)
+        self.assertEqual(relational.tightened_constraints_bytes,combined.tightened_constraints_bytes)
+        relational_cf["template_state"]["expires_at"]=1002
+        short_relational=relational_clear()
+        self.assertEqual(short_relational.expires_at,1002)
+        self.assertEqual(short_relational.relational_commit.expires_at,1002)
+        relational_cf["template_state"]["expires_at"]=1007
+        self.assertFalse(relational_clear(False).conditional_clear)
+        human["rs"]["nonce_state"]["consumed"]=True
+        self.assertFalse(relational_clear().conditional_clear)
+        human["rs"]["nonce_state"]["consumed"]=False
+        commit_fixture["s"]["nonce"]["consumed_at"]=999
+        self.assertFalse(relational_clear().conditional_clear)
+        commit_fixture["s"]["nonce"]["consumed_at"]=None
+        human["s"]["topology_epoch"]=human["s"]["decision"]["topology_epoch"]=6
+        human["f"]["state"]["topology_epoch"]=human["f"]["payload"]["topology_epoch"]=6
+        commit_fixture["s"]["topology_epoch"]=6;human["refresh"]()
+        self.assertEqual(relational_clear().reason,"CLEARANCE_RELATIONAL_COMMIT_BINDING")
+        human["s"]["topology_epoch"]=human["s"]["decision"]["topology_epoch"]=5
+        human["f"]["state"]["topology_epoch"]=human["f"]["payload"]["topology_epoch"]=5
+        commit_fixture["s"]["topology_epoch"]=5;human["refresh"]()
+        relational_cf["template_state"]["registration_status"]="withdrawn"
+        self.assertFalse(relational_clear().conditional_clear)
+        relational_cf["template_state"]["registration_status"]="registered"
+        with self.assertRaises(ValidationError):replace(relational_cf["verifier"],relational_commit_verifier=None)
+        wrong_route_cf=clearance_fixture(native,combined,operation,deployment)
+        wrong_commit,_=install_relational(wrong_route_cf,operation,deployment,"repair:other-route")
+        wrong_route=wrong_route_cf["verifier"].evaluate(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True,
+            relational_token_bytes=wrong_commit["f"]["f"]["sign"]())
+        self.assertEqual(wrong_route.reason,"CLEARANCE_RELATIONAL_REPAIR_BINDING")
         boundary_state["subject_class"]="outsider"
         denied_boundary=whole()
         self.assertEqual(denied_boundary.reason,"BOUNDARY_SUBJECT")

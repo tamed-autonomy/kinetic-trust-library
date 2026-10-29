@@ -57,3 +57,42 @@ def install_reissue(cf,operation,deployment,now=1000):
     cf["verifier"]=replace(old,template_verifier=replace(old.template_verifier,hand_back_verifier=hb),
         non_clearance_verifier=nc,profile_bytes=rfc8785.dumps(cp),reissue_verifier=rv)
     return rv,rs,refresh
+
+
+def install_relational(cf,operation,deployment,repair_ref_override=None):
+    import json,rfc8785
+    from dataclasses import replace
+    from kinetic_trust_library.v3.demand_supplier import _digest
+    from tests.unit.core.test_v3_relational_decision import fixture as decision_fixture
+    from tests.unit.core.test_v3_relational_commit import fixture as commit_fixture
+    from tests.unit.core.test_v3_hand_back_hysteresis import event
+    s=cf["state"];t=cf["template_state"]["template"]
+    s.update(consequence_class="Relational",mutates_relation=True)
+    t["consequence_class"]="Relational"
+    cf["template_state"]["consequence_class"]=cf["hand_back_state"]["consequence_class"]="Relational"
+    s["intent"]["consequence_class"]="Relational"
+    s["lease"].update(consequence_class="Relational",kind="single-use",nonce="nonce:one-step",expires_at=None,template_digest=_digest(t,"sha256"))
+    s["template_digest"]=cf["hand_back_state"]["lease"]["template_digest"]=s["lease"]["template_digest"]
+    old,history,refresh=install_reissue(cf,operation,deployment)
+    zone=json.loads(old.profile_bytes)["zone"]
+    f=decision_fixture(operation,deployment,zone,s["lease"],old.hysteresis_verifier,repair_ref_override or t["repair"]["ref"])
+    refresh()
+    f["s"]["evidence_digest"]=f["s"]["decision"]["evidence_digest"]=s["native_geometry_digest"]
+    f["f"]["state"]["evidence_digest"]=f["f"]["payload"]["evidence_digest"]=s["native_geometry_digest"]
+    f["refresh"]()
+    c=commit_fixture(f)
+    rp=json.loads(old.profile_bytes)
+    rp.update(relational_reissue="relationship-record-v1",relational_profile_digest=_digest(json.loads(f["v"].relational_verifier.profile_bytes),"sha256"))
+    history["profile_digest"]=_digest(rp,"sha256")
+    stop=f["rs"]["stops"][0]
+    e=event(2,operation["actor"],occurred=stop["occurred_at"])
+    e.update(stop_anchor=stop["anchor"],consequence_class="Relational")
+    e["adjudications"][0]["stop_anchor"]=stop["anchor"]
+    history.update(history=[e],pricing_profiles={stop["anchor"]:rp["hysteresis_profile_digest"]})
+    rv=replace(old,profile_bytes=rfc8785.dumps(rp),relational_verifier=f["v"].relational_verifier)
+    cp=cf["profiles"]["clearance"]
+    cp.update(relational_clear="conditional-single-use-v1",reissue_profile_digest=_digest(rp,"sha256"),
+              relational_commit_profile_digest=_digest(c["p"],"sha256"))
+    s["profile_digest"]=_digest(cp,"sha256")
+    cf["verifier"]=replace(cf["verifier"],profile_bytes=rfc8785.dumps(cp),reissue_verifier=rv,relational_commit_verifier=c["v"])
+    return c,history

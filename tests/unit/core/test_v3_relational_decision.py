@@ -5,39 +5,39 @@ import unittest
 HAS_EXTRAS=all(find_spec(n) for n in ("rfc8785","cryptography","jsonschema"))
 
 
-def fixture():
+def fixture(operation=None,deployment=None,zone="zone-a",lease=None,hysteresis_verifier=None,repair_ref="repair:registered"):
     import json,rfc8785,hashlib
     from dataclasses import replace
     from tests.unit.core.test_v3_relational_reissue import fixture as reissue
     from tests.unit.core.test_v3_adjudication import fixture as adjudication
     from kinetic_trust_library.v3.relational_decision import InstalledRelationalDecisionVerifier,AuthenticatedRelationalDecisionContext
     from kinetic_trust_library.v3.demand_supplier import _digest
-    rv,rs,lease,op,now,_=reissue()
+    rv,rs,lease,op,now,_=reissue(operation,deployment,zone,lease,hysteresis_verifier,repair_ref)
     dp=json.loads(rv.hysteresis_verifier.deployment_profile_bytes)
     f=adjudication(operation=op,deployment=dp,now=now)
-    f["profile"]["zone_id"]="zone-a"
-    f["state"].update(zone_id="zone-a",profile_digest=_digest(f["profile"],"sha256"),grant_digest=_digest(lease,"sha256"))
-    f["payload"].update(zone_id="zone-a",grant_digest=f["state"]["grant_digest"])
+    f["profile"]["zone_id"]=zone
+    f["state"].update(zone_id=zone,profile_digest=_digest(f["profile"],"sha256"),grant_digest=_digest(lease,"sha256"))
+    f["payload"].update(zone_id=zone,grant_digest=f["state"]["grant_digest"])
     f["verifier"]=replace(f["verifier"],profile_bytes=rfc8785.dumps(f["profile"]))
-    p=dict(id="human-decision:1",version=1,zone="zone-a",formula="accountable-adjudication-endogenous-v1",
+    p=dict(id="human-decision:1",version=1,zone=zone,formula="accountable-adjudication-endogenous-v1",
         adjudication_profile_digest=_digest(f["profile"],"sha256"),relational_profile_digest=_digest(json.loads(rv.profile_bytes),"sha256"),
         evidence_level="standard-endogenous",refusal_cases=[dict(id="must-refuse:1",case_digest="sha256:"+"a"*64,
             operation_digest="sha256:"+"4"*64,boundary_id="pep:declared")],max_run_age_seconds=100)
     principal="person:decider"
     signed_at=f["payload"]["iat"]
     decision=dict(anchor="sha256:"+"c"*64,token_digest="sha256:"+hashlib.sha256(f["sign"]()).hexdigest(),decided_by=principal,
-        issuer=f["profile"]["issuer"],key_id="test-key",signed_at=signed_at,repair_ref="repair:registered",
+        issuer=f["profile"]["issuer"],key_id="test-key",signed_at=signed_at,repair_ref=repair_ref,
         grant_digest=f["state"]["grant_digest"],evidence_digest=f["state"]["evidence_digest"],operation_digest=f["state"]["operation_digest"],
         current_grant_epoch=5,topology_epoch=5,review_kind="review",acknowledged_at=997,reviewed_at=998,
         offered_outcomes=["approve","refuse"],choice="approve")
     case=dict(id="must-refuse:1",case_digest="sha256:"+"a"*64,anchor="sha256:"+"1"*64,decided_by=principal,
               issuer=decision["issuer"],key_id="test-key",decided_at=980,choice="refuse",review_kind="review",
-              execution=dict(scope=dict(actor=op["actor"],operation_digest="sha256:"+"4"*64,zone="zone-a",topology_epoch=5),
+              execution=dict(scope=dict(actor=op["actor"],operation_digest="sha256:"+"4"*64,zone=zone,topology_epoch=5),
                 decision=dict(decision_id="refusal:1",record_digest="sha256:"+"1"*64,decided_at=980,execution_permitted=False,supervision="stable"),
                 observation=dict(decision_id="refusal:1",decision_digest="sha256:"+"1"*64,boundary_id="pep:declared",kind="non_dispatch",observed_at=981),
                 enforcement_point_present=True))
     s=dict(deployment_digest=_digest(dp,"sha256"),profile_digest=_digest(p,"sha256"),operation_digest=decision["operation_digest"],
-        subject=op["actor"],zone="zone-a",checked_at=now,expires_at=now+7,lease_digest=f["state"]["grant_digest"],
+        subject=op["actor"],zone=zone,checked_at=now,expires_at=now+7,lease_digest=f["state"]["grant_digest"],
         evidence_digest=f["state"]["evidence_digest"],current_grant_epoch=5,topology_epoch=5,ledger_head=rs["ledger_head"],
         principal=dict(id=principal,kind="person",issuer=decision["issuer"],key_id="test-key",key_holder=principal,
                        liability_ref="liability:signed",liability_anchor="sha256:"+"2"*64,liability_signed_by=principal,

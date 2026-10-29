@@ -2,19 +2,19 @@ from importlib.util import find_spec
 import unittest
 
 
-def fixture():
+def fixture(operation=None,deployment=None,zone="zone-a",lease=None,hysteresis_verifier=None,repair_ref="repair:registered"):
     import rfc8785
     from tests.unit.core.test_v3_reissue import fixture as base
     from tests.unit.core.test_v3_reconciliation_record import facts
     from dataclasses import asdict
     from kinetic_trust_library.v3.relational_reissue import InstalledRelationalReissueVerifier,AuthenticatedRelationalReissueContext
     from kinetic_trust_library.v3.demand_supplier import _digest
-    v,_,lease,op,now,_=base()
-    hv=v.hysteresis_verifier
+    v,_,lease,op,now,_=base(operation,deployment,zone=zone,lease=lease)
+    hv=v.hysteresis_verifier if hysteresis_verifier is None else hysteresis_verifier
     lease.update(consequence_class="Relational",kind="single-use",nonce="nonce:1",expires_at=None)
-    p=dict(id="relational:1",version=1,zone="zone-a",formula="adverse-stop-relationship-record-v1",
+    p=dict(id="relational:1",version=1,zone=zone,formula="adverse-stop-relationship-record-v1",
            hysteresis_profile_digest=_digest(__import__('json').loads(hv.profile_bytes),"sha256"),
-           repair_ref="repair:registered",decline_clock_seconds=20)
+           repair_ref=repair_ref,decline_clock_seconds=20)
     anchor="sha256:"+"a"*64
     record=dict(anchor="sha256:"+"b"*64,sequence=30,facts=asdict(facts(anchored_at=940)),repair_ref=p["repair_ref"],
                 disposition="reconciled",route_started_at=None,route_completed_at=None)

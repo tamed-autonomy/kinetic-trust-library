@@ -120,3 +120,67 @@ decision/reissue/adjudication/execution-observation tests. The new module also
 imports with site-package loading disabled. Source cases HB-10-001, HB-10-002
 and HB-10-004 motivate the implemented semantic checks; HB-10-003's production
 exogenous schedule remains unsupported rather than silently claimed complete.
+
+## Implemented checkpoint: conditional relational Clear and commit conditions
+
+`InstalledRelationalCommitVerifier` selects the private
+`conditional-single-use-commit-v1` policy. It requires the installed accountable
+decision gate plus Source-authenticated actual authority registration, nonce
+ownership/live state/revision, grant epoch, topology epoch, ledger head and seven
+protected prerequisite fences. Authority registration and nonce registration
+must precede the grant; withdrawal, revocation, consumption or disagreement
+between current Sources prevents construction. The named authority protocol is
+`compare-nonce-epoch-fences-with-effect-v1`; its registration is authenticated
+Source evidence, not a claim established by a string or by this test suite.
+
+The contract pins the exact operation/subject/zone/deployment, nonce namespace,
+actual full grant, authority and nonce revisions, current epochs/head, original
+template, native geometry evidence, human decision and repair reference. Fence
+anchors must match the corresponding verified facts, not arbitrary caller
+references. Source owns the durable revisions and complete dependency coverage:
+
+| Fence | Anchor and protected dependency |
+| --- | --- |
+| grant | Actual grant audit record and current grant state |
+| nonce | Actual authority-owned nonce record/live revision |
+| human_decision | Actual signed accountable decision and its current supporting registry/run evidence |
+| template | Original registered template digest and current registration/return-path status |
+| native_evidence | Verified native geometry digest and an aggregate protected revision covering all native prerequisite dependencies, including current readiness and boundary evidence |
+| adverse_stop | Current ledger head and active-stop/epoch state |
+| authority | Actual authority registration anchor and current protocol/custody/namespace registration |
+
+The selected clearance policy `conditional-single-use-v1` installs this exact
+decision/reissue/ledger graph and lease authority by digest and identity. It
+requires a native boundary verifier, matching topology epoch, the original
+template's repair reference, current native prerequisites, supervision and
+constraints. Conditional Clear bounds the commit contract itself by the shortest
+supporting native/template/registry/reissue/decision expiry; the contract cannot
+outlive the Clear result. Duration Clear keeps its independent duration bound.
+
+`check_relational_commit` accepts the installed typed assessment, never an unsigned
+wire contract. It compares the exact actual operation and a separately
+authenticated current protected frame at commit time, rejecting changed nonce or
+authority revision, consumed/revoked tokens, changed epochs/head/fences and
+expired evidence. Matching conditions return `action_permitted=False`: they
+are neither full Clear nor ordinary authorization. A timestamp alone cannot
+prove a frame is current; the caller must read the real protected authority state
+under the same transaction/lock that consumes the nonce and commits the exact
+protected mutation or durable dispatch intent. Serialization does not preserve
+authority: a remote consumer must independently authenticate its complete decision
+path or rerun the installed verifiers, not deserialize these bytes into permission.
+
+The modeled authority test serializes two attempts against one nonce and observes
+one accepted consumption/one modeled effect. This tests compare-before-consume
+semantics, not a production database, crash recovery, actual durable consumption,
+remote delivery or downstream effect confirmation. Service must still provide
+those adapters and complete ordinary authorization. Returning conditional Clear
+does not dispatch. Full exogenous decision meaningfulness and the remaining
+hand-back families/capability-selection work remain open. This private selected
+contract must be reconciled with the final RFC tag; no RFC wire is added.
+
+Clear/commit checkpoint verification: supplier review found no actionable defects.
+All 1,137 regression tests passed. The final source and built-wheel focused runs
+passed 48 tests, including the actual signed native composition and modeled
+concurrent consumption check. The comparison result's API cannot construct
+action permission and imports without optional dependencies. RFC refresh found
+no final 3.0 tag and unchanged main; the released baseline remains untouched.
