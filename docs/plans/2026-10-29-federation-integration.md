@@ -21,10 +21,19 @@ Item 5, additional item 4 routes and full deployment/API selection remain pendin
 
 Item 5 prerequisite: `sponsorship_capital` now implements the exact home reserve
 taper and permanent ancestral floor, prior closure, transferred residual value,
-for-cause discharge and complete inventory/overcommit arithmetic. It has no source
-or root integration yet. The cross-zone implementation must apply the earliest
-bond/agreement/severance end without releasing permanent residuals, and must
-preserve the receiving subject's independently earned standing.
+for-cause discharge and complete inventory/overcommit arithmetic.
+`federated_sponsorship` now supplies the selected current source and verifier for
+historical opening/current home capital, all-zone repair limits, exact instrument
+and context, sponsor receiver measure and earliest effective end. Its frame binds
+derived state across time-driven closure, preserving intrinsic standing and
+residuals. Root, total-standing and genesis integration are still pending. That
+integration must apply the current sponsor ceiling to total standing and validate
+actual genesis time against both the signed interval and `ends_at`.
+
+The reference requires opening home standing to be exportable and does not
+automatically rebase an old loan onto another agreement. Resolve the FD27
+`earnedInB: 80` versus Identity intrinsic-80 closure distinction at final adoption;
+the current explicitly intrinsic input follows the Identity closure rule.
 
 Next implementation:
 

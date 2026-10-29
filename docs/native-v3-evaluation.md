@@ -1196,3 +1196,44 @@ ownership across zones, actual original stakes/intrinsic standing, prior closure
 transfer history and current adjudication. Cross-zone bond source/root/standing
 composition remains next implementation work; bond or agreement end cannot be
 implemented as release of permanent residual liability.
+
+`InstalledFederatedSponsorshipVerifier` now binds the complete bond bytes/body,
+identity context, deployment/receiver profiles, healthy current clock and separate
+opening/current snapshots. It reuses the same directional federation projector
+and the existing published root-lineage sponsorship count predicate. The Source
+authenticates actual home ownership and complete capital inventories, actual
+agreement/admission versions and registry/witness facts, ordinary sponsor
+prerequisites, all opening breach zones and their published policies, bond anchors,
+withdrawal and severance. This is a semantic adapter contract, not a new wire.
+
+Opening eligibility requires the actual original home base, enough available
+home capital before the new stake, receiving/home records, an agreement providing
+for sponsorship and an admissible receiver-measured sponsor. The named exact
+reference requires the original home base to be exportable; it does not infer or
+re-export an imported portion of home standing. Every supplied breach-zone count
+must pass its actual published policy, including prior blocking state.
+
+Current credit requires the same origin agreement/admission, current records,
+admissibility and sufficient backing, and ends at the earliest bond/origin
+agreement/severance end. Its root sponsor basis cannot exceed either the actual
+opening receiver measure or the current one. Both use the lesser of actual home
+standing and attested exportable standing, preventing an older higher attestation
+from increasing the bond's basis. The collateral half is accounting and is never
+used as the subject's E_base. A derived end closes the active capital charge while
+retaining the ancestral floor. An unrelated current agreement cannot rewrite
+opening history or the original termination bound.
+
+The sealed assessment distinguishes `.opening_valid` from `.active`, retains
+independently earned intrinsic standing and current home capital, and binds the
+derived state as well as source facts in its semantic frame. Crossing an end
+changes that frame even if only the clock was refreshed. Ending current credit
+does not invalidate a properly established opening, erase earned standing or
+release residual liability. Actual root, total-standing and genesis composition
+remain next integration work: genesis must match the bond and precede `ends_at`,
+and active sponsorship must ceiling total receiver standing at sponsor measure.
+
+Draft reconciliation remains at the maturity boundary: federation FD27 caps
+`earnedInB: 80` at sponsor measure 72, while Identity Sections 6.4/8.2 close active
+capital at intrinsic E_base 80. The vector does not define whether that earned
+field is the same intrinsic quantity. This helper treats its explicitly named
+intrinsic input according to Identity closure and does not claim FD27 is resolved.

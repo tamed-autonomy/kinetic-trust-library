@@ -1,5 +1,37 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 current cross-zone sponsorship evidence
+
+Added an installed semantic source/verifier for the complete signed bond,
+historical opening and current all-home capital, receiver-measured sponsor,
+agreement/admission, all-zone opening breach limits and current termination.
+Shared the existing exact count predicate and directional factor projector;
+there is no second weaker copy. Opening eligibility and current credit remain
+separate, preserving valid historical births after expiry, severance or withdrawal.
+
+The verifier checks original stake against available capital before opening and
+the current inventory's exact signed bond. The collateral half is separate from
+standing. Root basis is bounded by opening and current receiver measures; actual
+home base caps a higher older attestation. Effective bond/agreement/severance end
+retains residual liability and the subject's independently earned standing. The
+semantic frame includes derived active/capital state, so time-driven closure
+cannot reuse an unchanged raw-source frame. Seven modeled source tests cover
+these boundaries, scope substitution, unknown/unrelated agreements and a hard
+breach in another zone. Supplier review found no actionable defects.
+
+This is an explicit exact-software reference, requiring the original home base
+to be exportable and retaining the origin agreement. It does not define mixed
+imported-home backing or automatically rebase an existing loan. Current Root,
+whole-standing and genesis integration are pending; no created genesis, atomic
+reserve, real signature/registry evidence or deployed capital enforcement follows.
+
+Potential draft ambiguity: Federation FD27's `earnedInB: 80` is capped at 72,
+whereas Identity 6.4/8.2 closes at intrinsic E_base 80 and preserves residuals.
+The vector does not define whether its earned field equals intrinsic standing.
+The explicit intrinsic input follows Identity closure; no complete FD27 or
+40-vector conformance claim is made. Final-tag reconciliation must settle that
+interpretation rather than silently apply inconsistent maturity semantics.
+
 ## 2026-10-29 sponsorship capital and permanent liability
 
 Cross-zone source review exposed a prerequisite absent from native Library

@@ -34,6 +34,20 @@ def _profile(raw):
     return profile
 
 
+
+def sponsorship_counts_eligible(profile,counts,blocked,aggregate_blocked,hard_blocked):
+    """Internal predicate for an authenticated, validated published profile."""
+    if (type(counts) is not dict or counts.keys()!=profile["entry_classes"].keys() or any(not _time(value) for value in counts.values())
+            or type(blocked) is not list or any(type(name) is not str or name not in counts for name in blocked)
+            or len(set(blocked))!=len(blocked) or type(aggregate_blocked) is not bool or type(hard_blocked) is not bool):
+        raise ValidationError("complete root-lineage counts and prior blocking state required")
+    total=sum(counts.values());hard=sum(count for name,count in counts.items() if profile["entry_classes"][name]["hard"])
+    eligible=(total<=profile["aggregate_count_limit"] and (not aggregate_blocked or total<profile["aggregate_count_limit"])
+        and hard<=1 and (not hard_blocked or hard<1) and all(count<=profile["entry_classes"][name]["count_limit"]
+        and (name not in blocked or count<profile["entry_classes"][name]["count_limit"]) for name,count in counts.items())
+    )
+    return eligible
+
 @dataclass(frozen=True,slots=True)
 class AuthenticatedSponsorshipContext:
     state_bytes: bytes
@@ -108,16 +122,7 @@ class InstalledSponsorshipRepairVerifier:
                 or not _time(state["opened_at"]) or not _time(body.get("start_time")) or not _time(body.get("end_time"))
                 or not state["opened_at"]<=body["start_time"]<body["end_time"] or state["opened_at"]>evaluated_at):
             raise ValidationError("sponsorship opening differs from current authenticated identity/instrument/policy")
-        counts=state["counts"];blocked=state["blocked_classes"]
-        if (type(counts) is not dict or counts.keys()!=profile["entry_classes"].keys() or any(not _time(value) for value in counts.values())
-                or type(blocked) is not list or any(type(name) is not str or name not in counts for name in blocked)
-                or len(set(blocked))!=len(blocked) or type(state["aggregate_blocked"]) is not bool or type(state["hard_blocked"]) is not bool):
-            raise ValidationError("complete root-lineage counts and prior blocking state required")
-        total=sum(counts.values());hard=sum(count for name,count in counts.items() if profile["entry_classes"][name]["hard"])
-        eligible=(total<=profile["aggregate_count_limit"] and (not state["aggregate_blocked"] or total<profile["aggregate_count_limit"])
-            and hard<=1 and (not state["hard_blocked"] or hard<1) and all(count<=profile["entry_classes"][name]["count_limit"]
-            and (name not in blocked or count<profile["entry_classes"][name]["count_limit"]) for name,count in counts.items())
-        )
+        eligible=sponsorship_counts_eligible(profile,state["counts"],state["blocked_classes"],state["aggregate_blocked"],state["hard_blocked"])
         result=object.__new__(SponsorshipRepairAssessment)
         for name,value in dict(eligible=eligible,reason="SPONSORSHIP_OPENING_ELIGIBLE" if eligible else "SPONSORSHIP_BREACH_LIMIT",
             opened_at=state["opened_at"],checked_at=evaluated_at,expires_at=state["expires_at"],zone_id=self.expected_zone,

@@ -109,7 +109,7 @@ class InstalledFederationVerifier:
             raise ValidationError("federation state differs from current invocation/profile/admission scope")
         identifiers(state["required_sovereignty"])
         values=dict(admitted=False,reason="FEDERATION_IMPORT_UNAVAILABLE",factor=None,exportable_base=None,void_clauses=(),expires_at=state["expires_at"])
-        try:self._project(state,profile,values,evaluated_at)
+        try:self._project(state,profile,values,evaluated_at,self.algorithm)
         except ValidationError:values.update(admitted=False,reason="FEDERATION_EVIDENCE_INVALID",exportable_base=None)
         import rfc8785
         frame={key:value for key,value in state.items() if key not in ("checked_at","expires_at")}
@@ -126,7 +126,8 @@ class InstalledFederationVerifier:
                 authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes,standing_ceiling_name=binding).items():object.__setattr__(result,key,value)
         return result
 
-    def _project(self,state,profile,out,now):
+    @staticmethod
+    def _project(state,profile,out,now,algorithm):
         agreement=state["agreement"];attestation=state["attestation"]
         if agreement is None or attestation is None or state["ingress_at"] is None:return
         out["void_clauses"]=agreement_terms(agreement)
@@ -175,7 +176,7 @@ class InstalledFederationVerifier:
                 or attestation["kind"] in ("silent-veto","soul-veto","reconciliation","standing-delta")
                 or attestation["current_valid"] is not True
                 or type(attestation["signed_act"]) is not bool or type(attestation["payload_digest"]) is not str
-                or re.fullmatch(self.algorithm+r":[0-9a-f]{"+str(64 if self.algorithm=="sha256" else 96)+"}",attestation["payload_digest"]) is None
+                or re.fullmatch(algorithm+r":[0-9a-f]{"+str(64 if algorithm=="sha256" else 96)+"}",attestation["payload_digest"]) is None
                 or type(attestation["signatures"]) is not list or not attestation["signatures"]):
             raise ValidationError("attestation is not an admissible current one-link software record")
         witnesses=set();signers=set()
