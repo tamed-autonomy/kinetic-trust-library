@@ -403,5 +403,55 @@ signatures, factual validity and current authority still require their own
 checks. Wrong keys or tags return no plaintext. Data keys are not retained in
 results, and key/plaintext fields are omitted from generated representations.
 This is not secure memory zeroization. Key custody, authorized access, retention,
-restoration and actual destruction remain source obligations. Issuing new
-encrypted envelopes is separate work; these APIs verify and read existing ones.
+restoration and actual destruction remain source obligations. The issuer below
+creates new envelopes separately from archive verification and authorized reads.
+
+## Producing encrypted evidence
+
+`v3.privacy_issuance.InstalledPrivacyEvidenceIssuer` installs the same archive
+lookup context, an ingest source, a signing adapter and a key-storage adapter.
+`issue(plaintext, actual_operation=..., now=..., clock_healthy=True)` accepts
+1–65,536 exact bytes; the completed envelope is bounded to 262,144 bytes, matching
+the verifier. These are Library resource limits, not universal RFC limits.
+
+The ingest source receives only `expected_context_bytes`, canonical actual
+`operation_bytes` and `checked_at`. It returns
+`AuthenticatedPrivacyIngest(state_bytes, trusted_keys_bytes, evidence_bytes)`.
+The closed state contains exact `context`, actual `operation`, current
+`checked_at`, independently authenticated `plaintext_digest`, approved
+`metadata`, `kid` and `algorithm`. The digest is SHA-256 at Levels 1/2 and
+SHA-384 at Level 3, over the exact original bytes. Metadata has exactly the RFC
+seal helper's ten fields: envelope/zone/chain/position/predecessor, purpose,
+privacy-policy digest, creation/deletion times and issuer. Creation is current;
+the approved policy must independently justify the retention deadline.
+
+This source must authenticate permission to ingest these actual bytes, permitted
+source/purpose/recipients and correction/retention state. It owns reservation,
+predecessor selection and concurrent append fencing. The plaintext and its
+candidate digest are not supplied to the source callback. Its output must
+reflect the independently authenticated invocation, not echo candidate claims.
+
+The Library generates a fresh 256-bit data key, 96-bit nonce and opaque key
+reference per attempt, then applies the exact RFC AES-GCM associated data and
+complete JCS signing body. The signing adapter's
+`sign(signing_input, algorithm=..., kid=...)` returns raw JWS signature bytes;
+private signing keys stay with that adapter. The Library verifies the completed
+signature/hash and role/issuer/zone/strength before asking for key storage.
+
+`key_storage.store(data_key, context_bytes=...)` must durably protect the exact
+data key and return `AuthenticatedPrivacyKeyStorage(context_bytes,
+evidence_bytes)`. The exact canonical custody context binds installed context,
+operation, approved metadata, original-byte digest, completed `record_hash`,
+`key_ref`, nonce, generated-key digest and current time. Acknowledging a different
+key or binding fails issuance. Adapters must not log raw keys. Source and custody
+evidence can identify personal data and must remain protected under the policy.
+
+The sealed result is explicitly `PRIVACY_ENVELOPE_SIGNED_UNANCHORED`. It retains
+the completed encrypted envelope and authenticated source/custody evidence,
+without returning the raw key or original plaintext. Its local computed hash
+does not establish an independent archive anchor. The consuming archive service
+must durably append under its reservation, establish consensus/anchoring and
+then use the installed verifier. Commit failures, uncertain storage outcomes,
+orphan-key cleanup, retries, uniqueness, lawful retention and destruction remain
+product responsibilities. No receipt, zeroization or original-evidence truth is
+established by issuance.
