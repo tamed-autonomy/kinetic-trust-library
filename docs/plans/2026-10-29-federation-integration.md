@@ -33,6 +33,17 @@ of current activity. Fresh signed proof and trajectory fixtures cover these path
 Remaining work is broader record/person/multilateral routes, full deployment/API
 selection and production source adapters/Service fencing.
 
+Record checkpoint: `federation_records` and `InstalledFederationRecordVerifier`
+now select exact record/profile/current-time evidence, complete reached-subject
+coverage, current bilateral agreements and registry/witness facts. They derive
+exposure-only breach/for-cause destinations and blocked sovereignty obligations;
+anchor-only notifications follow actual prior breach delivery with exact
+subject/anchor/origin/signed-agreement/time binding. Person notifications work
+without exporting personal reconciliation. Veto/delta/reconciliation bodies have
+no route. The reference requires exact same signed agreement terms; it does not
+migrate history across amended terms. Service delivery/wire serialization and
+production Source adapters remain; FD31–40 are not all fully implemented.
+
 The reference requires opening home standing to be exportable and does not
 automatically rebase an old loan onto another agreement. Resolve the FD27
 `earnedInB: 80` versus Identity intrinsic-80 closure distinction at final adoption;

@@ -1,5 +1,26 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 federation exposure and anchoring notifications
+
+Added a pure delivery planner and selected installed record verifier against
+Federation §6.5 / FD33, FD35, FD37, FD39 and FD40. Mandatory exposure follows
+actual reached-subject agreement coverage; an anchoring notification follows
+the breach's actual delivery history. A still-unenforced sovereignty constraint
+retains a blocked obligation. The notification projection carries exactly two
+anchors, never a personal reconciliation body or receiving-zone closure.
+
+The installed Source authenticates exact record/profile/time/signature facts,
+complete coverage and actual prior delivery records. Library binds historical
+delivery to subject, breach anchor, origin, exact signed agreement digest and
+time, checks agreement scope/expiry, and retains raw evidence plus derived frame.
+This named reference requires exact same terms; migration across amended terms
+is unsupported. Actual delivery, selected exposure wire construction, durable
+receipts/retries and authenticated production adapters remain Service work.
+The thirteen focused tests use modeled Source facts, not a production registry
+or federation signature/delivery interoperability claim. Existing imported
+standing checks cover separate one-link/witness/exportable restrictions; this
+checkpoint does not claim complete FD31–40 or all forty federation vectors.
+
 ## 2026-10-29 cross-zone root, whole standing and genesis
 
 Integrated the selected bond assessment with exact root scoring/effective end,

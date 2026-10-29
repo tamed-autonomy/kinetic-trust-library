@@ -1283,3 +1283,31 @@ to establish an otherwise valid historical birth. Signed trajectory tests accept
 an expired-today bond valid at birth, reject birth at its effective end and retain
 the same restriction through the predecessor path. This creates no genesis record
 and does not supply durable capital reservation or operational penalty enforcement.
+
+### Federation record delivery
+
+`InstalledFederationRecordVerifier` selects the private
+`reached-subject-exposure-and-anchor-notification-v1` profile. Its installed Source
+authenticates the exact record digest, subject, origin, current registry/witness
+facts, signed bilateral agreements, complete reached-subject inventory and prior
+breach deliveries. Coverage includes standing admitted under the agreement, a
+bond held or previously opened there, or an admitted attestation. Breach and
+for-cause withdrawal produce mandatory exposure destinations, never foreign
+closure. An unenforced sovereignty constraint retains a blocked obligation.
+
+Anchoring notifications instead use actual prior breach delivery, bound to the
+subject, breach anchor, origin, signed agreement digest and delivery time. This
+reference selects the exact same signed agreement terms; amended-term migration
+is unsupported. Delayed delivery after local reconciliation still requires the
+notification. Its generated `plan.notification_payload` contains exactly the
+breach and reconciliation anchors. It is not a reconciliation record and never
+closes receiver exposure, including for persons. Veto, delta and personal
+reconciliation records have no route. Positive attestations remain a separate
+selected import path; agent reconciliation-body delivery is not implemented.
+
+The assessment retains raw record/Source evidence internally for verification;
+these fields are not delivery payloads. Exposure routing does not invent or strip
+an RFC exposure wire record: Service must deliver the authenticated exposure
+record under the selected protocol, preserve constraints and perform local review.
+No messages are sent, standing changed or delivery completion asserted. Complete
+deployment composition and production authenticated delivery adapters remain.

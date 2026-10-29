@@ -80,6 +80,19 @@ selected native paths; unsupported claims must not be silently accepted.
 | [Claim names substrate](https://github.com/nmcitra/ktp-rfc/tree/b016dac2fe93e12c668b224dc5ef9e317026e359), Conformance, 3 vectors | Current docs avoid deployment claims, but no new native component/substrate claim model is adopted. | Update component-scoped claim metadata/validation and docs; distinguish supported SDK profiles from a deployment's claim. | Evidence supporting a real substrate/deployment claim and its accountable owner. |
 | [L15 composition limit](https://github.com/nmcitra/ktp-rfc/tree/717751d9851eae14e59a18141e3a1c0aad361f50) and [v3 named limits](https://github.com/nmcitra/ktp-rfc/tree/25f55d15239f2bae6cba7112742a107885dd7ac2) | No claim should imply solved cross-request composition or settled contradictory crypto/control floors. | Explicit capability/limit statements and no invented universal precision/crypto/quarantine rule. Keep unresolved dependencies visible. | Any optional additional composition policy and the evidence for its own stronger claims. |
 
+Federation record checkpoint (2026-10-29): the selected private
+`InstalledFederationRecordVerifier` now derives exposure destinations from complete
+reached-subject coverage, and two-anchor notifications from actual prior breach
+deliveries. Exact record/profile/subject/origin/time, registry/witness facts,
+signed bilateral agreement terms/expiry and sovereignty are checked or bound to
+the authenticated Source. History binds subject, breach, origin, exact original
+agreement digest and delivery time. Blocked sovereignty retains the obligation;
+no notification closes receiver exposure or exports personal reconciliation.
+This covers selected FD33/35/37/39/40 behavior, not every FD31–40 route. Actual
+delivery/wire construction, amended-term migration, person standing and full
+deployment/API composition remain pending. Raw retained evidence is internal,
+not a notification payload. See the native evaluation guide and federation plan.
+
 ## Implementation order
 
 1. **Bound normative carriage and boundary preconditions.** Add actual native
