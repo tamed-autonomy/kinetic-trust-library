@@ -1425,3 +1425,46 @@ adjudicated hysteresis, relational reissue/replay, unmanaged/demotion transition
 native result composition and broader source-vector coverage remain pending.
 The current reissue instant binds the actual Source-owned lease record and class
 minimum; it does not yet derive escalation from the complete hysteresis ledger.
+
+### Lease and non-Clear projections
+
+`project_lease` performs exact deterministic checks over authenticated semantic
+grant/intent facts. It binds subject, whole operation, consequence class, actual
+principal, declared authority, principal-token digest, original template and
+current grant epoch. A relation-state mutation cannot use a Logistics or
+Coordination intent. Duration ceilings are 72 hours for Logistics and 30 minutes
+for Coordination; Relational is a single-use nonce with no duration field value.
+Consumed, revoked and superseded-epoch grants are inactive. No nonce is consumed
+and no grant is minted/renewed by the library. The principal token must have
+been valid and within the declared freshness bound at mint time; its later expiry
+does not retroactively end the independently bounded lease. A fresh environment
+proof never moves the lease's end. These facts require an authenticated Source;
+calling pure arithmetic on requester dictionaries establishes no authority.
+
+`InstalledNonClearanceVerifier` selects private
+`authoritative-non-clearance-v1` projections for `Expired`, `Revoked` and
+`Exceeded`. Its Source authenticates the actual managed relation, current signed
+grant/intent/epoch and active stop record. Routine `Expired` requires an actually
+expired duration lease and no active adverse stop; its projection contains only
+the registered reissue path. It carries no hand-back, contest, human interrupt
+or hysteresis contribution. Revocation/epoch/consumption cannot masquerade as
+routine expiry. Adverse projections bind the actual stop's variant, reason,
+issue time and full hand-back digest, plus the same original lease/template.
+
+The nested hand-back must validate and remain resolved or parked. Neither state
+permits action. Raw adverse records are not hysteresis-countable here:
+`.adjudication_required_for_counting` marks the evidence needed before counting,
+not a requirement to initiate a new hearing. Actual ledger adjudication/escalation
+is a later installed contract. Operational/contract errors from either Source
+propagate with their provenance; malformed private projections instead return
+protocol-error/defect-route obligations. No invalid message is coerced into a
+different clearance variant.
+
+`Clear` construction is explicitly unsupported in this component. It is not an
+RFC clearance-wire implementation or a complete hand-back capability. Next work
+must validate the registered template before a fresh native result can construct
+conditional `Clear`, enforce relational reconciliation/reissue and commit-time
+single-use fencing, and compose adverse native outcomes with this sum. Actual
+principal/lease signatures, key custody, authoritative absence, durable atomic
+consumption and delivery remain Service/deployment responsibilities. All results
+in this component have `.action_permitted=False`.

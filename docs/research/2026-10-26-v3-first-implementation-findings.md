@@ -1,5 +1,26 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 lease and non-Clear states
+
+Added pure exact lease/intent validation and installed authenticated
+`Expired`/`Revoked`/`Exceeded` projections against the retained hand-back source.
+Lease checks bind whole signed action/class/principal/authority, template, mint
+freshness and live epoch/revocation/consumption. Logistics and Coordination obey
+72-hour/30-minute ceilings; relational grants are nonces rather than zero-length
+durations. Nothing mints, renews or consumes a token in the library.
+
+Routine lease expiry cannot hide an active adverse stop or accept contest/
+hand-back/hysteresis content. Adverse projections bind current stop, exact
+validated hand-back and original lease, preserving parked denial. Raw adversity
+is not counted before adjudication; no new mandatory hearing is invented.
+Source errors retain their provenance rather than being relabeled hostile wire.
+
+This is a private adapter sum, not a new RFC wire. Clear construction, full
+template-before-clearance/native composition, relational repair/reissue,
+adjudicated hysteresis and actual atomic commit remain pending. Source authority
+and signature truth are modeled in tests; production custody, live registry,
+durable consumption and delivery are not claimed by these components.
+
 ## 2026-10-29 registered hand-back records
 
 Retained the exact hand-back schema and all 73 source cases at
