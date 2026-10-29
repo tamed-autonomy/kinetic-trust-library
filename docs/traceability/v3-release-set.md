@@ -102,6 +102,17 @@ Grant-time enforcement now composes with Clear under symmetric selection; its
 historical profiles and actual issuance/audit/epoch checks preserve surviving
 bounds. Relational gates remain pending; no ledger write or sanction is claimed.
 
+Production decision-review monitor checkpoint (2026-10-29): a selected pure and
+installed Source-backed monitor now applies exact stochastic-draw selection,
+separate sampled/outcome-triggered review deadlines and cross-actor decider-wide
+uniform-approval findings. Acknowledgment is not review; late work retains record
+obligations, and durable older backlog cannot disappear with the window. Current
+registry/owner/head/coverage and governing policy are bound. Historical policy
+transitions, Full decision-gate composition and review-ledger commit fencing
+remain pending. Actual randomness, review quality and complete event provenance
+remain Source/audit obligations. No Full claim or action authority is returned.
+See the production-decision-review plan for the exact provisional interpretation.
+
 Conditional relational Clear checkpoint (2026-10-29): the selected native path
 now composes original template/lease, historical and persistent reissue,
 accountable signed decision and immutable single-use commit conditions. Authority,
