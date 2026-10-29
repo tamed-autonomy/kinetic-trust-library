@@ -575,3 +575,63 @@ the enclosure-adjusted R/E, checks the receiving zone and refuses proof expiry
 beyond enclosure evidence. Removing the profile from a replacement claims
 context cannot remove those requirements. Source/profile and final execution
 fencing must remain current for every resident-agent evaluation, not just ingress.
+
+## Fresh enclosure-measured egress
+
+`v3.egress.InstalledEgressProjector` implements the selected
+`fresh-enclosure-proof-v1` disclosure route. It takes an immutable disclosure
+profile, current disclosure source, complete incoming proof verifier and a typed
+`NativeCoreClaimsSource` for a freshly evaluated enclosure. At the outermost
+ring, the new Core is measured in that same ring. This route creates a new
+enclosure Oracle assertion; it does not rewrite an old signature or implement
+the illustrative NZ12 object mutation as a new wire contract.
+
+The profile binds exactly `id`, `version`, `mode`, `subject`, `source_zone`,
+`measurement_zone`, `audience` and `digest_algorithm`. The last selects SHA-256
+or SHA-384 for source-evidence bindings; it does not select or claim a stronger
+signature/conformance profile. The incoming verifier must bind the actual
+departing ring as its receiver; its Oracle issuing zone remains independently
+configured. `evaluate(incoming_compact, evaluated_at=..., clock_healthy=True)`
+first rechecks the complete input proof, including current roots and ingress.
+
+The disclosure source receives only installed `profile_bytes` and
+`evaluated_at`, and returns `AuthenticatedEgressEvidence(state_bytes,
+evidence_bytes)`. The closed state binds `profile_digest`, exact complete
+`incoming_proof_digest`, exact complete `outward_claims_digest`, current
+`checked_at`, `topology_epoch`, outermost-first `ancestry` and `expires_at`.
+The service must independently authenticate the actual departure/recipient,
+current governance/topology and approval of the entire outward payload,
+including standing/root and identity metadata. No candidate proof or payload
+is passed to that resolver. Constructing the return type grants no authority.
+
+The Library compares ancestry and epoch with current incoming ingress evidence,
+requires the direct enclosure as measurement zone, and checks that a nested
+measurement ring has its own current enclosure assessment at the same epoch,
+depth and direct-parent relationship. An identically valued flat Core cannot
+replace that assessment. The fresh Core supplies all R/E/context values, and
+this route omits optional velocity, volatility, quorum and resilience telemetry
+and extensions. Any outward receipts must be an outermost prefix of permitted
+enclosures; the departing ring's own receipt and inner receipts cannot survive.
+The output must have a fresh assertion identity, exact subject/recipient, and
+expiry no later than incoming proof/ingress and disclosure evidence. A known
+incoming veto cannot become clear.
+
+The sealed `EgressClaims` retains incoming verification, outward Core and
+authenticated disclosure evidence. Pass it as the claim source to the existing
+`InstalledProofIssuer`, with the enclosure's signing adapter and complete
+outward verifier. The issuer rechecks the completed new signature and current
+root/ingress policy. The original compact proof remains untouched. This is
+claim production, never movement permission or acceptance of foreign standing
+for execution. Actual exit authorization, federation admission, recipient
+access, audit/log exports, ongoing state fencing and disclosure side channels
+remain product responsibilities. Other egress wire/profile routes still need
+their own reviewed contracts.
+
+`minimize_confidential_exit_summary` creates a new unsigned derivative containing
+only present, safe integer `actions_total`, `actions_allowed`, `actions_vetoed`,
+`soul_vetoes` and `attestations_earned`. It omits R/E statistics, tier history,
+veto rates and unknown fields. It neither edits an original signed attestation
+nor authenticates the retained counts. Those counts can still be personal or
+sensitive data; disclosure approval and a newly authenticated attestation are
+required before external use. No universal Exit Attestation wire format is
+introduced by this helper.

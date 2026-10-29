@@ -13,7 +13,7 @@ HAS_EXTRAS=all(find_spec(name) for name in ("rfc8785","jsonschema","cryptography
 NOW=1800000000
 
 
-def fixture(depth=2):
+def fixture(depth=2, *, evaluated_at=NOW):
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from kinetic_trust_library.v3 import _trajectory_reference as t
     profile=dict(id="urn:unsafe-test:ingress-jcs-ed25519",version=1,signature="embedded-JWS-over-JCS-body",link="sha256-of-complete-JCS-receipt",link_digest_algorithm="sha256")
@@ -21,11 +21,11 @@ def fixture(depth=2):
     context=dict(subject=subject,issuing_zone="zone-"+str(depth),receiving_zone="zone-"+str(depth),receipt_profile_id=profile["id"],receipt_profile_digest=t.digest(profile,2),conformance_level=2)
     rings=[dict(zone_id="zone-"+str(i),enforcement_class=("green","cyan","blue","deep_blue")[min(i,3)],
                 enclosure_reach="0" if i==0 else "0.5",registry_enclosure_reach="0" if i==0 else "0.5",oracle_kids=["key-"+str(i)]) for i in range(depth+1)]
-    session=dict(sub=subject,cnf_jkt="test-possession-key",admission_id="admission-1",expires_at=NOW+8)
-    state=dict(context=context,checked_at=NOW,topology=dict(epoch=5,rings=rings),session=session)
+    session=dict(sub=subject,cnf_jkt="test-possession-key",admission_id="admission-1",expires_at=evaluated_at+8)
+    state=dict(context=context,checked_at=evaluated_at,topology=dict(epoch=5,rings=rings),session=session)
     private={"key-"+str(i):Ed25519PrivateKey.from_private_bytes(bytes([i+1])*32) for i in range(depth)}
     receipts=[dict(zone_id=rings[i]["zone_id"],oracle_kid="key-"+str(i),sub=subject,cnf_jkt=session["cnf_jkt"],aud=rings[i+1]["zone_id"],
-                   prev=None,topology_epoch=5,iat=NOW-1,exp=NOW+9,admission_id=session["admission_id"],sig="pending") for i in range(depth)]
+                   prev=None,topology_epoch=5,iat=evaluated_at-1,exp=evaluated_at+9,admission_id=session["admission_id"],sig="pending") for i in range(depth)]
     def sign_path(link=True):
         previous=None
         for receipt in receipts:
@@ -61,7 +61,7 @@ def fixture(depth=2):
             return AuthenticatedIngressReceipt(raw,t.digest(receipt,2),b"unsafe-test-profile-real-signature/current-role")
     source=Topology();adapter=ReceiptVerifier()
     verifier=InstalledIngressVerifier(t.canonical(context),t.canonical(profile),source,adapter)
-    payload=dict(sub=subject,exp=NOW+10,ktp=dict(zone=context["receiving_zone"]))
+    payload=dict(sub=subject,exp=evaluated_at+10,ktp=dict(zone=context["receiving_zone"]))
     if depth:payload["ktp"]["ingress_path"]=receipts
     return dict(t=t,profile=profile,context=context,rings=rings,state=state,session=session,receipts=receipts,payload=payload,
                 source=source,adapter=adapter,verifier=verifier,calls=calls,sign=sign_path)
