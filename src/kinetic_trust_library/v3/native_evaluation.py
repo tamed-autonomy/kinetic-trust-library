@@ -20,6 +20,8 @@ from .installed_ambient_repair import InstalledAmbientRepairVerifier,AmbientRepa
 from .federation import InstalledFederationVerifier,FederationAssessment,FEDERATION_CEILING_PREFIX
 from fractions import Fraction
 from .risk import _FACTORS
+from .normative_demand import InstalledNormativeDemandVerifier,NormativeDemandAssessment
+from .demand_supplier import _digest
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -38,6 +40,7 @@ class NativeEvaluationResult:
     repair: RepairAssessment | None
     ambient: AmbientRepairAssessment | None
     federation: FederationAssessment | None
+    normative_demand: NormativeDemandAssessment | None
 
     def __init__(self,*args,**kwargs):
         raise TypeError("native evaluation results are derived by an installed verifier")
@@ -56,6 +59,8 @@ class InstalledNativeEvaluationVerifier:
     repair_verifier: InstalledRepairVerifier | None = None
     ambient_verifier: InstalledAmbientRepairVerifier | None = None
     federation_verifier: InstalledFederationVerifier | None = None
+    normative_demand_verifier: InstalledNormativeDemandVerifier | None = None
+    normative_classifier_profile_bytes: bytes | None = None
 
     def __post_init__(self):
         if (type(self.association_verifier) is not InstalledRequestAssociationVerifier
@@ -84,6 +89,18 @@ class InstalledNativeEvaluationVerifier:
             ids.append(_parse_jcs_object(policy.profile_bytes)["gate_id"])
         if len(set(ids))!=len(ids):raise ValidationError("duplicate declared adjudication gate")
         deployment=self.readiness_verifier.readiness_verifier.deployment_profile_bytes
+        normative=self.normative_demand_verifier
+        if (normative is not None)!=(self.normative_classifier_profile_bytes is not None):
+            raise ValidationError("native normative demand requires its selected classifier profile")
+        if normative is not None:
+            if (type(normative) is not InstalledNormativeDemandVerifier or normative.deployment_profile_bytes!=deployment
+                    or normative.algorithm!=self.association_verifier.algorithm
+                    or _parse_jcs_object(normative.profile_bytes)["zone"]!=self.readiness_verifier.readiness_verifier.receiving_zone
+                    or type(self.normative_classifier_profile_bytes) is not bytes):
+                raise ValidationError("native normative policy differs from installed deployment/zone")
+            classifier=_parse_jcs_object(self.normative_classifier_profile_bytes)
+            if classifier.get("normative_input_profile_digest")!=_digest(_parse_jcs_object(normative.profile_bytes),normative.algorithm):
+                raise ValidationError("native normative classifier profile differs from installed policy")
         if "boundary" in _parse_jcs_object(deployment):
             if (type(self.boundary_verifier) is not InstalledBoundaryVerifier
                     or self.boundary_verifier.deployment_profile_bytes!=deployment):
@@ -132,12 +149,14 @@ class InstalledNativeEvaluationVerifier:
         repair=None
         ambient=None
         federation=None
+        normative_demand=None
         def result(reason,supervision="silent_veto",expiry=None):
             value=object.__new__(NativeEvaluationResult)
             for name,member in (("reason",reason),("checked_at",now),("supervision",supervision),
                 ("tightened_constraints_bytes",constraints),("canonical_geometry_bytes",raw),
                 ("association",association),("readiness",readiness),("expires_at",expiry),("adjudication",adjudication),
-                ("adjudications",adjudications),("boundary",boundary),("repair",repair),("ambient",ambient),("federation",federation)):
+                ("adjudications",adjudications),("boundary",boundary),("repair",repair),("ambient",ambient),("federation",federation),
+                ("normative_demand",normative_demand)):
                 object.__setattr__(value,name,member)
             return value
         if association.reason!="RB_BOUND":return result(association.reason)
@@ -225,6 +244,28 @@ class InstalledNativeEvaluationVerifier:
             raw=verified.canonical_body_bytes
             expiry=self.local_profile_expires_at
         body=_parse_jcs_object(raw)
+        normative_entries=[item for item in body["inputs"] if item["name"]=="normative_demand" and item["layer"]=="term"]
+        if self.normative_demand_verifier is None:
+            if normative_entries:return result("NORMATIVE_DEMAND_POLICY_REQUIRED")
+        else:
+            classifier=_parse_jcs_object(self.normative_classifier_profile_bytes)
+            expected_classifier=dict(id=classifier.get("id"),digest=_digest(classifier,self.association_verifier.algorithm))
+            if actual["classification_profile"]!=expected_classifier:return result("NORMATIVE_DEMAND_CLASSIFIER")
+            operation={name:value for name,value in actual.items() if name not in ("version","demand","classification_profile")}
+            normative_demand=self.normative_demand_verifier.evaluate(actual_operation=operation,
+                baseline_demand=actual["demand"]["value"],evaluated_at=now,clock_healthy=clock_healthy)
+            if normative_demand.demand>Decimal(str(actual["demand"]["value"])):return result("NORMATIVE_DEMAND_INCREASED")
+            if boundary is not None and (normative_demand.zone!=boundary.zone_id or normative_demand.topology_epoch!=boundary.topology_epoch):
+                return result("NORMATIVE_DEMAND_TOPOLOGY")
+            ingress=association.proof_verification.ingress_verification
+            if ingress is not None:
+                topology=_parse_jcs_object(ingress.authenticated_state_bytes)["topology"]
+                if normative_demand.topology_epoch!=topology["epoch"] or normative_demand.zone!=topology["rings"][-1]["zone_id"]:
+                    return result("NORMATIVE_DEMAND_TOPOLOGY")
+            if (len(normative_entries)!=1 or normative_entries[0].get("state")!="modeled" or normative_entries[0].get("value")!=normative_demand.geometry_value()
+                    or not {normative_demand.profile_digest,normative_demand.frame_digest}<=set(normative_entries[0]["evidence_digests"])):
+                return result("NORMATIVE_DEMAND_BINDING")
+            expiry=min(expiry,normative_demand.expires_at)
         if federation is not None:
             entries=[item for item in body["inputs"] if item["name"]=="federation" and item["layer"]=="term"]
             if (len(entries)!=1 or entries[0].get("value")!=federation.geometry_value()

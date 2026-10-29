@@ -1340,3 +1340,42 @@ breach is persisted by the library; Service must record/open and enforce it.
 This post-decision classifier supplies no authorization and does not renew or
 extend the original proof. Full deployment selection and production boundary
 adapters remain separate release requirements.
+
+### Importance and supplied normative demand
+
+`InstalledNormativeDemandVerifier` selects a private
+`maximum-whole-action-demand-v1` declaration naming each importance/supplied-input
+authority and one pinned external Draft 2020-12 schema. Source authenticates a
+complete current inventory of actual signed judgments, whole-action demand
+calibration and actor/operation/grant/evidence/zone/topology scope. Library checks
+declarations, schema, complete inventory, exact scope and validity, then takes
+`max(pre_normative_demand, each supplied whole-action demand)`. Lower proposed
+demands cannot lower the baseline. It neither sums judgments nor changes risk,
+standing, effective trust, grants or executable ceilings. Missing required input
+prevents classification instead of synthesizing a favorable default.
+
+`InstalledDemandClassifier.normative_demand_verifier` requires a symmetric
+`normative_input_profile_digest` in the classifier declaration, and an explicitly
+healthy clock. `NativeCoreContext.normative_demand_profile_bytes` binds the policy
+through Core; `.pre_normative_demand` and `.normative` retain the original demand
+and assessment. Claims cannot outlive the supporting judgments. Geometry selects
+`normative_demand_profile_digest` and records the modeled `normative_demand` term
+with raw Source evidence, external schema, policy and semantic frame. Exact
+enclosure/boundary topology must agree where selected. Prior/Soul vetoes and the
+existing supervision own-increment/release rules continue to restrict independently.
+
+The native current-use facade selects both `.normative_demand_verifier` and
+`.normative_classifier_profile_bytes`. It refreshes actual Source evidence,
+requires the exact current classifier/profile/frame/model and topology, rejects
+increased demand and caps expiry. A carried normative term without an installed
+policy is rejected. The trusted invocation adapter must still independently
+reconstruct current demand under the declared classifier; requester-supplied A
+is never that reconstruction. Complete deployment/API policy selection remains
+pending, so this component selection is not a deployment conformance claim.
+
+Schema resolution is closed to the pinned installed schema and its local
+references. HTTP/file/uninstalled references cannot retrieve content and fail
+with validation error. Content adequacy, judgment legitimacy, actual signatures
+and calibration remain external responsibilities. Real signed producer/current-use
+fixtures exercise the binding with modeled Source facts; the entire 23-case L11
+suite and production normative-adapter interoperability are not claimed here.

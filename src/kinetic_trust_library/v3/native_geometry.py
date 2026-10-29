@@ -67,7 +67,7 @@ class NativeGeometrySource:
             raise ValidationError("geometry demand belongs to another Core invocation")
         profile=_parse_jcs_object(self.evaluation_profile_bytes)
         required={"id","release","evaluator","core_deployment_digest","input_order","sources","magnitudes","thresholds","numeric_convention","constraint_policy"}
-        if (not required<=set(profile) or set(profile)-required-{"supervision_rail_profile_digest","ambient_repair_profile_digest","federation_profile_digest"}
+        if (not required<=set(profile) or set(profile)-required-{"supervision_rail_profile_digest","ambient_repair_profile_digest","federation_profile_digest","normative_demand_profile_digest"}
                 or profile["core_deployment_digest"]!=self.demand.deployment_digest
                 or profile["input_order"]!="layer-then-name-v1"
                 or profile["numeric_convention"]!="exact-decimal-boundaries-binary64-margin-v1"
@@ -80,6 +80,12 @@ class NativeGeometrySource:
                        for spec in profile["magnitudes"].values())
                 or type(profile["release"]) is not str or len(profile["release"])>255 or "unreleased" not in profile["release"].lower()):
             raise ValidationError("installed native geometry profile is invalid")
+        normative=self.demand.normative
+        if ("normative_demand_profile_digest" in profile)!=(normative is not None):
+            raise ValidationError("native geometry normative selection must be symmetric")
+        if normative is not None and (profile["normative_demand_profile_digest"]!=normative.profile_digest
+                or normative.profile_bytes!=context.normative_demand_profile_bytes):
+            raise ValidationError("native geometry normative profile differs from Core")
         if context.ambient_profile_bytes is not None:
             if profile.get("ambient_repair_profile_digest")!=_digest(_parse_jcs_object(context.ambient_profile_bytes),context.algorithm):
                 raise ValidationError("ambient geometry profile differs from the selected Core policy")
@@ -245,6 +251,11 @@ class NativeGeometrySource:
         add("demand","term","modeled",profile["sources"]["demand"],
             (context.deployment_profile_bytes,self.demand.classifier_profile_bytes,context.operation_bytes,self.demand.evidence.original_evidence),_wire_number(self.demand.demand))
         demand_evidence=self.demand.evidence
+        normative=self.demand.normative
+        if normative is not None:
+            add("normative_demand","term","modeled",profile["sources"]["demand"],
+                (normative.profile_bytes,normative.external_schema_bytes,normative.authenticated_state_bytes,
+                 normative.source_evidence_bytes,normative.frame_bytes),normative.geometry_value())
         add("demand.moment_criticality","term","observed" if demand_evidence.state=="observed" else "undefined",
             profile["sources"]["demand"],tuple(e for e in (demand_evidence.original_evidence,demand_evidence.payload_bytes,demand_evidence.provenance_bytes) if e),
             _wire_number(demand_evidence.observed_value))

@@ -1,5 +1,28 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 importance and supplied normative demand
+
+Added selected external-schema/authority inventory validation and max-of-whole-
+action-demand composition against Core L11 at
+`c8f912e27108d1493672a5787d98d31f95d0659a`. Classifier, Core context, proof expiry,
+geometry and current-use verification retain exact policy/frame/operation and
+topology binding. Lower supplied values cannot reduce baseline demand; no norm
+changes standing/risk/effective trust, grant ceilings or independent gates.
+
+Signed production fixtures preserve E=42 while A rises from 18 to 24, retain a
+stricter prior executable ceiling and prior veto, and deny a subsequent A=70.
+Current-use fixtures reject changed judgments even when demand stays sufficient,
+increased demand, changed epoch and unhandled carried policy, while multiple
+favorable adjudications still satisfy only their individual declared gates.
+
+Supplier review identified possible external schema reference retrieval; resolved
+with a closed installed registry. HTTP/file/uninstalled references fail predictably
+without retrieval, while local definitions work. Source cryptographic judgment
+authority and calibration are modeled; actual adapters remain external. This is
+selected demand-effect support, not normative adequacy or complete L11 conformance.
+Full composite deployment/API selection and broader person/hand-back/optional
+runtime requirements remain open in the release-set audit.
+
 ## 2026-10-29 execution observation
 
 Added immutable whole-operation decision/observation projections, pure

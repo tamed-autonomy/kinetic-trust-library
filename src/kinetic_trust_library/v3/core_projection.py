@@ -45,6 +45,7 @@ class NativeCoreContext:
     repair_profile_bytes: bytes | None = None
     ambient_profile_bytes: bytes | None = None
     federation_profile_bytes: bytes | None = None
+    normative_demand_profile_bytes: bytes | None = None
 
     def __post_init__(self):
         if (type(self.deployment_profile_bytes) is not bytes or type(self.operation_bytes) is not bytes
@@ -66,6 +67,10 @@ class NativeCoreContext:
         if self.federation_profile_bytes is not None:
             if type(self.federation_profile_bytes) is not bytes:raise ValidationError("federation profile must be immutable installed bytes")
             _federation_profile(_parse_jcs_object(self.federation_profile_bytes))
+        if self.normative_demand_profile_bytes is not None:
+            from .normative_demand import profile_terms
+            if type(self.normative_demand_profile_bytes) is not bytes:raise ValidationError("normative demand profile must be immutable")
+            profile_terms(_parse_jcs_object(self.normative_demand_profile_bytes))
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -185,6 +190,14 @@ def project_classified_native_core(
             or demand.operation_digest != digest_demand_operation(_parse_jcs_object(context.operation_bytes), algorithm=context.algorithm)
             or demand.evaluated_at != context.evaluated_at):
         raise ValidationError("classified demand belongs to another Core context")
+    normative=demand.normative
+    if (context.normative_demand_profile_bytes is not None)!=(normative is not None):
+        raise ValidationError("Core normative demand profile selection must be symmetric")
+    if normative is not None and (normative.profile_bytes!=context.normative_demand_profile_bytes
+            or normative.deployment_digest!=deployment_digest or normative.operation_digest!=operation_digest
+            or normative.evaluated_at!=context.evaluated_at or normative.expires_at<=context.evaluated_at
+            or normative.baseline_demand!=demand.pre_normative_demand or normative.demand!=demand.demand):
+        raise ValidationError("normative demand differs from actual Core context")
     if (standing.deployment_digest != demand.deployment_digest
             or standing.operation_digest != demand.operation_digest
             or standing.evaluated_at != context.evaluated_at):
@@ -227,6 +240,13 @@ def project_classified_native_core(
             raise ValidationError("selected enclosure profile requires current bound source evidence")
     elif enclosure is not None:
         raise ValidationError("enclosure evidence requires an installed Core profile")
+    if normative is not None:
+        if boundary is not None and (normative.zone!=boundary.zone_id or normative.topology_epoch!=boundary.topology_epoch):
+            raise ValidationError("normative demand differs from current boundary topology")
+        if enclosure is not None:
+            body=_parse_jcs_object(enclosure.authenticated_body_bytes)
+            if normative.zone!=body["zone_id"] or normative.topology_epoch!=body["topology_epoch"]:
+                raise ValidationError("normative demand differs from current enclosure topology")
     if federation is not None and enclosure is not None:
         if federation.receiving_zone!=_parse_jcs_object(enclosure.authenticated_body_bytes)["zone_id"]:
             raise ValidationError("federation standing differs from current enclosure topology")

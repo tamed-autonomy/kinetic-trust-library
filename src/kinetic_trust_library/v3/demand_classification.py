@@ -17,6 +17,7 @@ from .demand_supplier import _digest
 from .installed_demand import DemandAssessment
 from .trust_proof_json import _parse_jcs_object
 from .schema_formats import installed_format_checker
+from .normative_demand import InstalledNormativeDemandVerifier
 
 
 class DemandClassificationAdapter(Protocol):
@@ -38,6 +39,8 @@ class NativeClassifiedDemand:
     classifier_profile_bytes: bytes
     classification_profile_id: str
     classification_profile_digest: str
+    pre_normative_demand: Decimal
+    normative: object
 
     def __init__(self, *args, **kwargs):
         raise TypeError("NativeClassifiedDemand is derived by an installed classifier")
@@ -49,6 +52,7 @@ class InstalledDemandClassifier:
     adapter: DemandClassificationAdapter
     algorithm: str
     classifier_profile_bytes: bytes
+    normative_demand_verifier: InstalledNormativeDemandVerifier | None = None
 
     def __post_init__(self):
         if (type(self.deployment_profile_bytes) is not bytes
@@ -64,9 +68,16 @@ class InstalledDemandClassifier:
                 or type(classifier.get("version")) is not str or not classifier["version"]
                 or type(classifier.get("formula")) is not str or not classifier["formula"]):
             raise ValidationError("installed classifier profile identity/unit/formula is invalid")
+        normative=self.normative_demand_verifier
+        if ("normative_input_profile_digest" in classifier)!=(normative is not None):
+            raise ValidationError("classifier normative profile selection must be symmetric")
+        if normative is not None and (type(normative) is not InstalledNormativeDemandVerifier
+                or normative.deployment_profile_bytes!=self.deployment_profile_bytes or normative.algorithm!=self.algorithm
+                or classifier["normative_input_profile_digest"]!=_digest(_parse_jcs_object(normative.profile_bytes),self.algorithm)):
+            raise ValidationError("classifier normative policy differs from installed deployment/profile")
 
     def classify(self, assessment: DemandAssessment, *, actual_operation: dict,
-                 evaluated_at: int) -> NativeClassifiedDemand:
+                 evaluated_at: int, clock_healthy: bool | None = None) -> NativeClassifiedDemand:
         if type(assessment) is not DemandAssessment:
             raise ValidationError("installed demand assessment is required")
         operation_bytes = canonical_demand_operation_bytes(actual_operation)
@@ -90,6 +101,11 @@ class InstalledDemandClassifier:
         baseline, demand, maximum = values[Decimal(0)], values[reading], values[Decimal(1)]
         if not baseline <= demand <= maximum:
             raise ValidationError("demand criticality must not lower A")
+        before=demand;normative=None
+        if self.normative_demand_verifier is not None:
+            normative=self.normative_demand_verifier.evaluate(actual_operation=operation,baseline_demand=demand,
+                evaluated_at=evaluated_at,clock_healthy=clock_healthy)
+            demand=normative.demand
         result = object.__new__(NativeClassifiedDemand)
         for name, value in (
             ("demand", demand), ("baseline_demand", baseline),
@@ -99,6 +115,7 @@ class InstalledDemandClassifier:
             ("classifier_profile_bytes",self.classifier_profile_bytes),
             ("classification_profile_id",_parse_jcs_object(self.classifier_profile_bytes)["id"]),
             ("classification_profile_digest",_digest(_parse_jcs_object(self.classifier_profile_bytes),self.algorithm)),
+            ("pre_normative_demand",before),("normative",normative),
         ):
             object.__setattr__(result, name, value)
         return result

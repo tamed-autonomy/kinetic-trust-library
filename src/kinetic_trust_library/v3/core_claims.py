@@ -56,6 +56,15 @@ class NativeCoreClaimsSource:
             raise ValidationError("proof audience differs from the actual operation")
         deployment = _digest(profile, self.context.algorithm)
         invocation = digest_demand_operation(operation, algorithm=self.context.algorithm)
+        normative=None if self.core.classified_demand is None else self.core.classified_demand.normative
+        if self.core.risk is not None:
+            if (self.context.normative_demand_profile_bytes is not None)!=(normative is not None):
+                raise ValidationError("Core claims disagree on normative demand selection")
+            if normative is not None and (normative.profile_bytes!=self.context.normative_demand_profile_bytes
+                    or normative.deployment_digest!=deployment or normative.operation_digest!=invocation
+                    or normative.evaluated_at!=self.context.evaluated_at or normative.zone!=metadata["zone"]
+                    or type(metadata["exp"]) is not int or metadata["exp"]>normative.expires_at):
+                raise ValidationError("Core claims cannot contradict or outlive normative demand evidence")
         federation=self.standing.federation
         if (self.context.federation_profile_bytes is not None)!=(federation is not None):
             raise ValidationError("Core claims disagree on federation selection")

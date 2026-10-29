@@ -272,6 +272,48 @@ class ReadinessTests(unittest.TestCase):
         with self.assertRaises(ValidationError):replace(native,adjudication_verifiers=(first["verifier"],first["verifier"]))
         with self.assertRaises(ValidationError):replace(native,adjudication_verifier=first["verifier"])
         native=no_norm
+        from tests.unit.core.test_v3_normative_demand import fixture as normative_fixture
+        nv,ns,_,_=normative_fixture(operation,deployment,1000,"zone:alpha")
+        for value in ns["inputs"]:value["demand"]=34
+        classifier=dict(id="urn:test:normative-classifier",version="test",unit="ktp-action-risk-points",formula="installed reference",
+            normative_input_profile_digest=digest(json.loads(nv.profile_bytes)))
+        saved_actual=actual_bytes;saved_association=association_bytes;saved_geometry=json.loads(rfc8785.dumps(geometry))
+        normative_actual=json.loads(actual_bytes)
+        normative_actual["classification_profile"]=dict(id=classifier["id"],digest=digest(classifier))
+        actual_bytes=rfc8785.dumps(normative_actual)
+        association_body=json.loads(association_bytes);association_body["request_digest"]=digest_canonical_request(normative_actual,algorithm="sha256")
+        association_bytes=rfc8785.dumps(association_body);geometry["association"]=association_body
+        native=replace(no_norm,normative_demand_verifier=nv,normative_classifier_profile_bytes=rfc8785.dumps(classifier))
+        self.assertEqual(whole().reason,"NORMATIVE_DEMAND_BINDING")
+        current_norm=nv.evaluate(actual_operation=operation,baseline_demand=35,evaluated_at=1000,clock_healthy=True)
+        norm_term=dict(name="normative_demand",layer="term",state="modeled",source="urn:test:external-demand",
+            value=current_norm.geometry_value(),evidence_digests=sorted([current_norm.profile_digest,current_norm.frame_digest]))
+        geometry["inputs"].append(norm_term)
+        clear=whole()
+        self.assertEqual(clear.reason,"NATIVE_PREREQUISITES_VALID")
+        self.assertEqual(clear.expires_at,1005)
+        self.assertEqual(clear.supervision,combined.supervision)
+        native=no_norm
+        self.assertEqual(whole().reason,"NORMATIVE_DEMAND_POLICY_REQUIRED")
+        native=replace(no_norm,normative_demand_verifier=nv,normative_classifier_profile_bytes=rfc8785.dumps(classifier))
+        ns["inputs"][0]["demand"]=36
+        self.assertEqual(whole().reason,"NORMATIVE_DEMAND_INCREASED")
+        ns["inputs"][0]["demand"]=34
+        ns["inputs"][0]["payload"]["importance"]=.8
+        self.assertEqual(whole().reason,"NORMATIVE_DEMAND_BINDING")
+        ns["inputs"][0]["payload"]["importance"]=.9
+        ns["topology_epoch"]=6
+        self.assertEqual(whole().reason,"NORMATIVE_DEMAND_TOPOLOGY")
+        ns["topology_epoch"]=5
+        first=adjudication_fixture(operation,deployment,1000,gate_id="norm-first")
+        second=adjudication_fixture(operation,deployment,1000,gate_id="norm-second")
+        native=replace(native,adjudication_verifiers=(first["verifier"],second["verifier"]))
+        tokens=(("norm-first",first["sign"]()),("norm-second",second["sign"]()))
+        self.assertEqual(whole(tokens=tokens).reason,"NATIVE_PREREQUISITES_VALID")
+        self.assertEqual(whole(tokens=tokens[:1]).reason,"ADJ_GATE_UNSATISFIED")
+        second["payload"]["favorable"]=False
+        self.assertEqual(whole(tokens=(("norm-first",first["sign"]()),("norm-second",second["sign"]()))).reason,"ADJ_GATE_UNSATISFIED")
+        actual_bytes=saved_actual;association_bytes=saved_association;geometry=saved_geometry;native=no_norm
         from tests.unit.core.test_v3_installed_repair import fixture as repair_fixture
         repair_verifier,repair_state,_,_,_=repair_fixture(operation,deployment)
         native=replace(no_norm,repair_verifier=repair_verifier)
