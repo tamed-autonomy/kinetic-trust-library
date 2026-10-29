@@ -14,13 +14,17 @@ from .demand_supplier import _digest
 from .demand_operation import canonical_demand_operation_bytes,digest_demand_operation
 from .root_lifecycle import _time
 from .execution_observation import _name,_digest as is_digest
+from .relational_reissue import InstalledRelationalReissueVerifier
 
 
 def _profile(p):
-    if (type(p) is not dict or set(p)!={"id","version","zone","formula","hysteresis_profile_digest","relational_reissue"}
+    keys={"id","version","zone","formula","hysteresis_profile_digest","relational_reissue"}
+    selected=p.get("relational_reissue")=="relationship-record-v1"
+    if (type(p) is not dict or set(p)!=(keys|({"relational_profile_digest"} if selected else set()))
             or not _name(p["id"]) or not _name(p["zone"]) or not _time(p["version"]) or p["version"]==0
             or p["formula"]!="historical-capped-bound-and-grant-epoch-v1" or not is_digest(p["hysteresis_profile_digest"])
-            or p["relational_reissue"]!="unsupported"):
+            or p["relational_reissue"] not in ("unsupported","relationship-record-v1")
+            or selected and not is_digest(p["relational_profile_digest"])):
         raise ValidationError("invalid selected reissue profile or unsupported relational claim")
     return p
 
@@ -51,6 +55,7 @@ class HandBackReissueAssessment:
     expires_at: int
     authenticated_state_bytes: bytes
     source_evidence_bytes: bytes
+    relational: object
 
     def __init__(self,*args,**kwargs):raise TypeError("reissue assessments require installed complete current registry/ledger facts")
 
@@ -60,6 +65,7 @@ class InstalledHandBackReissueVerifier:
     hysteresis_verifier: InstalledHandBackHysteresisVerifier
     profile_bytes: bytes
     context_source: object
+    relational_verifier: InstalledRelationalReissueVerifier | None = None
 
     def __post_init__(self):
         if (type(self.hysteresis_verifier) is not InstalledHandBackHysteresisVerifier or type(self.profile_bytes) is not bytes
@@ -67,6 +73,11 @@ class InstalledHandBackReissueVerifier:
         hv=self.hysteresis_verifier;p=_profile(_parse_jcs_object(self.profile_bytes));hp=_parse_jcs_object(hv.profile_bytes)
         if p["hysteresis_profile_digest"]!=_digest(hp,hv.algorithm) or p["zone"]!=hp["zone"]:
             raise ValidationError("reissue policy differs from installed ledger policy/zone")
+        selected=p["relational_reissue"]=="relationship-record-v1"
+        rv=self.relational_verifier
+        if (selected!=(rv is not None) or rv is not None and (type(rv) is not InstalledRelationalReissueVerifier
+                or rv.hysteresis_verifier is not hv or p["relational_profile_digest"]!=_digest(_parse_jcs_object(rv.profile_bytes),hv.algorithm))):
+            raise ValidationError("relational reissue selection requires the exact installed shared ledger policy")
 
     def evaluate(self,lease_bytes,*,actual_operation,evaluated_at,clock_healthy):
         if (type(lease_bytes) is not bytes or len(lease_bytes)>262144 or not _time(evaluated_at) or clock_healthy is not True):
@@ -131,10 +142,27 @@ class InstalledHandBackReissueVerifier:
                 current_sequence=e["sequence"],as_of=evaluated_at,ledger_head_sequence=head["sequence"])
             bounds.append((e["stop_anchor"],quote.reissue_not_before))
         required=max((bound for _,bound in bounds),default=None)
+        relational=None
+        if g["consequence_class"]=="Relational" and self.relational_verifier is not None:
+            relational=self.relational_verifier.evaluate(lease_bytes,actual_operation=op,evaluated_at=evaluated_at,clock_healthy=clock_healthy)
+            if (relational.current_grant_epoch!=s["current_grant_epoch"] or relational.lease_digest!=ld
+                    or relational.grant_sequence!=g["sequence"] or relational.ledger_head_anchor!=head["anchor"]
+                    or relational.ledger_head_sequence!=head["sequence"]):
+                raise ValidationError("relational and historical reissue Sources disagree on actual grant/epoch/ledger head")
+            rs=_parse_jcs_object(relational.authenticated_state_bytes)
+            if rs["grant"]!=g:raise ValidationError("relational and historical grant audit records differ")
+            retained_stops={e["stop_anchor"]:e for e in s["history"] if e["subject"]==op["actor"]
+                and e["consequence_class"]=="Relational" and e["variant"]!="Expired"}
+            persistent={e["anchor"]:e for e in rs["stops"]}
+            if (not set(retained_stops)<=set(persistent) or any(e["occurred_at"]>=retained and e["anchor"] not in retained_stops for e in rs["stops"])
+                    or any(persistent[a]["sequence"]!=e["sequence"] or persistent[a]["occurred_at"]!=_at(e["occurred_at"])
+                           for a,e in retained_stops.items())):
+                raise ValidationError("retained pricing history differs from persistent relational stop inventory")
         reason=("REISSUE_GRANT_EPOCH" if g["grant_epoch"]!=s["current_grant_epoch"] else
                 "REISSUE_GRANT_PRECEDES_STOP" if predates else "REISSUE_TOO_EARLY" if required is not None and g["issued_at"]<required else
-                "REISSUE_RELATIONAL_REPAIR_UNSUPPORTED" if g["consequence_class"]=="Relational" else "REISSUE_ELIGIBLE")
-        expiry=s["expires_at"]
+                "REISSUE_RELATIONAL_REPAIR_UNSUPPORTED" if g["consequence_class"]=="Relational" and relational is None else
+                relational.reason if relational is not None and not relational.eligible else "REISSUE_ELIGIBLE")
+        expiry=min(s["expires_at"],relational.expires_at) if relational is not None else s["expires_at"]
         for e in s["history"]:
             if e["variant"]=="Revoked" and any(a["outcome"]=="overturned" for a in e["adjudications"]):
                 end=_at(e["occurred_at"])+hp["window_seconds"]
@@ -144,5 +172,5 @@ class InstalledHandBackReissueVerifier:
                 current_grant_epoch=s["current_grant_epoch"],required_reissue_not_before=required,bounds=tuple(sorted(bounds)),cap_satisfied=tuple(sorted(capped)),
                 ignored_expunged=tuple(sorted(ignored)),expungement_required=inventory.expungement_required,revoker_accountability_required=inventory.revoker_accountability_required,
                 profile_bytes=self.profile_bytes,operation_bytes=op_bytes,evaluated_at=evaluated_at,expires_at=expiry,
-                authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes).items():object.__setattr__(result,key,value)
+                authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes,relational=relational).items():object.__setattr__(result,key,value)
         return result
