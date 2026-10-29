@@ -20,6 +20,25 @@ class RequestContextFailure(Exception):
     pass
 
 
+@dataclass(frozen=True,slots=True,init=False)
+class VerifiedAssociationCarrier:
+    compact_carrier: str
+    canonical_geometry_bytes: bytes
+    canonical_request_bytes: bytes
+    canonical_association_bytes: bytes
+    compact_proof: str
+    verified_at: int
+
+    def __init__(self,*args,**kwargs):
+        raise TypeError("VerifiedAssociationCarrier is derived by the installed carrier bridge")
+
+
+def _verified_carrier_binding(**fields):
+    value=object.__new__(VerifiedAssociationCarrier)
+    for name,member in fields.items(): object.__setattr__(value,name,member)
+    return value
+
+
 class _Failure(Exception):
     def __init__(self, reason, proof_reason=None):
         self.reason,self.proof_reason=reason,proof_reason
@@ -51,6 +70,7 @@ class RequestAssociationResult:
     canonical_request_bytes: bytes | None
     canonical_association_bytes: bytes | None
     compact_proof: str
+    carrier_binding: VerifiedAssociationCarrier | None
 
     def __init__(self,*args,**kwargs):
         raise TypeError("RequestAssociationResult is derived by an installed verifier")
@@ -76,6 +96,7 @@ class InstalledRequestAssociationVerifier:
                invocation_evidence: bytes,now: int,clock_healthy: bool) -> RequestAssociationResult:
         import rfc8785
         canonical=association_canonical=None
+        carrier_binding=None
         try:
             try:
                 request,canonical=_parse(request_bytes)
@@ -127,8 +148,13 @@ class InstalledRequestAssociationVerifier:
             if self.crosses_trust_boundary:
                 if self.carrier_verifier is None:
                     raise _Failure("RB_CARRIER")
-                if self.carrier_verifier.verify(canonical_request_bytes=canonical,
-                        canonical_association_bytes=association_canonical,proof=verified,now=now) is not True:
+                carrier_binding=self.carrier_verifier.verify(canonical_request_bytes=canonical,
+                        canonical_association_bytes=association_canonical,proof=verified,now=now,clock_healthy=clock_healthy)
+                if (type(carrier_binding) is not VerifiedAssociationCarrier
+                        or carrier_binding.canonical_request_bytes!=canonical
+                        or carrier_binding.canonical_association_bytes!=association_canonical
+                        or carrier_binding.compact_proof!=proof or carrier_binding.verified_at!=now):
+                    carrier_binding=None
                     raise _Failure("RB_CARRIER")
             reason=self.replay_adapter.reserve(replay_domain=actual["replay_domain"],request_id=actual["request_id"],
                 request_digest=request_digest,proof_digest=proof_digest,issuer=claims["iss"],proof_jti=claims["jti"])
@@ -140,7 +166,8 @@ class InstalledRequestAssociationVerifier:
             reason,proof_reason=exc.reason,exc.proof_reason
         result=object.__new__(RequestAssociationResult)
         for name,value in (("reason",reason),("proof_reason",proof_reason),("canonical_request_bytes",canonical),
-                           ("canonical_association_bytes",association_canonical),("compact_proof",proof)):
+                           ("canonical_association_bytes",association_canonical),("compact_proof",proof),
+                           ("carrier_binding",carrier_binding)):
             object.__setattr__(result,name,value)
         return result
 
