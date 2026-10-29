@@ -325,3 +325,37 @@ API cutover, migration and release verification remain outstanding. See the
 ## Exact standing arithmetic
 
 Installed standing passes the selected root's exact ratio into native base composition. `NativeBaseTrust.raw_base` is a `Fraction`; weighting and ceilings precede conversion of `base_trust` to a finite Decimal. The root's display score is diagnostic. A nonterminating effective standing is rejected until a wire precision profile is declared; a repeating raw value that becomes finite after a ceiling is supported.
+
+## Erasure receipt accounting
+
+`v3.privacy_erasure.InstalledErasureReceiptVerifier` checks the exact RFC erasure
+receipt against an independently authenticated current inventory. Install a JCS
+lookup context containing exactly `receipt_id`, `request_digest`,
+`subject_scope_digest`, `privacy_policy_digest` and `conformance_level`.
+This context is a Library adapter contract, not an additional RFC wire format.
+
+The resolver receives only `expected_context_bytes` and `checked_at`. It returns
+`AuthenticatedErasureContext(state_bytes, evidence_bytes)`. The closed state
+contains `context` (the exact installed context), current `checked_at`,
+`authenticated_receipt_digest` (the independently authenticated complete receipt)
+and `inventory` (the RFC reference's `TrustedErasureInventory` fields).
+The resolver must establish approved policy, actual request/scope, complete
+copy/key/recipient discovery and concurrent-copy fencing, disposal evidence,
+all usable key/wrapping/recovery paths, recipient acknowledgements and complete
+retention authority. Constructing the return type does not establish those facts.
+The candidate receipt is never passed to this lookup.
+
+`verify(receipt_bytes, now=..., clock_healthy=True)` returns a sealed accounting
+result. `ERASURE_ACCOUNTING_VERIFIED` preserves the receipt's verified `pending`,
+`partial` or `complete` status and retains the exact receipt and authenticated
+source evidence. `complete` is limited to that inventory, scope and cutoff;
+it makes no claim about uncontrolled copies or a legal outcome. Approved retained
+exceptions keep status partial; `overdue_retention_copy_ids` exposes elapsed
+deadlines without granting continued retention. Invalid claims yield
+`ERASURE_INVALID`; unavailable current context yields `ERASURE_UNAVAILABLE`.
+
+This path does not delete storage, destroy keys, grant access, clear revocation,
+change correction state or authorize an operation. A restored or newly discovered
+copy requires current disposition/fencing evidence. Receipt and source metadata
+remain purpose-limited personal data. The integration tests explicitly model
+authenticated services and do not demonstrate deployed discovery or destruction.
