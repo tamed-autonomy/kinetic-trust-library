@@ -1468,3 +1468,52 @@ single-use fencing, and compose adverse native outcomes with this sum. Actual
 principal/lease signatures, key custody, authoritative absence, durable atomic
 consumption and delivery remain Service/deployment responsibilities. All results
 in this component have `.action_permitted=False`.
+
+### Conditional Clear construction and pre-registered recourse
+
+`InstalledHandBackTemplateVerifier` validates actual original registration under
+the explicit private `registered-template-and-sealed-context-v2` profile.
+It shares recipient/SLA, recourse independence, subject repair and redaction
+invariants with record validation. V2 registers system/principal contest branches,
+the applicable sovereign authority/protocol closures and an undetermined registry
+branch before grant. Source authenticates the complete applicable-authority set
+and registration status. Stop-time selection uses the actual authority and never
+rewrites the full template digest the grant signed. The older private fixed-arm
+record profile remains record-only; it cannot supply a template for Clear.
+This is an internal adapter representation, not an added RFC template wire.
+
+`InstalledClearanceVerifier` selects
+`native-template-lease-clearance-v1` and one exact installed native verifier,
+template verifier and authoritative non-Clear policy. `NativeEvaluationResult`
+retains its producing verifier identity. Clear cannot use a result from another
+installed policy, another operation/deployment, another time or different current
+geometry. Current Source facts independently authenticate the managed relation,
+signed grant/intent, grant epoch and active stop registry; authenticated absence
+must never be synthesized from a failed lookup.
+
+Conditional Clear requires a currently active duration lease and the exact
+original currently registered template, registered before the grant. It copies
+native supervision and tightened constraints byte-for-byte and expires no later
+than the native result, lease, template evidence or current registry evidence.
+A 72-hour lease never extends the ordinary ten-second proof limit. A required
+adjudication failure remains a failed native prerequisite even when supervision
+would otherwise be stable. Known adverse state resolves through the independently
+verified non-Clear path when its actual hand-back is available; otherwise an
+explicit `.hand_back_required` obligation remains and no valid clearance variant
+is constructed. Routine lease expiry uses only the validated Expired/reissue path.
+
+`ClearanceAssessment.conditional_clear` is a prerequisite projection, not an
+execution permit; `.action_permitted` remains false for every variant. Service
+must authorize and fence actual current state at commit. This component creates
+no grant, human endpoint, sealed bundle, durable escrow, lease renewal or effect.
+Native failures without an already resolved stop still require runtime resolution
+against the registered template, not a bare final adverse clearance.
+
+Relational Clear is explicitly unsupported by this selected profile, and an
+enabled claim is rejected. Its anchored reconciliation/reissue, accountable human
+decision and atomic nonce consumption must be composed before enabling it.
+Complete deployment/capability selection, adjudicated hysteresis, unmanaged/
+demotion behavior, broader source cases and production Source/custody/delivery
+adapters remain open. Real signed native/readiness fixtures validate the selected
+duration path with modeled registration/grant/stop facts; they do not establish
+those external production boundaries.

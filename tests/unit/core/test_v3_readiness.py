@@ -205,6 +205,49 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(combined.reason,"NATIVE_PREREQUISITES_VALID")
         self.assertEqual(combined.supervision,"stable")
         self.assertEqual(combined.expires_at,1006)
+        from tests.unit.core._v3_clearance_fixture import fixture as clearance_fixture
+        cf=clearance_fixture(native,combined,operation,deployment)
+        def clearance(value=combined):return cf["verifier"].evaluate(value,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        cleared=clearance()
+        self.assertTrue(cleared.valid);self.assertEqual(cleared.kind,"Clear");self.assertTrue(cleared.conditional_clear)
+        self.assertFalse(cleared.action_permitted)
+        self.assertEqual(cleared.supervision,combined.supervision)
+        self.assertEqual(cleared.tightened_constraints_bytes,combined.tightened_constraints_bytes)
+        self.assertEqual(cleared.expires_at,1006)
+        cf["state"]["lease"]["expires_at"]=1002
+        self.assertEqual(clearance().expires_at,1002)
+        cf["state"]["lease"]["expires_at"]=1000
+        expired=clearance()
+        self.assertTrue(expired.valid);self.assertEqual(expired.kind,"Expired");self.assertFalse(expired.conditional_clear)
+        cf["state"]["lease"]["expires_at"]=1100
+        cf["state"]["lease"]["revoked"]=True
+        self.assertTrue(clearance().hand_back_required)
+        cf["state"]["lease"]["revoked"]=False
+        cf["state"]["adverse_stop"]=dict(id="stop:1",kind="Exceeded",reason=cf["wire"]["reason"],
+            issued_at=cf["wire"]["issued_at"],hand_back_digest=digest(cf["wire"]))
+        self.assertTrue(clearance().hand_back_required)
+        cf["records"]["hand_back"]=rfc8785.dumps(cf["wire"])
+        stopped=clearance()
+        self.assertTrue(stopped.valid);self.assertEqual(stopped.kind,"Exceeded");self.assertFalse(stopped.conditional_clear)
+        self.assertEqual(stopped.non_clearance.hand_back.delivery_state,"parked")
+        cf["state"]["adverse_stop"]=None;cf["records"]["hand_back"]=None
+        cf["template_state"]["registration_status"]="withdrawn"
+        self.assertEqual(clearance().reason,"CLEARANCE_TEMPLATE_UNAVAILABLE")
+        cf["template_state"]["registration_status"]="registered"
+        cf["template_state"]["template"]["registered_at"]=cf["state"]["lease"]["issued_at"]+1
+        late_digest=digest(cf["template_state"]["template"])
+        old_template_digest=cf["state"]["lease"]["template_digest"]
+        cf["state"]["template_digest"]=cf["state"]["lease"]["template_digest"]=late_digest
+        self.assertEqual(clearance().reason,"CLEARANCE_TEMPLATE_BINDING")
+        cf["template_state"]["template"]["registered_at"]=900
+        cf["state"]["template_digest"]=cf["state"]["lease"]["template_digest"]=old_template_digest
+        cf["state"]["consequence_class"]=cf["state"]["lease"]["consequence_class"]=cf["state"]["intent"]["consequence_class"]="Relational"
+        cf["state"]["mutates_relation"]=True;cf["state"]["lease"].update(kind="single-use",nonce="nonce:one-step",expires_at=None)
+        self.assertEqual(clearance().reason,"CLEARANCE_RELATIONAL_UNSUPPORTED")
+        from dataclasses import replace
+        other_policy=replace(native)
+        self.assertEqual(replace(cf["verifier"],native_verifier=other_policy).evaluate(combined,
+            actual_operation=operation,evaluated_at=1000,clock_healthy=True).reason,"CLEARANCE_NATIVE_POLICY")
         boundary_state["subject_class"]="outsider"
         denied_boundary=whole()
         self.assertEqual(denied_boundary.reason,"BOUNDARY_SUBJECT")
@@ -234,6 +277,11 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(favorable.canonical_geometry_bytes,combined.canonical_geometry_bytes)
         self.assertTrue(favorable.adjudication.gate_satisfied)
         self.assertEqual(favorable.expires_at,1006)
+        gate_cf=clearance_fixture(native,favorable,operation,deployment)
+        gate_clear=gate_cf["verifier"].evaluate(favorable,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        self.assertTrue(gate_clear.conditional_clear)
+        gate_stop=gate_cf["verifier"].evaluate(absent,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        self.assertFalse(gate_stop.valid);self.assertTrue(gate_stop.hand_back_required)
         adjudication["payload"]["favorable"]=False
         self.assertEqual(whole(token=adjudication["sign"]()).reason,"ADJ_GATE_UNSATISFIED")
         adjudication["payload"]["favorable"]=True

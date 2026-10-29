@@ -26,6 +26,7 @@ from .demand_supplier import _digest
 
 @dataclass(frozen=True, slots=True, init=False)
 class NativeEvaluationResult:
+    verifier: object
     reason: str
     checked_at: int
     supervision: str
@@ -152,7 +153,7 @@ class InstalledNativeEvaluationVerifier:
         normative_demand=None
         def result(reason,supervision="silent_veto",expiry=None):
             value=object.__new__(NativeEvaluationResult)
-            for name,member in (("reason",reason),("checked_at",now),("supervision",supervision),
+            for name,member in (("verifier",self),("reason",reason),("checked_at",now),("supervision",supervision),
                 ("tightened_constraints_bytes",constraints),("canonical_geometry_bytes",raw),
                 ("association",association),("readiness",readiness),("expires_at",expiry),("adjudication",adjudication),
                 ("adjudications",adjudications),("boundary",boundary),("repair",repair),("ambient",ambient),("federation",federation),

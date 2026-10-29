@@ -52,7 +52,7 @@ def _wire_validator():
 def _profile(p):
     if (set(p)!={"id","version","zone","defect_endpoint","formula","classes"}
             or any(not _name(p[k]) for k in ("id","zone","defect_endpoint")) or not _time(p["version"]) or p["version"]==0
-            or p["formula"]!="registered-template-and-sealed-context-v1" or type(p["classes"]) is not dict
+            or p["formula"] not in ("registered-template-and-sealed-context-v1","registered-template-and-sealed-context-v2") or type(p["classes"]) is not dict
             or set(p["classes"])!={"Logistics","Coordination","Relational"}):
         raise ValidationError("invalid selected hand-back profile")
     for kind,c in p["classes"].items():
@@ -142,9 +142,11 @@ class InstalledHandBackVerifier:
         return result(True,delivery)
 
     def _validate(self,s,w,issued,reissue,p,op,now,ciphertext):
-        if (set(s)!={"deployment_digest","profile_digest","operation_digest","checked_at","expires_at","subject","subject_profile","zone",
+        expected={"deployment_digest","profile_digest","operation_digest","checked_at","expires_at","subject","subject_profile","zone",
                 "consequence_class","action_id","reason","stop_origin","delegator","operator","operator_affiliates","measurers","lease",
                 "issued_at","reissue_not_before","template","bundle","delivery"}
+        if p["formula"]=="registered-template-and-sealed-context-v2":expected.add("sovereign_authority")
+        if (set(s)!=expected
                 or s["deployment_digest"]!=_digest(_parse_jcs_object(self.deployment_profile_bytes),self.algorithm)
                 or s["profile_digest"]!=_digest(p,self.algorithm) or s["operation_digest"]!=digest_demand_operation(op,algorithm=self.algorithm)
                 or s["subject"]!=op["actor"] or s["subject_profile"] not in ("software","person") or s["zone"]!=p["zone"]
@@ -156,13 +158,11 @@ class InstalledHandBackVerifier:
             raise ValidationError("hand-back differs from actual stop scope")
         c=p["classes"][s["consequence_class"]]
         if reissue<issued+c["minimum_reissue_seconds"]:raise ValidationError("reissue below declared class floor")
-        forbidden={s["subject"],s["operator"]}|_strings(s["operator_affiliates"])|_strings(s["measurers"])
-        t=s["template"]
-        if (type(t) is not dict or set(t)!={"id","version","subject","consequence_class","registered_at","recipient","recourse","repair","redaction_policy_digest"}
-                or not _name(t["id"]) or not _time(t["version"]) or t["version"]==0 or t["subject"]!=s["subject"]
-                or t["consequence_class"]!=s["consequence_class"] or not _time(t["registered_at"]) or t["registered_at"]>issued
-                or not is_digest(t["redaction_policy_digest"])):
-            raise ValidationError("hand-back requires actual pre-registered subject/class template")
+        from .hand_back_template import validate_template,select_recourse,V2
+        if p["formula"]==V2 and not (s["stop_origin"]=="sovereign" and _name(s["sovereign_authority"])
+                or s["stop_origin"]!="sovereign" and s["sovereign_authority"] is None):
+            raise ValidationError("actual sovereign authority binding differs from stop origin")
+        t=validate_template(s,p,issued)
         lease=s["lease"]
         if lease is not None:
             if (type(lease) is not dict or set(lease)!={"id","subject","consequence_class","issued_at","template_digest"}
@@ -171,29 +171,15 @@ class InstalledHandBackVerifier:
                     or lease["template_digest"]!=_digest(t,self.algorithm)):
                 raise ValidationError("hand-back template differs from actual registered grant template")
         recipient=t["recipient"]
-        if (type(recipient) is not dict or set(recipient)!={"endpoint","principal","key_id","channel","ack_sla_seconds","liability_ref"}
-                or any(not _name(recipient[k]) for k in ("endpoint","principal","key_id","channel","liability_ref"))
-                or not _time(recipient["ack_sla_seconds"]) or not 0<recipient["ack_sla_seconds"]<=c["ack_sla_seconds"]
-                or w["recipient"]!={k:recipient[k] for k in ("endpoint","ack_sla_seconds")}
-                or recipient["principal"]!=(s["subject"] if s["subject_profile"]=="person" else s["delegator"])):
-            raise ValidationError("recipient must be actual accountable subject endpoint within declared SLA")
+        if w["recipient"]!={k:recipient[k] for k in ("endpoint","ack_sla_seconds")}:
+            raise ValidationError("wire recipient differs from registered template")
         repair=t["repair"]
-        if type(repair) is not dict or set(repair)!={"subject","ref"} or repair["subject"]!=s["subject"] or not _name(repair["ref"]) or w["repair"]!=repair["ref"]:
+        if w["repair"]!=repair["ref"]:
             raise ValidationError("registered repair route must answer the same subject")
-        recourse=t["recourse"]
-        if type(recourse) is not dict or any(w["recourse"][k]!=recourse.get(k) for k in ("kind","ref")):
+        recourse=select_recourse(t,p,s["stop_origin"],s.get("sovereign_authority"))
+        if any(w["recourse"][k]!=recourse[k] for k in ("kind","ref")):
             raise ValidationError("recourse differs from registered template")
         kind=recourse["kind"]
-        if kind=="contest":
-            if (set(recourse)!={"kind","ref","owner","independent_of"} or not _name(recourse["owner"])
-                    or recourse["owner"] in forbidden or not forbidden<=_strings(recourse["independent_of"])):
-                raise ValidationError("contest owner must be independent including operator affiliates")
-        elif kind=="closed_by_authority":
-            if set(recourse)!={"kind","ref","authority","protocol"} or not _name(recourse["authority"]) or not _name(recourse["protocol"]):
-                raise ValidationError("sovereign closure must identify actual authority/protocol")
-        elif kind=="undetermined":
-            if set(recourse)!={"kind","ref","registry"} or not _name(recourse["registry"]):raise ValidationError("undetermined must name consulted registry")
-        else:raise ValidationError("unknown recourse")
         expected={"system":"contest","principal":"contest","sovereign":"closed_by_authority","undetermined":"undetermined"}[s["stop_origin"]]
         if kind!=expected or (s["reason"]=="exceeded_soul")!=(s["stop_origin"]=="sovereign"):
             raise ValidationError("stop origin requires its own recourse arm")

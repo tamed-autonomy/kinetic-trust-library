@@ -1,5 +1,29 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 validated duration Clear construction
+
+Extracted shared original-template validation and added a selected current
+template verifier plus conditional duration Clear construction from one exact
+installed native verifier. Signed native results retain verifier provenance;
+operation/deployment/current geometry/time, active signed lease and pre-grant
+original template must agree. Supervision/constraints are preserved byte-for-byte,
+and validity is bounded by native proof/readiness, lease, template and registry.
+Another policy, withdrawn/late template, active adverse stop or required-gate
+failure cannot clear. Existing resolved/parked non-Clear states and routine
+Expired remain separate; missing hand-back is an explicit unresolved obligation.
+
+The private v2 template pre-registers recourse branches. This exposes and resolves
+an implementation limitation of the earlier single-arm adapter: selecting a
+sovereign closure must not rewrite the signed grant's contest template. The full
+branch map is registered beforehand and its original digest stays fixed. Actual
+applicable authority and registry truth remain Source responsibilities.
+
+Relational Clear remains explicitly unsupported pending anchored reissue/repair,
+accountable human gate and atomic consumption composition. Clear is conditional
+SDK evidence, not dispatch permission or a full hand-back/deployment claim.
+Runtime must still resolve/persist new adverse stops; the Library does not create
+recipients, seal bundles, mint leases or perform delivery/commit effects.
+
 ## 2026-10-29 lease and non-Clear states
 
 Added pure exact lease/intent validation and installed authenticated
