@@ -105,12 +105,57 @@ digest alias when a name exceeds the record's 255-character bound. Inputs are
 sorted by layer then name, with sorted evidence digests and matching undefined
 entries in the same order.
 
+## Current readiness prerequisite
+
+`InstalledReadinessVerifier(deployment_profile_bytes, readiness_profile_bytes,
+adapter, conformance_level, receiving_zone)` installs the separately approved
+profile and trusted zone. Its `evaluate(attestation_bytes, actual_operation=...,
+evaluated_at=..., clock_healthy=...)` returns a sealed prerequisite result.
+It never increases standing, adds a component to E_base or permits execution.
+
+The adapter's `resolve` receives those immutable profiles, canonical operation,
+trusted evaluation time/level and receiving zone, without the candidate
+attestation. It returns `AuthenticatedReadinessContext` with canonical bytes for
+the independently reconstructed readiness request, authenticated current state
+and trusted key registry projection. It must establish running artifact/configuration
+bindings, actual scope/environment, registry competence/independence and evidence,
+approved governance/profile relationships, current durable epoch/active digest,
+challenge/check evidence and key revocation. A timestamp or digest label alone
+does not establish any of those facts.
+
+Current state contains exactly `profile_id`, `profile_digest`,
+`deployment_profile_digest`, `assessor_registry_digest`,
+`minimum_profile_version`, `readiness_epoch`, `active_attestation_digest`,
+`challenge`, `checked_at` and `status`. Live status must be active and its
+checked-at time equal the current evaluation second. Authenticated key entries
+bind `kid`, `subject`, `zone_id`, `purpose`, `alg`, `kty`, `crv`, public JWK
+coordinates, `not_before`, `not_after`, and `revoked: false`. Assessor and decision
+purposes are respectively `ktp-readiness-attestation-v1` and
+`ktp-readiness-decision-v1`.
+
+`InstalledReadinessDecisionVerifier(readiness_verifier, proof_verifier).verify`
+accepts complete canonical sidecar and attestation bytes, a derived
+`RequestAssociationResult`, and current time/clock health. It requires
+`RB_BOUND`, freshly queries readiness again, re-verifies the exact ordinary
+proof, and verifies the sidecar's purpose-separated signature and complete
+request/proof/epoch/evidence/expiry binding. Ordinary request replay reservation
+therefore precedes this check; reservation is not permission or an effect.
+Products must fence current state and complete remaining ordinary authorization
+before protected effects, and apply their declared safe transition on lost
+conditions. No cached positive readiness result can replace the live query.
+
+The standalone assessment verifier supports the reference's classical strength
+checks, including P-384/Ed448 for Level 3. Sidecar composition currently rejects
+Level 3 because the ordinary proof verifier does not yet establish that
+cryptographic profile. Threshold, hybrid, key-custody and broader conformance
+requirements remain separate implementation gates.
+
 ## Remaining release gates
 
 The source adapters in the integration tests are explicitly fixtures. Real
 instrument/witness signatures, live lifecycle/root refresh, production source
-profiles, person standing/eligibility/capacity, nested ingress, readiness and
-full authorization still require their documented contracts and evidence.
+profiles, person standing/eligibility/capacity, nested ingress and whole-evaluation
+authorization still require their documented contracts and evidence.
 Repeating root-score arithmetic and exact Decimal values that cannot survive
 the JCS number wire remain precision dependencies. The final RFC tag, public
 API cutover, migration and release verification remain outstanding. See the
