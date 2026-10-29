@@ -4,6 +4,8 @@
 
 ## Pinned proposal inputs
 
+Native proof issuance now accepts canonical claims only from an installed source and keeps private-key custody behind an installed signing adapter. Clock, schema, trusted key/role/algorithm and issuer/audience/time checks precede signing. Every completed artifact passes the full installed verifier before being returned, including signed veto/undetermined assertions; issuance grants no execution authority. Fresh Ed25519 tests cover successful issuance, unhealthy clock, expired claims, unknown keys, schema rejection before signing, and invalid signature rejection. The source still owns authority and evidence for its claims; native Core-to-claims production remains separate work.
+
 | Proposal | Exact reviewed head | Local test fixture | Scope |
 |---|---|---|---|
 | [RFC PR #193](https://github.com/nmcitra/ktp-rfc/pull/193), issue #150 | `b698f82e02c435974bc828eb34616b2db1dc603d` | `spec/proposals/por-friction-boundaries-v3.json` (SHA-256 `91ad1952b4f6abb51d275c4f10aa494b8a39521ff352090f833eaccb3fa846d4`) | 18 modeled friction boundary decisions |
