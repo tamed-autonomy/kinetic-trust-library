@@ -8,6 +8,14 @@ Implemented: distinct pure imported-standing result and shared bounded-standing
 Core/capacity seam, receiver/class/lowering factor bounds and receiver software
 ceilings. Do not substitute an extra cap on locally recomposed contributions.
 
+Installed evidence checkpoint: item 1 and deterministic selected bilateral
+software checks from item 2 now exist in `federation.py`/`federation_terms.py`.
+The source owns actual signatures, current registry/acceptance, exportable earned
+standing and forward-only version/admission history. One-link/current-validity
+checks from item 4 are implemented for software standing attestations; other
+record-delivery/person/multilateral routes and actual deployment adapters remain.
+Items 3, 5 and full native producer/current-use composition are still pending.
+
 Next implementation:
 
 1. Install a closed current source for actual agreement/version/directional

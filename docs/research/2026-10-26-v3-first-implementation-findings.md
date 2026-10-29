@@ -1,5 +1,33 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 installed directional federation evidence
+
+Added a current installed source boundary for a named bilateral software import
+profile. Closed agreement projections require the mandatory party, directional,
+crossing, sovereignty and review/lifecycle cells. Actual signed agreement version,
+admission-time history, current acceptance, signer/registry/witness facts and
+exportable locally earned standing remain source-authenticated facts.
+
+Deterministic checks enforce exact operation/profile/subject/zones, receiver
+signature direction, one-link earned-within provenance, current validity,
+declared lowering/class bounds, earliest support expiry and no application of a
+later-effective agreement to an earlier ingress. Invalid import supplies no
+standing and imposes no universal local veto. The source must preserve the actual
+admission's factor version until next ingress; fresh signatures do not rewrite it.
+
+The named reference chooses the minimum of matching action/substrate overrides,
+using default only when neither matches. This is an explicit overlap policy,
+not a universal draft rule. Void veto/evaluation/input-coordination/foreign-act
+clauses do not void unrelated agreement terms. Person, multilateral, mixed
+accumulation and execution routes are not claimed by this component profile.
+
+Supplier review found no actionable defect. Six modeled source tests cover current
+bindings, exportable versus total standing, expiry/version boundaries, incorrect
+signature direction, severance, relaying/re-export, current invalidity, witness
+and registry failure, sovereignty, lowering and selector bounds, void clauses and
+unsupported person selection. Standing/claims/current-use and bond integration
+remain next implementation work; no deployed source or crypto conformance follows.
+
 ## 2026-10-29 distinct imported-standing arithmetic
 
 Source federation `8a733c4ab9e9063eb9cd64f92bc2cd34b4f84169`, Sections 4.5

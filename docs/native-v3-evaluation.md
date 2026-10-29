@@ -1088,10 +1088,51 @@ raw result and receiver ceilings without inventing local allocation shares.
 Native Core/capacity accept the shared bounded-standing union and keep their
 existing local Soul and risk calculation. No foreign R or E_trust is an operand.
 
-This checkpoint is pure arithmetic only. Installed agreement/signature/registry,
-one-link/export provenance, claims, current-use revalidation and sponsorship
-integration remain pending. It does not enable federation admission through an
-installed producer. The draft does not define how to extract exportable standing
+The draft does not define how to extract exportable standing
 from root/peer-containing E_base or combine an import with later locally earned
 standing: require actual authenticated exportable evidence, and keep mixed
 accumulation unsupported until a separately selected policy defines it.
+
+`InstalledFederationVerifier` now authenticates current import evidence through
+an installed source that receives only the actual operation and installed
+profiles. Its closed state binds deployment/profile/operation, clock, subject,
+sender/receiver and the actual admission identity/time. The source supplies the
+actual signed agreement version applicable to that admission, current receiver
+acceptance, actual subject/action/substrate and Enforcement Class, and separately
+authenticated sender-earned exportable standing.
+
+The initial reference supports bilateral software imports. The agreement
+projection requires both parties' terminators/signing authorities, signatures,
+effective/expiry times, directional terms, crossing/sovereignty declarations,
+dispute/deadline, incident/notice and severance cells. Classified veto delegation,
+foreign evaluation, coordinated evaluation inputs and foreign act-binding clauses
+are void without voiding unrelated terms. Source clause classification is an
+authenticated semantic fact, not natural-language legal interpretation by the SDK.
+
+Only a receiver-signed matching direction supplies a factor. Action/substrate
+overrides replace the default when present; if both match, the explicitly named
+reference takes their minimum. A selected above-one override cannot hide behind
+a valid matching override. Declared lowering results and class ceilings bound
+the one factor. This selector policy is explicit rather than an asserted universal
+rule for overlapping selectors in the draft.
+
+An admitted attestation must match subject/profile/zones, cross one link, name the
+sending zone as the zone in which its exportable standing was earned, have current
+validity and registry-verified signatures, and have a witnessed sender signature.
+Additional non-witness signatures add no credit. Exportable standing cannot
+exceed total attested base standing; foreign risk/effective standing are not
+accepted operands. Required sovereignty constraints must be enforced by the
+receiver. Personal/reconciliation/veto/delta routes are not silently admitted by
+this software standing profile.
+
+Unavailable, expired, severed or unsupported import evidence yields an explicit
+unavailable assessment, preserving the possibility of an independently installed
+local route. Agreement/attestation expiry bounds the current source horizon;
+cached evidence cannot extend it. A new agreement version effective after the
+recorded ingress cannot be applied to that old admission. The source owns actual
+forward-effective version/admission history and revocations. The sealed result
+retains the raw current evidence, semantic frame, factor and void clauses and can
+derive an imported standing value under independently supplied receiver ceilings.
+Installed standing/claims/current-use and cross-zone bond integration remain
+implementation work. Source fixtures model authority facts; actual signature,
+registry, admission and export provenance need production adapters.
