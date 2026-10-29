@@ -8,7 +8,9 @@ R/E intermediate precision and surrounding proof contract are unresolved.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Context, Decimal, localcontext
+from decimal import Decimal
+from fractions import Fraction
+from ._exact import finite_decimal
 
 from kinetic_trust_library._decimal import DecimalLike, as_decimal
 from kinetic_trust_library.errors import ValidationError
@@ -17,7 +19,6 @@ from .core import NativeCorePreflight
 from .base_trust import NativeBaseTrust
 
 
-_EXACT_CAPACITY_CONTEXT = Context(prec=70)
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -58,12 +59,9 @@ def project_native_capacity(
     base = standing.base_trust
     action_demand = as_decimal(demand, name="autonomy demand", minimum=0, maximum=100)
     risk = preflight.risk
-    with localcontext(_EXACT_CAPACITY_CONTEXT):
-        decision_e = base * (Decimal(1) - risk.decision_risk)
-        measured_e = (
-            None if risk.measured_risk is None
-            else base * (Decimal(1) - risk.measured_risk)
-        )
+    decision_e = finite_decimal(Fraction(base) * (1 - Fraction(risk.decision_risk)))
+    measured_e = (None if risk.measured_risk is None else
+                  finite_decimal(Fraction(base) * (1 - Fraction(risk.measured_risk))))
     relation = (
         "below" if action_demand < decision_e
         else "at" if action_demand == decision_e

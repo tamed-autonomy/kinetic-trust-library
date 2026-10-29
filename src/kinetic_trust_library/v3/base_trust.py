@@ -7,7 +7,9 @@ nor the provenance of each applicable ceiling. It is not a standing verifier.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Context, Decimal, localcontext
+from decimal import Decimal
+from fractions import Fraction
+from ._exact import finite_decimal
 
 from kinetic_trust_library._decimal import DecimalLike, as_decimal
 from kinetic_trust_library.errors import ValidationError
@@ -20,7 +22,6 @@ _BUILT_IN_VALUES = {
     "trajectory": frozenset({50, 70, 100}),
     "adversity": frozenset({60, 80, 90, 100}),
 }
-_EXACT_BASE_CONTEXT = Context(prec=70)
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -74,12 +75,12 @@ def calculate_native_base_trust(
         bounded["external_root_missing"] = min(
             bounded.get("external_root_missing", Decimal(70)), Decimal(70)
         )
-    with localcontext(_EXACT_BASE_CONTEXT):
-        remainder = (Decimal(100) - peer_weight) / Decimal(100)
-        por_share = Decimal(70) * remainder
-        root_share = Decimal(30) * remainder
-        raw = por * (por_share / Decimal(70)) + root * (root_share / Decimal(100)) + peer * (peer_weight / Decimal(100))
-        base = min(raw, *bounded.values())
+    remainder = (100 - Fraction(peer_weight)) / 100
+    por_share = finite_decimal(70 * remainder)
+    root_share = finite_decimal(30 * remainder)
+    raw = finite_decimal(Fraction(por) * remainder + Fraction(root) * 30 * remainder / 100
+                         + Fraction(peer) * Fraction(peer_weight) / 100)
+    base = min(raw, *bounded.values())
     binding = tuple(sorted(name for name, value in bounded.items() if value == base))
     result = object.__new__(NativeBaseTrust)
     for name, value in (

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from decimal import Context, Decimal, localcontext
+from decimal import Decimal
+from fractions import Fraction
+from ._exact import finite_decimal
 
 from kinetic_trust_library._decimal import DecimalLike, as_decimal
 from kinetic_trust_library.errors import ValidationError
@@ -15,7 +17,6 @@ _FACTORS = (
     "update_resistance",
     "attestation_coverage",
 )
-_EXACT_FACTOR_CONTEXT = Context(prec=70)
 
 
 def calculate_five_factor_risk(
@@ -42,15 +43,12 @@ def calculate_five_factor_risk(
     }
     if any(weight == 0 for weight in validated_weights.values()):
         raise ValidationError("Risk Factor weights must be positive")
-    # Public decimal inputs have at most 34 significant digits. Their products
-    # and five-term sum fit without rounding in this wider local context.
-    with localcontext(_EXACT_FACTOR_CONTEXT):
-        if sum(validated_weights.values(), Decimal(0)) != Decimal(1):
-            raise ValidationError("Risk Factor weights must sum to one")
-        return sum(
-            (validated_weights[name] * values[name] for name in _FACTORS),
-            Decimal(0),
-        )
+    if sum((Fraction(w) for w in validated_weights.values()), Fraction(0)) != 1:
+        raise ValidationError("Risk Factor weights must sum to one")
+    return finite_decimal(sum(
+        (Fraction(validated_weights[name]) * Fraction(values[name]) for name in _FACTORS),
+        Fraction(0),
+    ))
 
 
 __all__ = ["calculate_five_factor_risk"]
