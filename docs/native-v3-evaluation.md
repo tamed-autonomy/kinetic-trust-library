@@ -1517,3 +1517,49 @@ demotion behavior, broader source cases and production Source/custody/delivery
 adapters remain open. Real signed native/readiness fixtures validate the selected
 duration path with modeled registration/grant/stop facts; they do not establish
 those external production boundaries.
+
+### Adjudicated hand-back hysteresis
+
+`InstalledHandBackHysteresisVerifier` selects the private
+`capped-linear-adjudicated-hysteresis-v1` policy. All numbers are declarations:
+per-class minimum/increment/cap, pricing window, ledger owner/append protocol,
+retention and repeated-overturn threshold. This reference uses prior confirmed
+adversity on the same subject across classes; the priced stop's class supplies
+the finite delay cap. Its retained-history contract covers the window plus the
+largest class cap, sufficient to recompute still-binding prices. This is a
+reference-policy requirement, not a universal RFC retention formula.
+
+Source authenticates the complete zone inventory, actual current audit head and
+sequence, governing policy and actual priced stop. Adjudication timelines bind
+the exact stop anchor; false findings bind the attestation that caused Exceeded;
+expungements bind the actual stop and overturn/finding record. Same-tick ordering
+uses audit sequence, never identifier/hash sorting. Expired and pending entries
+never increase delay. Upheld contests and causally false attestations are excluded
+immediately, even while a missing append-only expungement is reported as a
+correction obligation. Unrelated findings/expungements cannot remove history.
+
+The assessment retains both original issued pricing (knowledge then available)
+and corrected pricing. Later confirmation cannot retrospectively raise the old
+bound; later findings can remove wrongful prior history. The original hand-back
+remains valid as historical evidence. `.priced_stop_expunged` identifies when the
+priced stop itself is no longer an active basis; a price is not a grant gate or
+permission to keep enforcing an expunged stop. Future grant checks must consider
+all applicable surviving bounds. Separate zone-wide per-revoker overturn counts
+and accountability obligations never become subject delay or an invented standing
+deduction. Service applies its declared accountable process and actual corrections.
+
+`InstalledHandBackVerifier.hysteresis_verifier` requires a symmetric
+`hysteresis_profile_digest` and matching deployment/zone/class minima. The actual
+hand-back Source additionally supplies `stop_anchor`. Validation binds actual
+variant, subject/class/time/anchor and exact original issued reissue bound to the
+ledger assessment, with the shortest evidence expiry. It retains `.hysteresis`
+for audit and correction work. Source failures propagate without accusation of
+hostile wire; hand-back body/bound mismatches remain protocol errors.
+
+Grant-time reissue enforcement and relational reconciliation are not implemented
+by this pricing component. The Clear constructor explicitly rejects a selected
+hysteresis profile until grant-reissue integration is installed, rather than
+silently ignoring it. Source completeness, signatures, actual append/expungement,
+revoker sanctions and durable fencing remain external. These Source facts are
+modeled in tests; no ledger write, personal score or production append protocol
+is claimed.

@@ -72,6 +72,8 @@ class InstalledClearanceVerifier:
                 or not callable(getattr(self.context_source,"resolve",None))):
             raise ValidationError("invalid installed clearance verifier")
         hb=self.template_verifier.hand_back_verifier;p=_profile(_parse_jcs_object(self.profile_bytes))
+        if hb.hysteresis_verifier is not None:
+            raise ValidationError("selected hysteresis requires grant-reissue integration before Clear")
         if (self.non_clearance_verifier.hand_back_verifier is not hb
                 or self.native_verifier.readiness_verifier.readiness_verifier.deployment_profile_bytes!=hb.deployment_profile_bytes
                 or self.native_verifier.association_verifier.algorithm!=hb.algorithm

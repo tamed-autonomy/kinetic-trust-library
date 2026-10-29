@@ -50,11 +50,13 @@ def _wire_validator():
 
 
 def _profile(p):
-    if (set(p)!={"id","version","zone","defect_endpoint","formula","classes"}
+    if (set(p)-{"hysteresis_profile_digest"}!={"id","version","zone","defect_endpoint","formula","classes"}
             or any(not _name(p[k]) for k in ("id","zone","defect_endpoint")) or not _time(p["version"]) or p["version"]==0
             or p["formula"] not in ("registered-template-and-sealed-context-v1","registered-template-and-sealed-context-v2") or type(p["classes"]) is not dict
             or set(p["classes"])!={"Logistics","Coordination","Relational"}):
         raise ValidationError("invalid selected hand-back profile")
+    if "hysteresis_profile_digest" in p and not is_digest(p["hysteresis_profile_digest"]):
+        raise ValidationError("invalid selected hysteresis profile digest")
     for kind,c in p["classes"].items():
         if (type(c) is not dict or set(c)!={"ack_sla_seconds","minimum_reissue_seconds"}
                 or not _time(c["ack_sla_seconds"]) or c["ack_sla_seconds"]==0 or not _time(c["minimum_reissue_seconds"])
@@ -88,6 +90,7 @@ class HandBackAssessment:
     authenticated_state_bytes: bytes | None
     ciphertext_bytes: bytes | None
     source_evidence_bytes: bytes | None
+    hysteresis: object
 
     def __init__(self,*args,**kwargs):raise TypeError("hand-backs require installed registered-template validation")
 
@@ -98,28 +101,40 @@ class InstalledHandBackVerifier:
     profile_bytes: bytes
     context_source: object
     algorithm: str
+    hysteresis_verifier: object = None
 
     def __post_init__(self):
         if (type(self.deployment_profile_bytes) is not bytes or type(self.profile_bytes) is not bytes
                 or self.algorithm not in ("sha256","sha384") or not callable(getattr(self.context_source,"resolve",None))):
             raise ValidationError("invalid installed hand-back verifier")
-        _parse_jcs_object(self.deployment_profile_bytes);_profile(_parse_jcs_object(self.profile_bytes))
+        _parse_jcs_object(self.deployment_profile_bytes);p=_profile(_parse_jcs_object(self.profile_bytes))
+        if ("hysteresis_profile_digest" in p)!=(self.hysteresis_verifier is not None):
+            raise ValidationError("hand-back hysteresis selection must be symmetric")
+        if self.hysteresis_verifier is not None:
+            from .installed_hysteresis import InstalledHandBackHysteresisVerifier
+            v=self.hysteresis_verifier
+            if (type(v) is not InstalledHandBackHysteresisVerifier or v.deployment_profile_bytes!=self.deployment_profile_bytes
+                    or v.algorithm!=self.algorithm or p["hysteresis_profile_digest"]!=_digest(_parse_jcs_object(v.profile_bytes),self.algorithm)):
+                raise ValidationError("hand-back hysteresis differs from installed deployment/profile")
+            hp=_parse_jcs_object(v.profile_bytes)
+            if hp["zone"]!=p["zone"] or any(hp["classes"][kind]["minimum_seconds"]!=c["minimum_reissue_seconds"] for kind,c in p["classes"].items()):
+                raise ValidationError("hand-back and hysteresis class/zone declarations differ")
 
     def evaluate(self,hand_back_bytes,*,actual_operation,evaluated_at,clock_healthy):
         if type(hand_back_bytes) is not bytes or not _time(evaluated_at):
             raise ValidationError("hand-back verification requires immutable bytes and current time")
         operation_bytes=canonical_demand_operation_bytes(actual_operation)
         op=_parse_jcs_object(operation_bytes);p=_profile(_parse_jcs_object(self.profile_bytes))
-        source=None
+        source=None;hysteresis=None
         def result(valid,delivery=None):
             r=object.__new__(HandBackAssessment)
             for k,v in dict(valid=valid,reason="HAND_BACK_VALID" if valid else "HAND_BACK_PROTOCOL_ERROR",action_permitted=False,
                     hand_back_bytes=hand_back_bytes if valid else None,profile_bytes=self.profile_bytes,operation_bytes=operation_bytes,
-                    evaluated_at=evaluated_at,expires_at=state["expires_at"] if valid else None,delivery_state=delivery,
+                    evaluated_at=evaluated_at,expires_at=min(state["expires_at"],hysteresis.expires_at if hysteresis is not None else state["expires_at"]) if valid else None,delivery_state=delivery,
                     delivery_effort_required=valid and delivery=="parked",protocol_error_record_required=not valid,defect_route_required=not valid,
                     defect_endpoint=p["defect_endpoint"],authenticated_state_bytes=None if source is None else source.state_bytes,
                     ciphertext_bytes=source.ciphertext_bytes if valid else None,
-                    source_evidence_bytes=None if source is None else source.evidence_bytes).items():object.__setattr__(r,k,v)
+                    source_evidence_bytes=None if source is None else source.evidence_bytes,hysteresis=hysteresis).items():object.__setattr__(r,k,v)
             return r
         if clock_healthy is not True or len(hand_back_bytes)>262144:return result(False)
         try:
@@ -139,6 +154,14 @@ class InstalledHandBackVerifier:
             state=_parse_jcs_object(source.state_bytes)
             delivery=self._validate(state,wire,issued,reissue,p,op,evaluated_at,source.ciphertext_bytes)
         except (ValidationError,ProofFormatError,ValueError,TypeError,KeyError,UnicodeError,RecursionError):return result(False)
+        if self.hysteresis_verifier is not None:
+            # Child Source/contract failures retain provenance, never become
+            # accusations that a requester supplied hostile wire.
+            hysteresis=self.hysteresis_verifier.evaluate(actual_operation=op,evaluated_at=evaluated_at,clock_healthy=clock_healthy)
+            if (hysteresis.stop_anchor!=state["stop_anchor"] or hysteresis.subject!=state["subject"]
+                    or hysteresis.consequence_class!=state["consequence_class"] or hysteresis.issued_at!=issued
+                    or (wire["reason"] in {"revoked_by_principal","revoked_by_counterparty","demotion"})!=(hysteresis.variant=="Revoked")
+                    or hysteresis.projection.original_reissue_not_before!=reissue):return result(False)
         return result(True,delivery)
 
     def _validate(self,s,w,issued,reissue,p,op,now,ciphertext):
@@ -146,6 +169,7 @@ class InstalledHandBackVerifier:
                 "consequence_class","action_id","reason","stop_origin","delegator","operator","operator_affiliates","measurers","lease",
                 "issued_at","reissue_not_before","template","bundle","delivery"}
         if p["formula"]=="registered-template-and-sealed-context-v2":expected.add("sovereign_authority")
+        if self.hysteresis_verifier is not None:expected.add("stop_anchor")
         if (set(s)!=expected
                 or s["deployment_digest"]!=_digest(_parse_jcs_object(self.deployment_profile_bytes),self.algorithm)
                 or s["profile_digest"]!=_digest(p,self.algorithm) or s["operation_digest"]!=digest_demand_operation(op,algorithm=self.algorithm)
@@ -156,6 +180,7 @@ class InstalledHandBackVerifier:
                 or issued!=_instant(s["issued_at"]) or reissue!=_instant(s["reissue_not_before"])
                 or not _name(s["delegator"]) or not _name(s["operator"])):
             raise ValidationError("hand-back differs from actual stop scope")
+        if self.hysteresis_verifier is not None and not is_digest(s["stop_anchor"]):raise ValidationError("actual priced stop anchor required")
         c=p["classes"][s["consequence_class"]]
         if reissue<issued+c["minimum_reissue_seconds"]:raise ValidationError("reissue below declared class floor")
         from .hand_back_template import validate_template,select_recourse,V2

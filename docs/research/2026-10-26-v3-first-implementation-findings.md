@@ -1,5 +1,28 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 adjudicated hysteresis pricing
+
+Added declared capped-linear history projection, installed complete current
+ledger/head/owner/retention/actual-stop verification, and optional exact pricing
+binding in the hand-back validator. Only prior confirmed, unexpunged adversity
+counts. Expiry/pending/overturned/causally false entries cannot inflate subject
+delay. Missing mandatory expungements are explicit correction obligations, while
+per-revoker repeated-overturn accounting spans the zone and never penalizes the
+subject or invents a standing formula.
+
+Original issued and currently corrected prices remain distinct. Actual audit
+sequence resolves same-tick order; later confirmation cannot reprice old evidence,
+and later expungement cannot make the originally valid hand-back appear forged.
+Adjudications and expungements bind the actual stop; false findings bind the
+causing attestation. The complete installed inventory includes the actual priced
+stop, its variant and the profile that governed it. A priced-stop-expunged flag
+must be respected by the upcoming grant gate, not treated as continuing sanction.
+
+This is named reference arithmetic, not an RFC-supplied formula. Source world
+facts and append/authority truth remain modeled; runtime writes no ledger here.
+Grant-time reissue/relational repair and human-gate composition remain next, and
+Clear explicitly rejects selected hysteresis until that integration exists.
+
 ## 2026-10-29 validated duration Clear construction
 
 Extracted shared original-template validation and added a selected current
