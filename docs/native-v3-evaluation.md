@@ -105,6 +105,36 @@ digest alias when a name exceeds the record's 255-character bound. Inputs are
 sorted by layer then name, with sorted evidence digests and matching undefined
 entries in the same order.
 
+## Current root verification
+
+`InstalledLiveRootVerifier(instrument_verifier, inventory_source, context_bytes,
+expected_zone)` can be installed as the full proof verifier's root predicate.
+The context is immutable independently authenticated subject/class, deployment,
+generation/lineage and hop-bound configuration. It does not come from the proof.
+The inventory source implements `resolve(context_bytes=..., evaluated_at=...)`
+without receiving the candidate and returns `AuthenticatedRootInventory` with
+the complete instrument-byte tuple, retained inventory evidence, exact context,
+current checked-at time and established no-credit reason. It must authenticate
+inventory completeness and currentness; an outage cannot be called an empty set.
+
+Every use reassesses instruments and current lifecycle through the installed
+instrument verifier, selects the strongest eligible root and binds its exact
+projection to the proof. Stale/mismatched inventory or unavailable source state
+rejects. A changed lifecycle can require fresh proof issuance even within its
+ten-second lifetime. `RootProofBinding` remains the exact-snapshot primitive;
+it must not be reused as though its snapshot were a fresh current-state query.
+
+The full proof result retains a sealed root result bound to the exact payload
+bytes and current evaluation time. Request association and readiness-sidecar
+results retain their full proof verification, including fresh root evidence.
+Products can use the retained source evidence in their effect-fencing protocol;
+the Library neither persists nor atomically fences external state by itself.
+
+Tests verify actual RFC test instrument, Oracle-witness and lifecycle-event
+signatures. Their envelope and unsafe public keys are test-only. They do not
+define a production instrument format or establish actual exposure, chain truth,
+current registries or inventory completeness.
+
 ## Current readiness prerequisite
 
 `InstalledReadinessVerifier(deployment_profile_bytes, readiness_profile_bytes,
@@ -153,8 +183,8 @@ requirements remain separate implementation gates.
 ## Remaining release gates
 
 The source adapters in the integration tests are explicitly fixtures. Real
-instrument/witness signatures, live lifecycle/root refresh, production source
-profiles, person standing/eligibility/capacity, nested ingress and whole-evaluation
+instrument/event source adapters and fencing, production source profiles,
+person standing/eligibility/capacity, nested ingress and whole-evaluation
 authorization still require their documented contracts and evidence.
 Repeating root-score arithmetic and exact Decimal values that cannot survive
 the JCS number wire remain precision dependencies. The final RFC tag, public

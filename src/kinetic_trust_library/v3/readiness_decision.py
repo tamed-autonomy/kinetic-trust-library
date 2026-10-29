@@ -7,7 +7,7 @@ still fence that state and satisfy grants, Core/envelope and remaining controls.
 from dataclasses import dataclass
 from kinetic_trust_library.errors import ValidationError, ProofFormatError
 from .installed_readiness import InstalledReadinessVerifier, ReadinessVerificationResult, _binding
-from .complete_proof_verifier import InstalledProofVerifier
+from .complete_proof_verifier import InstalledProofVerifier, ProofVerificationResult
 from .request_association import RequestAssociationResult
 from .trust_proof_json import _parse_jcs_object
 from .root_lifecycle import _time
@@ -20,6 +20,7 @@ class ReadinessDecisionResult:
     association: RequestAssociationResult
     decision_bytes: bytes | None
     expires_at: int | None
+    proof_verification: ProofVerificationResult | None
 
     def __init__(self,*args,**kwargs):
         raise TypeError("readiness decision results are derived by an installed verifier")
@@ -51,10 +52,12 @@ class InstalledReadinessDecisionVerifier:
                 or type(association) is not RequestAssociationResult or not _time(evaluated_at)):
             raise ValidationError("readiness sidecar requires immutable evidence and a derived association")
         readiness=None
+        proof=None
         def result(reason,expiry=None):
             value=object.__new__(ReadinessDecisionResult)
             for name,member in (("reason",reason),("readiness",readiness),("association",association),
-                ("decision_bytes",decision_bytes if reason=="READINESS_DECISION_VALID" else None),("expires_at",expiry)):
+                ("decision_bytes",decision_bytes if reason=="READINESS_DECISION_VALID" else None),("expires_at",expiry),
+                ("proof_verification",proof)):
                 object.__setattr__(value,name,member)
             return value
         if association.reason!="RB_BOUND" or association.canonical_request_bytes is None:

@@ -101,8 +101,7 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(result.expires_at,1220)
         from kinetic_trust_library.v3.readiness_decision import InstalledReadinessDecisionVerifier
         from kinetic_trust_library.v3.complete_proof_verifier import InstalledProofVerifier
-        from kinetic_trust_library.v3.native_proof_profile import native_schema_bundle,RootProofBinding
-        from kinetic_trust_library.v3.assessed_root_selection import select_assessed_roots
+        from kinetic_trust_library.v3.native_proof_profile import native_schema_bundle
         from kinetic_trust_library.v3.request_binding import digest_canonical_request,digest_complete_proof
         from kinetic_trust_library.v3.request_association import InstalledRequestAssociationVerifier
         root=Path(__file__).parents[3]
@@ -115,10 +114,18 @@ class ReadinessTests(unittest.TestCase):
         ordinary_key={**key,"kid":"ordinary-key","issuer":ordinary["iss"],"zone":"zone:alpha","role":"trust-proof-oracle"}
         signing=(segment(rfc8785.dumps(dict(alg="EdDSA",kid=ordinary_key["kid"],typ="ktp-trust-proof+jwt")))+"."+segment(rfc8785.dumps(ordinary))).encode()
         ordinary_compact=signing.decode()+"."+segment(private.sign(signing))
-        roots=select_assessed_roots((),context_bytes=rfc8785.dumps(dict(subject=operation["actor"],subject_profile="software")),evaluated_at=1000,algorithm="sha256")
+        from kinetic_trust_library.v3.live_root import InstalledLiveRootVerifier,AuthenticatedRootInventory
+        from kinetic_trust_library.v3.installed_root import InstalledRootVerifier
+        root_context=rfc8785.dumps(dict(subject=operation["actor"],subject_profile="software"))
+        class RootInventory:
+            def resolve(self,*,context_bytes,evaluated_at):
+                return AuthenticatedRootInventory((),b"fixture-current-complete-empty-root-inventory",context_bytes,evaluated_at)
+        class RootInstrument:
+            def verify(self,*args,**kwargs):raise AssertionError("empty inventory has no instrument")
+        live_root=InstalledLiveRootVerifier(InstalledRootVerifier(RootInstrument(),"sha256"),RootInventory(),root_context,"zone:alpha")
         pv=InstalledProofVerifier(native_schema_bundle(),rfc8785.dumps({ordinary_key["kid"]:ordinary_key}),rfc8785.dumps(dict(
             issuer=ordinary["iss"],audience=operation["audience"],zone="zone:alpha",subject=operation["actor"],subject_kind="software_agent",required_ceilings={},ring_depth=0)),
-            ("EdDSA",),RootProofBinding(roots,"zone:alpha"))
+            ("EdDSA",),live_root)
         actual={**operation,"version":"request-binding-v1","demand":{"value":35,"unit":"ktp-action-risk-points"},
             "classification_profile":{"id":"urn:ktp:classifier:readiness-test","digest":d("classifier")}}
         actual_bytes=rfc8785.dumps(actual)
@@ -131,6 +138,7 @@ class ReadinessTests(unittest.TestCase):
         association=InstalledRequestAssociationVerifier(Invocation(),pv,Replay(),"sha256").verify(actual_bytes,association_bytes,ordinary_compact,
             invocation_evidence=b"fixture-actual-invocation",now=1000,clock_healthy=True)
         self.assertEqual(association.reason,"RB_BOUND")
+        self.assertEqual(association.proof_verification.root_verification.checked_at,1000)
         issuer_key={**key,"kid":"decision-key","subject":"oracle-1","purpose":"ktp-readiness-decision-v1"}
         keys[issuer_key["kid"]]=issuer_key
         decision=dict(decision_version="ktp-readiness-decision-v1",request_digest=digest(request),
@@ -154,8 +162,13 @@ class ReadinessTests(unittest.TestCase):
         from kinetic_trust_library.errors import ValidationError
         with self.assertRaisesRegex(ValidationError,"Level 3"):
             InstalledReadinessDecisionVerifier(stronger_readiness,pv)
-        def check_decision():return dv.verify(rfc8785.dumps(decision),rfc8785.dumps(attestation),association,evaluated_at=1000,clock_healthy=True)
+        def check_decision(now=1000):return dv.verify(rfc8785.dumps(decision),rfc8785.dumps(attestation),association,evaluated_at=now,clock_healthy=True)
         self.assertEqual(check_decision().reason,"READINESS_DECISION_VALID")
+        state["checked_at"]=1001
+        current=check_decision(1001)
+        self.assertEqual(current.reason,"READINESS_DECISION_VALID")
+        self.assertEqual(current.proof_verification.root_verification.checked_at,1001)
+        state["checked_at"]=1000
         state["status"]="revoked"
         self.assertEqual(check_decision().reason,"READINESS_INVALID")
         state["status"]="active"

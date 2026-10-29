@@ -13,6 +13,7 @@ from .trust_proof_framing import parse_compact_framing
 from .trust_proof_json import parse_proof_json_objects, _parse_jcs_object
 from .trust_proof_invariants import _invariants_hold, trust_proof_stage7_reason
 from .schema_formats import installed_format_checker
+from .live_root import RootProofVerificationResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +52,7 @@ class ProofVerificationResult:
     reason: str
     stage: int
     authenticated_payload_bytes: bytes | None
+    root_verification: RootProofVerificationResult | None
 
     def __init__(self, *args, **kwargs):
         raise TypeError("ProofVerificationResult is derived by an installed verifier")
@@ -62,7 +64,7 @@ class InstalledProofVerifier:
     trusted_keys_bytes: bytes
     expected_context_bytes: bytes
     installed_algorithms: tuple[str, ...]
-    root_verifier: Callable[[bytes, int], bool]
+    root_verifier: Callable[[bytes, int], bool | RootProofVerificationResult]
     ingress_verifier: Callable[[tuple[object, ...]], bool] | None = None
     extension_handlers: tuple[tuple[str, Callable[[bytes], bool]], ...] = ()
     fixture_software_default: bool = False
@@ -117,24 +119,30 @@ class InstalledProofVerifier:
                     accepted = False
                 if not accepted:
                     return _result(compact, "TP_EXTENSION_CRITICAL", 6, raw)
+        root_evidence = None
         try:
             invariant = _invariants_hold(payload, expected_subject=context["subject"], expected_zone=context["zone"],
                                          required_ceilings=context["required_ceilings"], expected_subject_kind=context.get("subject_kind", "software_agent"))
-            root_valid = invariant and self.root_verifier(raw, now) is True
+            root_check = self.root_verifier(raw, now) if invariant else False
+            if type(root_check) is RootProofVerificationResult:
+                root_evidence = root_check
+                root_valid = root_check.valid and root_check.checked_at == now and root_check.payload_bytes == raw
+            else:
+                root_valid = root_check is True
         except Exception:
             root_valid = False
         if not root_valid:
-            return _result(compact, "TP_INVARIANT", 7, raw)
+            return _result(compact, "TP_INVARIANT", 7, raw, root_evidence)
         reason = trust_proof_stage7_reason(payload, expected_subject=context["subject"], expected_zone=context["zone"],
             required_ceilings=context["required_ceilings"], ring_depth=context["ring_depth"], ingress_verifier=self.ingress_verifier, expected_subject_kind=context.get("subject_kind", "software_agent"))
         if reason is not None:
-            return _result(compact, reason, 7, raw)
+            return _result(compact, reason, 7, raw, root_evidence)
         gate = payload["ktp"]["gate_state"]
-        return _result(compact, {"clear":"TP_CLEAR", "veto":"TP_VETO", "undetermined":"TP_UNDETERMINED"}[gate], 8, raw)
+        return _result(compact, {"clear":"TP_CLEAR", "veto":"TP_VETO", "undetermined":"TP_UNDETERMINED"}[gate], 8, raw, root_evidence)
 
 
-def _result(compact, reason, stage, payload):
+def _result(compact, reason, stage, payload, root_evidence=None):
     result = object.__new__(ProofVerificationResult)
-    for name, value in (("compact",compact), ("reason",reason), ("stage",stage), ("authenticated_payload_bytes",payload)):
+    for name, value in (("compact",compact), ("reason",reason), ("stage",stage), ("authenticated_payload_bytes",payload), ("root_verification",root_evidence)):
         object.__setattr__(result,name,value)
     return result

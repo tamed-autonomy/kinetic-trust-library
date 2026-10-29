@@ -13,7 +13,7 @@ import json
 from kinetic_trust_library.errors import ValidationError
 from .trust_proof_json import _reject_duplicate, _reject_constant, _check_tree, _parse_jcs_object
 from .request_binding import _request_validator, canonical_request_bytes, digest_canonical_request, digest_complete_proof
-from .complete_proof_verifier import InstalledProofVerifier
+from .complete_proof_verifier import InstalledProofVerifier, ProofVerificationResult
 
 
 class RequestContextFailure(Exception):
@@ -72,6 +72,7 @@ class RequestAssociationResult:
     canonical_association_bytes: bytes | None
     compact_proof: str
     carrier_binding: VerifiedAssociationCarrier | None
+    proof_verification: ProofVerificationResult | None
 
     def __init__(self,*args,**kwargs):
         raise TypeError("RequestAssociationResult is derived by an installed verifier")
@@ -98,6 +99,7 @@ class InstalledRequestAssociationVerifier:
         import rfc8785
         canonical=association_canonical=None
         carrier_binding=None
+        verified=None
         try:
             try:
                 request,canonical=_parse(request_bytes)
@@ -168,7 +170,7 @@ class InstalledRequestAssociationVerifier:
         result=object.__new__(RequestAssociationResult)
         for name,value in (("reason",reason),("proof_reason",proof_reason),("canonical_request_bytes",canonical),
                            ("canonical_association_bytes",association_canonical),("compact_proof",proof),
-                           ("carrier_binding",carrier_binding)):
+                           ("carrier_binding",carrier_binding),("proof_verification",verified)):
             object.__setattr__(result,name,value)
         return result
 
