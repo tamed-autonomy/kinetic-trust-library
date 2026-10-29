@@ -30,7 +30,7 @@ class EligibleRoot:
             raise ValidationError("eligible root identifier is invalid")
         if type(complete_digest) is not str or _DIGEST.fullmatch(complete_digest) is None:
             raise ValidationError("eligible root complete digest is invalid")
-        value = as_decimal(strength, name="eligible root strength", minimum=0)
+        value = as_decimal(strength, name="eligible root strength", minimum=0, maximum=100)
         if value == 0:
             raise ValidationError("zero-strength root is ineligible")
         object.__setattr__(self, "instrument_id", instrument_id)

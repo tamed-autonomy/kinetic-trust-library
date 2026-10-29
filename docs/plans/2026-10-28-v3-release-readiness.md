@@ -4,7 +4,7 @@
 
 | Area | Current branch | Work needed before the final-tag reconciliation can be small |
 | --- | --- | --- |
-| Five-factor risk and missing evidence | Pure calculations, factor-state projection, Soul-first preflight, sensor configuration boundary | Compose authenticated feed/signal population and standing with Core evaluation; define and test exact R/E precision before an authorization result. |
+| Five-factor risk and missing evidence | Pure calculations, factor-state projection, Soul-first preflight, sensor configuration boundary, derived `E_base` arithmetic, exact E projection and non-authorizing ordered Core projection | Authenticate feed/signal population and every standing contribution/ceiling; classify A from the actual operation; define and test exact R/E precision before an authorization result. |
 | Demand-side criticality | Canonical operation digest and deterministic declaration/value/time/provenance digest/binding precheck | Install production supplier and verification profile interfaces, authenticate the complete value and source path, establish independence and provenance admissibility, and use the restrictive reading in a declared A formula. A successful precheck is not an accepted observation. |
 | Standing and External Root | Identifier binding, PoR boundary, strongest-single eligible-root selection | Replace v2 sponsor inference and standing model with authenticated bond/instrument and lifecycle projection. Person-subject handling needs the accepted proof shape. |
 | Trust Proof | Ordered parser/signature/time precheck through stage 5, partial stage 7, pinned proposal schema | Resolve the five-factor schema reference across PRs, incorporate the closed External Root union, regenerate signed fixtures, implement stages 6–8 and a single accepting verifier. Level-specific cryptographic profiles remain explicit. |
@@ -13,11 +13,11 @@
 
 ## Current dependency order
 
-1. Finish the native Core input and evaluator path with externally authenticated inputs and a conservative undefined-input result. Keep R/E precision as a named unresolved gate, not an implicit rounding choice.
+1. Finish the native Core input and evaluator path with externally authenticated inputs and a conservative undefined-input result. The arithmetic projection exists, but its precomputed evidence values are not verified by it. Keep R/E precision as a named unresolved gate, not an implicit rounding choice.
 2. Compose the proof stages only after the RFC supplies a coherent five-factor schema and External Root projection. Build signed positive and negative fixtures through the full accepting path.
 3. Bind accepted proof, request, replay and Decision Geometry into one immutable result, then replace the public v2 APIs.
 4. Run the Library and Service suites against the final RFC tag, update the RFC pin and package version, and exercise installed-wheel examples.
 
-The refreshed full Library suite passed 825 tests with the v3 optional dependencies; the wheel build included the bundled demand schemas and precheck module.
+The refreshed full Library suite passed 839 tests with the v3 optional dependencies; the wheel build included the bundled demand schemas, precheck module and native Core projection modules.
 
 Until steps 1–3 are implemented, an RFC freeze would still leave substantial Library work. The target is to finish those steps on this branch while treating proposal-specific edges as replaceable. The final tag should then require a source diff review, localized changes, fixture refresh, and release verification.

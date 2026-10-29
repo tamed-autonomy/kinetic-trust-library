@@ -15,6 +15,10 @@ VECTORS = Path(__file__).parents[3] / "spec/proposals/external-root-v1.json"
 
 
 class ProposedExternalRootSelection(unittest.TestCase):
+    def test_root_strength_cannot_exceed_core_score_range(self):
+        with self.assertRaises(ValidationError):
+            EligibleRoot("root", "sha256:" + "a" * 64, 101)
+
     def test_published_selection_cases(self):
         vectors = json.loads(VECTORS.read_text())
         self.assertEqual(len(vectors["selection_cases"]), 4)
