@@ -6,11 +6,12 @@ still fence that state and satisfy grants, Core/envelope and remaining controls.
 """
 from dataclasses import dataclass
 from kinetic_trust_library.errors import ValidationError, ProofFormatError
-from .installed_readiness import InstalledReadinessVerifier, ReadinessVerificationResult, _binding
+from .installed_readiness import InstalledReadinessVerifier, ReadinessVerificationResult
 from .complete_proof_verifier import InstalledProofVerifier, ProofVerificationResult
 from .request_association import RequestAssociationResult
 from .trust_proof_json import _parse_jcs_object
 from .root_lifecycle import _time
+from ._jws_keys import load_key_binding as _binding
 
 
 @dataclass(frozen=True, slots=True, init=False)

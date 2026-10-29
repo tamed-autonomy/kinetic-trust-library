@@ -2,7 +2,7 @@
 # Copyright 2025-2026 Chris Perkins. Licensed under Apache-2.0.
 # Modified for Library resource loading and isolated native readiness use.
 """Private readiness signature subset adapted from RFC trajectory primitives."""
-from dataclasses import dataclass
+from ._jws_keys import KeyBinding
 import base64
 import hashlib
 import json
@@ -125,15 +125,6 @@ def digest(value, level):
     return digest_bytes(canonical(value), level)
 
 
-@dataclass(frozen=True)
-class KeyBinding:
-    """Previously authenticated key/role/subject binding, never candidate data."""
-    key_id: str
-    subject: str
-    algorithm: str
-    purpose: str
-    public_key: object
-    zone_id: str
 
 
 def literal(value):

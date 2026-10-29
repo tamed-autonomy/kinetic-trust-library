@@ -13,13 +13,15 @@ not a complete deployment or certification claim.
 Products own sensing, storage, keys, transport, failure handling, retries,
 human interaction, action, and enforcement.
 
-The provisional v3 namespace also includes adapted readiness reference checks
-and private signature primitives from nmcitra/ktp-rfc scripts/readiness.py and
+The provisional v3 namespace also includes adapted readiness and trajectory
+reference checks and signature primitives from nmcitra/ktp-rfc scripts/readiness.py and
 scripts/trajectory_signatures.py, commit
 9612f7955d88e25d193dab2a17d51d0c9d9075d0, under Apache-2.0.
 Copyright 2025-2026 Chris Perkins. Modifications isolate readiness signatures,
 load bundled schemas, and integrate installed immutable Library boundaries.
-The accompanying readiness schemas retain their original source bytes.
+The accompanying readiness and trajectory schemas retain their original source
+bytes. Native trajectory validation explicitly composes the five-factor v3 Risk
+Factors reference; it does not modify the archived source schema or fixtures.
 
 ---
 

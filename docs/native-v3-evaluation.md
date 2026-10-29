@@ -208,11 +208,65 @@ execution budgets and target semantics, and atomically fences source state with
 protected effects. No positive cached result permits continuing after lost
 conditions or expiry.
 
+## Signed trajectory history
+
+`InstalledTrajectoryVerifier(expected_context_bytes, adapter)` verifies native
+`ktp-trajectory-v3` records against independently authenticated chain state.
+The immutable expected context contains exactly `trusted_level`,
+`trusted_profile_digest`, `expected_agent`, `expected_zone`, `expected_chain`
+and `minimum_record_format: "ktp-trajectory-v3"`. The adapter's
+`resolve(expected_context_bytes=..., checked_at=...)` receives no candidate.
+It returns `AuthenticatedTrajectoryContext(state_bytes, trusted_keys_bytes,
+evidence_bytes)` with canonical state and independently authenticated key data.
+
+State contains exactly `checked_at`, `context`, `head`, `predecessor`,
+`predecessor_context` and `migration`. The current context and check second must
+match the installed expectation. `head` is the independently authenticated
+complete final-head binding from the RFC, including final record hash and
+commit intent. The resolver must verify the actual required commitment protocol,
+unique durable head selection, current configuration/format floor and registry;
+a mutable pointer or `committed` flag cannot establish those facts.
+
+Genesis uses null predecessor and predecessor context. A continuation carries
+the accepted complete predecessor and its independently approved historical
+context, allowing authorized profile/key transitions without trusting the
+predecessor's own assertions. The verifier checks both records' signatures,
+complete hashes, exact sequence/hash/state continuity and strictly increasing
+event timestamps. Key metadata uses the shared purpose-bound JWK projection
+described above. Signing validity is checked at the event/Oracle times; history
+does not expire simply because the signing key later reaches its validity end.
+Current revocation and evidence admissibility remain resolver obligations.
+
+For an activated migrated genesis, `migration` contains exactly `token`,
+`checkpoint_digest`, `approved_state` and `activated_at`. The token is the full
+signed migration JWS. The other facts must come from authenticated governance,
+independent state revalidation and durable one-time lineage activation. The
+verifier checks the checkpoint's exact new-genesis bindings and validity at
+activation, including that the fully signed genesis precedes activation. It
+does not require renewal when verifying an already activated history after the
+checkpoint expiry. A record declaring migration without that external evidence
+rejects. The Library does not implement the migration registry or approve state.
+
+`verify(record_bytes, now=..., clock_healthy=...)` returns sealed integrity/head
+evidence, retaining complete record, hashes and trusted state/evidence. It does
+not establish an authorized transition, physical continuity, truthful sensors,
+standing credit or permission. Inputs are bounded to 262,144 canonical record
+bytes for this Library profile. Classical signature checks support the
+reference's P-256/P-384 and Ed25519/Ed448 choices; a stronger trusted deployment
+still needs its required threshold/hybrid/custody mechanisms.
+
+The original trajectory schema and signed fixtures are byte-preserved. Native
+validation explicitly changes the stale risk-schema reference to PR #164's v3
+five-factor definition. Original six-factor fixtures are crypto diagnostics;
+they are not a native compatibility mode. Fresh unsafe-test-key native records
+exercise the composed profile. Final RFC reconciliation must update this
+reference and regenerate canonical fixtures upstream.
+
 ## Remaining release gates
 
 The source adapters in the integration tests are explicitly fixtures. Real
 instrument/event source adapters and fencing, production source profiles,
-person standing/eligibility/capacity, nested ingress and whole-evaluation
+person standing/eligibility/capacity, nested ingress and consuming-service
 authorization still require their documented contracts and evidence.
 Repeating root-score arithmetic and exact Decimal values that cannot survive
 the JCS number wire remain precision dependencies. The final RFC tag, public

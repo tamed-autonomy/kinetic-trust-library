@@ -11,6 +11,7 @@ from kinetic_trust_library.errors import ValidationError, ProofFormatError
 from .demand_operation import canonical_demand_operation_bytes
 from .trust_proof_json import _parse_jcs_object
 from .root_lifecycle import _time
+from ._jws_keys import load_key_binding as _binding
 
 
 class ReadinessVerificationFailure(Exception):
@@ -46,40 +47,6 @@ class ReadinessVerificationResult:
     @property
     def valid(self):
         return self.reason=="READINESS_VALID"
-
-
-def _binding(keys, compact):
-    """Build an internal RFC key binding only from authenticated registry data."""
-    from . import _readiness_reference as r
-    from ._readiness_crypto import KeyBinding, unb64
-    from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448
-    if type(compact) is not str or len(compact)>524288:
-        raise r.InvalidRecord("unbounded readiness signature")
-    parts=compact.split(".")
-    if len(parts)!=3:
-        raise r.InvalidRecord("invalid readiness signature framing")
-    header_bytes=unb64(parts[0])
-    if len(header_bytes)>1024:
-        raise r.InvalidRecord("unbounded readiness header")
-    header=_parse_jcs_object(header_bytes)
-    key=keys.get(header.get("kid"))
-    if type(key) is not dict or key.get("kid")!=header.get("kid") or key.get("revoked") is not False:
-        raise r.InvalidRecord("readiness key is not currently trusted")
-    r.integer(key.get("not_before"));r.integer(key.get("not_after"))
-    algorithm,curve=key.get("alg"),key.get("crv")
-    if algorithm in ("ES256","ES384") and key.get("kty")=="EC":
-        size=32 if algorithm=="ES256" else 48
-        expected_curve="P-256" if size==32 else "P-384"
-        x,y=unb64(key.get("x")),unb64(key.get("y"))
-        if curve!=expected_curve or len(x)!=size or len(y)!=size:
-            raise r.InvalidRecord("readiness curve/coordinate mismatch")
-        public=ec.EllipticCurvePublicNumbers(int.from_bytes(x,"big"),int.from_bytes(y,"big"),
-            ec.SECP256R1() if size==32 else ec.SECP384R1()).public_key()
-    elif algorithm=="EdDSA" and key.get("kty")=="OKP" and curve in ("Ed25519","Ed448"):
-        public=(ed25519.Ed25519PublicKey if curve=="Ed25519" else ed448.Ed448PublicKey).from_public_bytes(unb64(key.get("x")))
-    else:
-        raise r.InvalidRecord("unsupported readiness signing key")
-    return KeyBinding(key["kid"],key["subject"],algorithm,key["purpose"],public,key["zone_id"]),key
 
 
 @dataclass(frozen=True, slots=True)
