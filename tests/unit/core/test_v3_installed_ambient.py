@@ -91,6 +91,18 @@ class InstalledAmbientTests(unittest.TestCase):
         self.assertEqual(result.available_contingency,("triage_order","verifier_mutual_aid","admission_tightening"))
         self.assertFalse(result.geometry_value()["recovery"]["emergency_authorized"])
         self.assertFalse(result.recovery.recovered)  # Actual current utilization/debt overrides calm history.
+        from tests.unit.core.test_v3_rule_repair import fixture as rule_fixture
+        profile["recovery"]["rule_repair"]=dict(recurrence_limit=2)
+        state["profile_digest"]=_digest(profile,"sha256");v=replace(v,profile_bytes=rfc8785.dumps(profile))
+        state["recovery"]["rule_repair"]=rule_fixture()
+        repaired=v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
+        self.assertTrue(repaired.rule_repair.records_complete)
+        self.assertEqual(repaired.rule_repair.closed_patterns,("pattern:profile",))
+        self.assertEqual(repaired.geometry_value()["rule_repair"]["open_patterns"],[])
+        state["recovery"]["rule_repair"]["patterns"][0]["amendment"]["cites"]=[]
+        open_rule=v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
+        self.assertEqual(open_rule.rule_repair.open_patterns,("pattern:profile",))
+        self.assertNotEqual(open_rule.frame_digest,repaired.frame_digest)
         state["current"].update(prior_stock=2,arrivals=[])
         state["current"]["prior_stock_by_class"]["act-outside-decision"]=2
         result=v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
@@ -285,11 +297,18 @@ class InstalledAmbientTests(unittest.TestCase):
         self.assertTrue(next(item for item in prohibited["inputs"] if item["name"]=="ambient_repair")["value"]["consequential_hosting_forbidden"])
         profile["declared_capacity"]=4
         profile["recovery"]=dict(margin="0.1",stock_target=1,amendment_rate_limit="0.1",nonattendance_rate_limit="0.1",
-            crisis_invariants_preserved=False,contingency=None)
+            crisis_invariants_preserved=False,contingency=None,rule_repair=dict(recurrence_limit=2))
         state["profile_digest"]=_digest(profile,"sha256")
         state["recovery"]=dict(previous_tier="normal",history=[dict(starts_at=1010,ends_at=1020,
             utilization=0,open_stock=0,banked_excess=0,amendment_rate=0,nonattendance_rate=0)],amendment_rate=0,nonattendance_rate=0)
+        from tests.unit.core.test_v3_rule_repair import fixture as rule_fixture
+        state["recovery"]["rule_repair"]=rule_fixture()
+        state["recovery"]["rule_repair"]["patterns"][0].update(profile_digest=state["profile_digest"],definition_digest=state["profile_digest"])
+        state["recovery"]["rule_repair"]["patterns"][0]["record"]["profile_digest"]=state["profile_digest"]
+        state["recovery"]["rule_repair"]["patterns"][0]["amendment"]["profile_digest"]=state["profile_digest"]
+        state["recovery"]["rule_repair"]["patterns"][0]["amendment"]["previous_definition_digest"]=state["profile_digest"]
         incapable=replace(v,profile_bytes=rfc8785.dumps(profile))
         blocked=json.loads(current_geometry(incapable).produce(evaluated_at=1030))
         self.assertEqual(blocked["reason_codes"],["INPUT_UNAVAILABLE"])
         self.assertEqual(blocked["result"]["supervision"],"silent_veto")
+        self.assertTrue(next(value for value in blocked["inputs"] if value["name"]=="ambient_repair")["value"]["rule_repair"]["records_complete"])

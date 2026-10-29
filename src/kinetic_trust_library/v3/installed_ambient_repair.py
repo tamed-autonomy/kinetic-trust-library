@@ -14,7 +14,7 @@ from kinetic_trust_library.errors import ValidationError
 from .ambient_repair import project_ambient_window,reference_criticality_valid,ratio
 from .repair_capacity import RepairCapacityRecord,RepairCapacityWindow,project_repair_capacity,project_capacity_by_class
 from .installed_repair import HARD_ENTRIES
-from .installed_repair_recovery import validate_recovery_declaration,project_installed_recovery
+from .installed_repair_recovery import validate_recovery_declaration,project_installed_recovery,project_installed_rule_repair
 from .trust_proof_json import _parse_jcs_object
 from .demand_supplier import _digest
 from .demand_operation import canonical_demand_operation_bytes,digest_demand_operation
@@ -90,6 +90,7 @@ class AmbientRepairAssessment:
     maximum_banked_excess: Fraction | None
     recovery: object
     available_contingency: tuple
+    rule_repair: object
     criticality_valid: bool | None
     pressure_floor: Decimal | None
     supervision_floor: str
@@ -112,6 +113,9 @@ class AmbientRepairAssessment:
             result["recovery"]=dict(tier=self.recovery.tier,recovered=self.recovery.recovered,
                 measurement_complete=self.recovery.measurement_complete,rule_repair_required=self.recovery.rule_repair_required,
                 emergency_authorized=False,available_contingency=list(self.available_contingency))
+        if self.rule_repair is not None:
+            result["rule_repair"]=dict(records_complete=self.rule_repair.records_complete,
+                open_patterns=list(self.rule_repair.open_patterns),closed_patterns=list(self.rule_repair.closed_patterns))
         return result
 
 
@@ -261,12 +265,14 @@ class InstalledAmbientRepairVerifier:
         banks=tuple(view.banked_excess for view in views)
         maximum_utilization=None if any(value is None for value in utilizations) else max(utilizations)
         maximum_bank=None if any(value is None for value in banks) else max(banks)
-        recovery=None;available_contingency=()
+        recovery=None;available_contingency=();rule_repair=None
         if "recovery" in profile:
             recovery=project_installed_recovery(profile["recovery"],state["recovery"],capacity_windows=tuple(windows),
                 criticality=profile["criticality"],recovery_windows=profile["recovery_windows"],
                 utilization=None if any(entry["declared_capacity"] is None for entry in profile["entry_classes"].values()) else maximum_utilization,
                 stock=metrics.open_stock,bank=maximum_bank,parse=_rational)
+            rule_repair=project_installed_rule_repair(profile["recovery"],state["recovery"],recovery=recovery,
+                profile_digest=policy,evaluated_at=evaluated_at,algorithm=self.algorithm)
             contingency=profile["recovery"]["contingency"]
             if recovery.tier in ("debt-growth","crisis") and contingency is not None:
                 available_contingency=tuple(name for name in ("triage_order","verifier_mutual_aid","admission_tightening") if contingency[name])
@@ -277,7 +283,7 @@ class InstalledAmbientRepairVerifier:
             evaluated_at=evaluated_at,expires_at=state["expires_at"],zone_id=state["zone_id"],parent_zone=None if parent is None else parent["zone_id"],
             topology_epoch=state["topology_epoch"],capacity=capacity,metrics=metrics,criticality_valid=criticality,pressure_floor=pressure,
             class_capacities=class_capacities,class_metrics=tuple(class_metrics),
-            maximum_utilization=maximum_utilization,maximum_banked_excess=maximum_bank,recovery=recovery,available_contingency=available_contingency,
+            maximum_utilization=maximum_utilization,maximum_banked_excess=maximum_bank,recovery=recovery,available_contingency=available_contingency,rule_repair=rule_repair,
             supervision_floor="assisted" if pressure is None else metrics.supervision_floor,
             consequential_hosting_forbidden=(any(view.consequential_hosting_forbidden for view in views)
                 or recovery is not None and recovery.consequential_hosting_forbidden) and state["consequential"],profile_digest=policy,

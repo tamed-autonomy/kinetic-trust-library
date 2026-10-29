@@ -1,5 +1,29 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 rule-repair records and amendment citations
+
+Added deterministic recurring-pattern and tier-caused rule-repair record checks,
+then connected selected evidence to the installed ambient frame and geometry.
+Closing a pattern requires a current anchored ratified amendment that binds the
+same pattern/profile and prior definition, changes the definition, acknowledges
+the governing authority's breach, preserves affected parties' rights and passes
+the independent-verifier requirements. A missing record or amendment stays open.
+
+Supplier review identified an initial provenance gap: any current reconciliation
+could be cited even if unrelated. The corrected model authenticates the exact
+driving reconciliation set per pattern and requires that set, with current anchors
+and timestamps, in its amendment. A valid unrelated citation, self-citation,
+future citation or unchanged definition cannot close the pattern. Follow-up
+supplier review found no remaining actionable defect in that change.
+
+Focused current-use coverage accepts the retained closed inventory, rejects its
+stale geometry after a citation change, and retains the reopened obligation after
+fresh evidence is supplied. Signed producer fixtures retain the rule-repair
+summary. The Source still owns complete actual history, causal classification,
+current reconciliation validity, ratification and audit anchoring; this code
+neither creates records nor claims to exercise a deployed amendment process.
+Mandatory selection in the full deployment composition remains pending.
+
 ## 2026-10-29 installed sustained recovery
 
 Bound selected recovery declarations to the installed ambient source and exact

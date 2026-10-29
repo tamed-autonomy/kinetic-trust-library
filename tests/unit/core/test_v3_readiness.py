@@ -325,6 +325,28 @@ class ReadinessTests(unittest.TestCase):
         with_ambient=whole()
         self.assertEqual(with_ambient.reason,"NATIVE_PREREQUISITES_VALID")
         self.assertEqual(with_ambient.ambient.pressure_floor,0)
+        from tests.unit.core.test_v3_rule_repair import fixture as rule_fixture
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        ambient_profile["recovery"]=dict(margin="0.1",stock_target=1,amendment_rate_limit="0.1",nonattendance_rate_limit="0.1",
+            crisis_invariants_preserved=True,contingency=None,rule_repair=dict(recurrence_limit=2))
+        ambient_state["recovery"]=dict(previous_tier="normal",history=[dict(starts_at=980,ends_at=990,
+            utilization=0,open_stock=0,banked_excess=0,amendment_rate=0,nonattendance_rate=0)],
+            amendment_rate=0,nonattendance_rate=0,rule_repair=rule_fixture())
+        ambient_state["profile_digest"]=_digest(ambient_profile,"sha256")
+        rule_verifier=replace(ambient_verifier,profile_bytes=rfc8785.dumps(ambient_profile))
+        native=replace(native,ambient_verifier=rule_verifier)
+        current_ambient=rule_verifier.evaluate(actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        item["value"]=current_ambient.geometry_value();item["evidence_digests"]=sorted([current_ambient.profile_digest,current_ambient.frame_digest])
+        self.assertEqual(whole().ambient.rule_repair.closed_patterns,("pattern:profile",))
+        ambient_state["recovery"]["rule_repair"]["patterns"][0]["amendment"]["cites"]=[]
+        self.assertEqual(whole().reason,"AMBIENT_BINDING")
+        current_ambient=rule_verifier.evaluate(actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        item["value"]=current_ambient.geometry_value();item["evidence_digests"]=sorted([current_ambient.profile_digest,current_ambient.frame_digest])
+        self.assertEqual(whole().ambient.rule_repair.open_patterns,("pattern:profile",))
+        del ambient_profile["recovery"];del ambient_state["recovery"]
+        ambient_state["profile_digest"]=_digest(ambient_profile,"sha256");native=replace(native,ambient_verifier=ambient_verifier)
+        current_ambient=ambient_verifier.evaluate(actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        item["value"]=current_ambient.geometry_value();item["evidence_digests"]=sorted([current_ambient.profile_digest,current_ambient.frame_digest])
         ambient_state["expires_at"]=1002
         self.assertEqual(whole().expires_at,1002)
         ambient_state["expires_at"]=1007;ambient_state["ledger_head"]="sha256:"+"b"*64;ambient_state["window_ledger_head"]=ambient_state["ledger_head"]

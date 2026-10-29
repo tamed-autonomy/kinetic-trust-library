@@ -1040,5 +1040,32 @@ hosting denial follows the existing ordered producer and current-use gates.
 
 Recovery selection is optional for component assembly, not a claim that an
 ambient-only component is a complete repair deployment. Full deployment policy
-must select it. Rule-repair record validation and amendment citation remain
-implementation work; an obligation flag is not a produced or anchored record.
+must select it.
+
+An optional nested `rule_repair` declaration publishes the recurrence count.
+Selection requires a complete authenticated inventory of applicable recurring
+rule/profile/consequence-class patterns, including the profile cause associated
+with the repair tier. `rule_repair.project_rule_repairs` checks the anchored
+record and a ratified anchored amendment separately. An amendment must bind the
+same pattern, responsible profile and prior definition, change that definition,
+acknowledge the governing authority's breach, name all affected parties, retain
+their rights, and carry independent verification distinct from the Oracle.
+
+Each pattern has an independently authenticated exact set of reconciliation
+records that drove it. The amendment must cite that nonempty set; a valid but
+unrelated reconciliation is insufficient. Citations must retain current anchors
+and precede or coincide with the amendment. Self-citation, a no-op amendment,
+missing acknowledgment, an unratified amendment or invalid independence leaves
+the pattern open. Persisted prior triggering remains binding when recent counts
+fall, even before its first record exists. Time and recovery do not close it. The assessment and geometry
+retain record completeness and open/closed pattern identifiers; the frame binds
+the complete evidence. A new tier entry must name its current responsible profile.
+
+The source owns complete historical applicability/counting, actual governing and
+affected parties, independent-party facts at the record date, actual ratification
+and changed definition, and the valid reconciliation records and their causal
+relationship to each pattern. This is a closed semantic adapter projection,
+not a new audit wire format or a mechanism for writing/ratifying amendments.
+An open rule yields an obligation rather than an invented automatic action
+veto. Full deployment policy must select both recovery and rule-repair evidence;
+the component options alone do not establish complete repair conformance.

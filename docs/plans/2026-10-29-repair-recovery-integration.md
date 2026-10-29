@@ -4,10 +4,11 @@ Source: repair draft `e1f124b64de3234bc96f94fcd7c8ee612d965517`,
 Sections 4.6 and 5.5. No final tag or full conformance claim.
 
 The pure `repair_recovery` projection and selected installed integration are
-implemented. Items 1–3 are implemented for the selected component path; item 4
-and complete deployment selection remain pending. Item 5 has producer/current-use
-coverage for hosting denial and focused history/policy boundaries; fuller
-rule-repair cases remain pending:
+implemented. Items 1–4 are implemented for the selected component path, including
+record/amendment validation and exact driving-citation binding. Complete
+deployment selection remains pending. Item 5 has producer/current-use coverage
+for hosting denial, retained rule-repair state, stale citation frames and focused
+history/policy boundaries; no deployed Service amendment process is claimed:
 
 1. Require published recovery margin, stock target, both strict rate limits,
    crisis invariant capability and a closed contingency declaration. Reject
