@@ -184,16 +184,44 @@ class ReadinessTests(unittest.TestCase):
         gv=InstalledGeometryVerifier(Reproduction(),pv,"sha256")
         av=InstalledRequestAssociationVerifier(Invocation(),pv,Replay(),"sha256")
         native=InstalledNativeEvaluationVerifier(av,dv,gv,1000,1006)
-        def whole(body=None):
+        def whole(body=None,token=None):
             return native.verify(actual_bytes,association_bytes,ordinary_compact,
                 decision_bytes=rfc8785.dumps(decision),attestation_bytes=rfc8785.dumps(attestation),
                 invocation_evidence=b"fixture-actual-invocation",now=1000,clock_healthy=True,
-                geometry_body_bytes=rfc8785.dumps(geometry if body is None else body))
+                geometry_body_bytes=rfc8785.dumps(geometry if body is None else body),adjudication_token=token)
         combined=whole()
         self.assertEqual(combined.reason,"NATIVE_PREREQUISITES_VALID")
         self.assertEqual(combined.supervision,"stable")
         self.assertEqual(combined.expires_at,1006)
         self.assertEqual(combined.readiness.proof_verification.root_verification.checked_at,1000)
+        from dataclasses import replace
+        from tests.unit.core.test_v3_adjudication import fixture as adjudication_fixture
+        adjudication=adjudication_fixture(operation,deployment,1000)
+        no_norm=native
+        native=replace(native,adjudication_verifier=adjudication["verifier"])
+        absent=whole()
+        self.assertEqual(absent.reason,"ADJ_GATE_UNSATISFIED")
+        self.assertEqual(absent.supervision,combined.supervision)
+        self.assertEqual(absent.tightened_constraints_bytes,combined.tightened_constraints_bytes)
+        favorable=whole(token=adjudication["sign"]())
+        self.assertEqual(favorable.reason,"NATIVE_PREREQUISITES_VALID")
+        self.assertEqual(favorable.canonical_geometry_bytes,combined.canonical_geometry_bytes)
+        self.assertTrue(favorable.adjudication.gate_satisfied)
+        self.assertEqual(favorable.expires_at,1006)
+        adjudication["payload"]["favorable"]=False
+        self.assertEqual(whole(token=adjudication["sign"]()).reason,"ADJ_GATE_UNSATISFIED")
+        adjudication["payload"]["favorable"]=True
+        adjudication["state"]["evidence_digest"]="sha256:"+"0"*64
+        self.assertEqual(whole(token=adjudication["sign"]()).reason,"ADJ_GATE_UNSATISFIED")
+        optional_profile=dict(adjudication["profile"],gate_required=False)
+        optional_verifier=replace(adjudication["verifier"],profile_bytes=rfc8785.dumps(optional_profile))
+        native=replace(no_norm,adjudication_verifier=optional_verifier)
+        adjudication["source"].unavailable=True
+        unchanged=whole(token=adjudication["sign"]())
+        self.assertEqual(unchanged.reason,"NATIVE_PREREQUISITES_VALID")
+        self.assertEqual(unchanged.supervision,combined.supervision)
+        self.assertEqual(unchanged.canonical_geometry_bytes,combined.canonical_geometry_bytes)
+        native=no_norm
         from kinetic_trust_library.v3.human_eligibility import InstalledHumanEligibilityVerifier,AuthenticatedHumanContext,combine_human_origin
         class HumanSource:
             def resolve(self,**kwargs):return AuthenticatedHumanContext(rfc8785.dumps(human_fixture_data["request"]),

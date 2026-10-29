@@ -13,6 +13,7 @@ from .geometry_verifier import InstalledGeometryVerifier
 from .trust_proof_json import _parse_jcs_object
 from kinetic_trust_library.proofs._jwt import _decode_segment
 from .root_lifecycle import _time
+from .adjudication import InstalledAdjudicationVerifier, AdjudicationAssessment
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -25,6 +26,7 @@ class NativeEvaluationResult:
     association: RequestAssociationResult
     readiness: ReadinessDecisionResult | None
     expires_at: int | None
+    adjudication: AdjudicationAssessment | None
 
     def __init__(self,*args,**kwargs):
         raise TypeError("native evaluation results are derived by an installed verifier")
@@ -37,6 +39,7 @@ class InstalledNativeEvaluationVerifier:
     local_geometry_verifier: InstalledGeometryVerifier | None = None
     local_evaluated_at: int | None = None
     local_profile_expires_at: int | None = None
+    adjudication_verifier: InstalledAdjudicationVerifier | None = None
 
     def __post_init__(self):
         if (type(self.association_verifier) is not InstalledRequestAssociationVerifier
@@ -52,20 +55,28 @@ class InstalledNativeEvaluationVerifier:
         elif any(v is not None for v in (self.local_geometry_verifier,self.local_evaluated_at,self.local_profile_expires_at)):
             raise ValidationError("protected carriage cannot select a local unsigned geometry alternative")
 
+        if self.adjudication_verifier is not None:
+            if (type(self.adjudication_verifier) is not InstalledAdjudicationVerifier
+                    or self.adjudication_verifier.deployment_profile_bytes != self.readiness_verifier.readiness_verifier.deployment_profile_bytes
+                    or _parse_jcs_object(self.adjudication_verifier.profile_bytes)["zone_id"] != self.readiness_verifier.readiness_verifier.receiving_zone):
+                raise ValidationError("adjudication policy differs from native deployment/receiving zone")
+
     def verify(self, request_bytes: bytes, association_bytes: bytes, compact_proof: str, *,
                decision_bytes: bytes, attestation_bytes: bytes, invocation_evidence: bytes,
-               now: int, clock_healthy: bool, geometry_body_bytes: bytes | None = None) -> NativeEvaluationResult:
+               now: int, clock_healthy: bool, geometry_body_bytes: bytes | None = None,
+               adjudication_token: bytes | None = None) -> NativeEvaluationResult:
         import rfc8785
         if not _time(now):raise ValidationError("native evaluation requires trusted current time")
         association=self.association_verifier.verify(request_bytes,association_bytes,compact_proof,
             invocation_evidence=invocation_evidence,now=now,clock_healthy=clock_healthy)
         raw=constraints=None
         readiness=None
+        adjudication=None
         def result(reason,supervision="silent_veto",expiry=None):
             value=object.__new__(NativeEvaluationResult)
             for name,member in (("reason",reason),("checked_at",now),("supervision",supervision),
                 ("tightened_constraints_bytes",constraints),("canonical_geometry_bytes",raw),
-                ("association",association),("readiness",readiness),("expires_at",expiry)):
+                ("association",association),("readiness",readiness),("expires_at",expiry),("adjudication",adjudication)):
                 object.__setattr__(value,name,member)
             return value
         if association.reason!="RB_BOUND":return result(association.reason)
@@ -121,6 +132,14 @@ class InstalledNativeEvaluationVerifier:
         claims=_parse_jcs_object(readiness.proof_verification.authenticated_payload_bytes)
         expiry=min(expiry,readiness.expires_at,claims["exp"])
         if now>=expiry:return result("NATIVE_EVALUATION_EXPIRED")
+        if self.adjudication_verifier is not None:
+            operation = {name:value for name,value in actual.items() if name not in ("version", "demand", "classification_profile")}
+            adjudication = self.adjudication_verifier.evaluate(adjudication_token, actual_operation=operation,
+                evaluated_at=now, clock_healthy=clock_healthy)
+            if adjudication.gate_required:
+                if not adjudication.gate_satisfied:
+                    return result("ADJ_GATE_UNSATISFIED", projected["supervision"])
+                expiry=min(expiry,adjudication.expires_at)
         return result("NATIVE_PREREQUISITES_VALID",projected["supervision"],expiry)
 
 

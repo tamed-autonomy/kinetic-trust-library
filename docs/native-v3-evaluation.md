@@ -635,3 +635,64 @@ nor authenticates the retained counts. Those counts can still be personal or
 sensitive data; disclosure approval and a newly authenticated attestation are
 required before external use. No universal Exit Attestation wire format is
 introduced by this helper.
+
+## Declared adjudication gates
+
+`v3.adjudication.InstalledAdjudicationVerifier` implements the token binding and
+declared-gate portion of proposed Core L11. This checkpoint does not implement
+per-rail supervision increments/releases or the complete importance/supplied-input
+composition contract. Those remain explicit work in the release-set audit.
+
+Install immutable deployment bytes, adjudication `profile_bytes`, approved
+`external_schema_bytes`, a current-context source and a token verifier. The
+closed profile binds `id`, `version`, `gate_id`, `gate_required`, `issuer`,
+`zone_id`, `external_schema_id`, `external_schema_digest` and `token_profile_id`.
+`gate_required` is authenticated installed policy, never a requester flag.
+The external JSON Schema is checked and pinned, not evaluated for normative
+adequacy. Its issuer/schema approval and the profile's applicability must be
+established before installation and rechecked by the context source. Changing
+this configuration requires the deployment's evaluation-policy/version process;
+these fields are a Library adapter contract, not additional RFC wire claims.
+
+The source receives installed deployment/profile/schema bytes, canonical actual
+`operation_bytes` and `evaluated_at`, without the candidate token. It returns
+`AuthenticatedAdjudicationContext(state_bytes, evidence_bytes)`. The closed
+state contains `deployment_digest`, `operation_digest`, `profile_digest`, current
+`checked_at`, actual `actor`, whole `action_digest`, possession-verified
+`cnf_jkt`, current `grant_digest`, `evidence_digest`, `zone_id`,
+`topology_epoch` and `expires_at`. It must authenticate actual whole-action and
+possession scope, grant/evidence versions and current topology, not echo claims.
+
+The adapter verifies the complete token JWS under the explicitly named installed
+crypto/key-role profile and returns `AuthenticatedAdjudicationPayload` with
+exact canonical `payload_bytes`, opaque `evidence_bytes`, actual verified
+`key_id` and its authenticated `issuer`. The Library applies the unchanged
+proposal schema and checks exact issuer, actor/action/possession/grant/evidence/
+zone/epoch binding and integer `iat <= now < exp`. If payload `kid` is present,
+it must match the verified key. Malformed, invalidly signed, expired, corrected
+or misbound tokens are `ADJ_ABSENT`; unavailable current source state is
+`ADJ_UNAVAILABLE`. Neither result invents a measurement or an additional gate.
+Favorable and unfavorable assessments retain exact authenticated evidence,
+original token bytes and the verified key ID/issuer for audit and current-key
+fencing. They are bounded by token and source expiry and contain no capacity
+or score. Retaining/exporting those records remains subject to the installed
+data policy.
+
+Select this verifier with `InstalledNativeEvaluationVerifier(...,
+adjudication_verifier=...)`, then supply `adjudication_token` to `verify`.
+Deployment and receiving-zone policies must agree. Existing proof, geometry,
+veto and readiness failures stop before token use. After those prerequisites,
+a declared unsatisfied gate yields `ADJ_GATE_UNSATISFIED`, retaining the original
+measured geometry, supervision floor and constraints. A favorable verdict only
+satisfies that gate and can shorten expiry; it does not improve the measured
+result. With no required gate, an absent/unavailable token leaves the no-norm
+result unchanged. Consumers must check the complete result reason; a supervision
+floor alone is never execution permission. The assessment is retained in
+`NativeEvaluationResult.adjudication`.
+
+The source token schema retains its published draft `$id` (under `/v2/`) and
+SHA-256 payload bindings unchanged. Stronger profiles and a final interoperable
+token JOSE profile remain explicit reconciliation work. The test Ed25519/JWS
+profile is unsafe fixture material, not a new wire standard. Unexpected provider
+failures propagate without a successful evaluation. Multiple gates, rail-owned
+increments/releases and all 23 source-vector semantics are not claimed complete.
