@@ -32,6 +32,7 @@ from .enclosure import EnclosureInputs, NativeEnclosureAssessment, _profile as _
 from .boundary import BoundaryAssessment
 from .installed_repair import _profile as _repair_profile
 from .installed_ambient_repair import _profile as _ambient_profile
+from .federation_terms import profile_terms as _federation_profile
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +44,7 @@ class NativeCoreContext:
     enclosure_profile_bytes: bytes | None = None
     repair_profile_bytes: bytes | None = None
     ambient_profile_bytes: bytes | None = None
+    federation_profile_bytes: bytes | None = None
 
     def __post_init__(self):
         if (type(self.deployment_profile_bytes) is not bytes or type(self.operation_bytes) is not bytes
@@ -61,6 +63,9 @@ class NativeCoreContext:
         if self.ambient_profile_bytes is not None:
             if type(self.ambient_profile_bytes) is not bytes:raise ValidationError("ambient profile must be immutable installed bytes")
             _ambient_profile(self.ambient_profile_bytes)
+        if self.federation_profile_bytes is not None:
+            if type(self.federation_profile_bytes) is not bytes:raise ValidationError("federation profile must be immutable installed bytes")
+            _federation_profile(_parse_jcs_object(self.federation_profile_bytes))
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -185,6 +190,15 @@ def project_classified_native_core(
             or standing.evaluated_at != context.evaluated_at):
         raise ValidationError("standing belongs to another Core context")
     repair=standing.repair
+    federation=standing.federation
+    if context.federation_profile_bytes is not None:
+        if (federation is None or federation.profile_bytes!=context.federation_profile_bytes or not federation.admitted
+                or federation.deployment_digest!=deployment_digest or federation.operation_digest!=operation_digest
+                or federation.evaluated_at!=context.evaluated_at or federation.expires_at<=context.evaluated_at):
+            raise ValidationError("selected federation profile requires current bound imported standing")
+        if boundary is not None and federation.receiving_zone!=boundary.zone_id:
+            raise ValidationError("federation standing differs from the current boundary zone")
+    elif federation is not None:raise ValidationError("federation evidence requires an installed Core profile")
     if context.repair_profile_bytes is not None:
         if (repair is None or repair.profile_bytes!=context.repair_profile_bytes or not repair.reentry_eligible
                 or repair.deployment_digest!=deployment_digest or repair.operation_digest!=operation_digest
@@ -213,6 +227,9 @@ def project_classified_native_core(
             raise ValidationError("selected enclosure profile requires current bound source evidence")
     elif enclosure is not None:
         raise ValidationError("enclosure evidence requires an installed Core profile")
+    if federation is not None and enclosure is not None:
+        if federation.receiving_zone!=_parse_jcs_object(enclosure.authenticated_body_bytes)["zone_id"]:
+            raise ValidationError("federation standing differs from current enclosure topology")
     if ambient is not None and enclosure is not None:
         body=_parse_jcs_object(enclosure.authenticated_body_bytes)
         if (ambient.zone_id!=body["zone_id"] or ambient.parent_zone!=body["enclosure_zone"]

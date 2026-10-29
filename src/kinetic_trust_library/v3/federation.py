@@ -17,6 +17,8 @@ from .ambient_repair import ratio
 from .federation_terms import name,identifiers,agreement_terms,profile_terms
 from .imported_standing import derive_federation_factor,calculate_imported_standing
 
+FEDERATION_CEILING_PREFIX="federation_ingress."
+
 
 @dataclass(frozen=True,slots=True)
 class AuthenticatedFederationContext:
@@ -46,13 +48,19 @@ class FederationAssessment:
     frame_bytes: bytes
     authenticated_state_bytes: bytes
     source_evidence_bytes: bytes
+    standing_ceiling_name: str | None
 
     def __init__(self,*args,**kwargs):raise TypeError("federation assessments require installed current verification")
 
     def derive_standing(self,*,ceilings,root_available):
         if not self.admitted:raise ValidationError("unavailable import supplies no standing; select an independent local route")
-        return calculate_imported_standing(exportable_base=self.exportable_base,factor=self.factor,source_zone=self.source_zone,
+        if type(ceilings) is not dict or any(type(name) is not str or name.startswith(FEDERATION_CEILING_PREFIX) for name in ceilings):
+            raise ValidationError("provider ceilings cannot replace the federation admission binding")
+        base=calculate_imported_standing(exportable_base=self.exportable_base,factor=self.factor,source_zone=self.source_zone,
             receiving_zone=self.receiving_zone,ceilings=ceilings,root_available=root_available)
+        if self.standing_ceiling_name is None:return base
+        return calculate_imported_standing(exportable_base=self.exportable_base,factor=self.factor,source_zone=self.source_zone,
+            receiving_zone=self.receiving_zone,ceilings={**ceilings,self.standing_ceiling_name:base.base_trust},root_available=root_available)
 
     def geometry_value(self):
         def exact(value):return None if value is None else dict(n=str(value.numerator),d=str(value.denominator))
@@ -105,11 +113,17 @@ class InstalledFederationVerifier:
         except ValidationError:values.update(admitted=False,reason="FEDERATION_EVIDENCE_INVALID",exportable_base=None)
         import rfc8785
         frame={key:value for key,value in state.items() if key not in ("checked_at","expires_at")}
+        binding=None
+        if values["admitted"] and profile.get("standing_binding")=="admission-digest-ceiling-v1":
+            admission=dict(deployment_digest=deployment,profile_digest=policy,admission_id=state["admission_id"],ingress_at=state["ingress_at"],
+                subject=state["subject"],source_zone=state["from_zone"],receiving_zone=state["to_zone"],
+                agreement_digest=_digest(state["agreement"],self.algorithm),attestation_digest=state["attestation"]["payload_digest"])
+            binding=FEDERATION_CEILING_PREFIX+_digest(admission,self.algorithm)
         result=object.__new__(FederationAssessment)
         for key,value in dict(**values,deployment_digest=deployment,operation_digest=invocation,profile_bytes=self.profile_bytes,
                 profile_digest=policy,evaluated_at=evaluated_at,admission_id=state["admission_id"],ingress_at=state["ingress_at"],subject=state["subject"],
                 source_zone=state["from_zone"],receiving_zone=state["to_zone"],frame_digest=_digest(frame,self.algorithm),frame_bytes=rfc8785.dumps(frame),
-                authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes).items():object.__setattr__(result,key,value)
+                authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes,standing_ceiling_name=binding).items():object.__setattr__(result,key,value)
         return result
 
     def _project(self,state,profile,out,now):

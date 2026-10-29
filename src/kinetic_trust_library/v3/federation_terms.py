@@ -83,12 +83,14 @@ def agreement_terms(body):
 
 
 def profile_terms(body):
-    if (type(body) is not dict or set(body)!={"id","version","receiving_zone","formula","enforcement_classes","subject_profiles","lowering_policies"}
+    if (type(body) is not dict or set(body)-{"standing_binding"}!={"id","version","receiving_zone","formula","enforcement_classes","subject_profiles","lowering_policies"}
             or not name(body["id"]) or not name(body["receiving_zone"]) or not _time(body["version"]) or body["version"]==0
             or body["formula"]!="minimum-applicable-directional-terms-v1"
             or type(body["enforcement_classes"]) is not dict or not body["enforcement_classes"]
             or identifiers(body["subject_profiles"])!={"software"}):
         raise ValidationError("invalid selected software federation profile")
+    if "standing_binding" in body and body["standing_binding"]!="admission-digest-ceiling-v1":
+        raise ValidationError("unsupported federation standing binding")
     identifiers(body["lowering_policies"])
     for key,value in body["enforcement_classes"].items():
         if (not name(key) or type(value) is not dict or set(value)!={"rank","factor_ceiling"} or not _time(value["rank"])):

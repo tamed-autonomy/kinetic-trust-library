@@ -1,5 +1,34 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 federation native production and current use
+
+Connected the selected federation source to an explicit imported-only standing
+route, Core context, native claim production, geometry and current-use checking.
+The software route retains receiver identity/root and applicable ceilings, derives
+the foreign-earned amount through one factor, and reads no local PoR/peer
+contributions. Actual receiver DP peer-share metadata stays distinct from imported
+standing. A fresh Ed25519 proof and geometry fixture produces E_base 56 and
+E_trust 33.6 under unchanged local R 0.4.
+
+Supplier design review supported an explicitly selected provisional profile using
+the schema's further-declared-ceiling mechanism. Its reserved admission ceiling
+binds deployment/profile/admission/subject/zones and immutable agreement/attestation
+identity. This convention is not represented as an RFC-standard federation wire
+claim. Local providers cannot inject the prefix, and exactly one matching marker
+is required at current use. Proofs cannot outlive support, predate admission,
+exceed the refreshed bound or omit current profile/frame geometry evidence.
+
+Focused tests reject missing policy, conflicting markers, replaced admission,
+current invalidity, reduced factor and stale geometry even when standing remains
+sufficient; a valid refreshed frame passes. Clock-only support refresh preserves
+the admission identity, and the result retains the current federation assessment
+and earliest expiry. Follow-up supplier review found no actionable defect.
+
+Cross-zone sponsorship/bonds, other federation record delivery/person/multilateral
+routes and final full deployment/API selection remain implementation work. Source
+fixtures model agreement/registry/export authority; signing the native result does
+not establish production truth of those modeled source facts.
+
 ## 2026-10-29 installed directional federation evidence
 
 Added a current installed source boundary for a named bilateral software import

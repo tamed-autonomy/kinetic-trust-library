@@ -17,6 +17,7 @@ from .adjudication import InstalledAdjudicationVerifier, AdjudicationAssessment
 from .boundary import InstalledBoundaryVerifier, BoundaryAssessment
 from .installed_repair import InstalledRepairVerifier,RepairAssessment
 from .installed_ambient_repair import InstalledAmbientRepairVerifier,AmbientRepairAssessment
+from .federation import InstalledFederationVerifier,FederationAssessment,FEDERATION_CEILING_PREFIX
 from fractions import Fraction
 from .risk import _FACTORS
 
@@ -36,6 +37,7 @@ class NativeEvaluationResult:
     boundary: BoundaryAssessment | None
     repair: RepairAssessment | None
     ambient: AmbientRepairAssessment | None
+    federation: FederationAssessment | None
 
     def __init__(self,*args,**kwargs):
         raise TypeError("native evaluation results are derived by an installed verifier")
@@ -53,6 +55,7 @@ class InstalledNativeEvaluationVerifier:
     boundary_verifier: InstalledBoundaryVerifier | None = None
     repair_verifier: InstalledRepairVerifier | None = None
     ambient_verifier: InstalledAmbientRepairVerifier | None = None
+    federation_verifier: InstalledFederationVerifier | None = None
 
     def __post_init__(self):
         if (type(self.association_verifier) is not InstalledRequestAssociationVerifier
@@ -96,6 +99,11 @@ class InstalledNativeEvaluationVerifier:
                 or self.ambient_verifier.deployment_profile_bytes!=deployment or self.ambient_verifier.algorithm!=self.association_verifier.algorithm
                 or _parse_jcs_object(self.ambient_verifier.profile_bytes)["zone_id"]!=self.readiness_verifier.readiness_verifier.receiving_zone):
             raise ValidationError("ambient policy differs from native deployment/receiving zone")
+        if self.federation_verifier is not None and (type(self.federation_verifier) is not InstalledFederationVerifier
+                or self.federation_verifier.deployment_profile_bytes!=deployment or self.federation_verifier.algorithm!=self.association_verifier.algorithm
+                or _parse_jcs_object(self.federation_verifier.profile_bytes)["receiving_zone"]!=self.readiness_verifier.readiness_verifier.receiving_zone
+                or _parse_jcs_object(self.federation_verifier.profile_bytes).get("standing_binding")!="admission-digest-ceiling-v1"):
+            raise ValidationError("federation policy differs from native deployment/receiving zone or admission binding")
 
     def verify(self, request_bytes: bytes, association_bytes: bytes, compact_proof: str, *,
                decision_bytes: bytes, attestation_bytes: bytes, invocation_evidence: bytes,
@@ -123,12 +131,13 @@ class InstalledNativeEvaluationVerifier:
         boundary=None
         repair=None
         ambient=None
+        federation=None
         def result(reason,supervision="silent_veto",expiry=None):
             value=object.__new__(NativeEvaluationResult)
             for name,member in (("reason",reason),("checked_at",now),("supervision",supervision),
                 ("tightened_constraints_bytes",constraints),("canonical_geometry_bytes",raw),
                 ("association",association),("readiness",readiness),("expires_at",expiry),("adjudication",adjudication),
-                ("adjudications",adjudications),("boundary",boundary),("repair",repair),("ambient",ambient)):
+                ("adjudications",adjudications),("boundary",boundary),("repair",repair),("ambient",ambient),("federation",federation)):
                 object.__setattr__(value,name,member)
             return value
         if association.reason!="RB_BOUND":return result(association.reason)
@@ -159,6 +168,22 @@ class InstalledNativeEvaluationVerifier:
                 declared=[item for item in current_claims["ktp"]["applicable_ceilings"] if item["ceiling"]=="repair_reentry"]
                 if len(declared)!=1 or Decimal(str(declared[0]["value"]))>repair.standing_ceiling:
                     return result("REPAIR_CEILING")
+        current_claims=_parse_jcs_object(association.proof_verification.authenticated_payload_bytes)
+        admission_markers=[item for item in current_claims["ktp"]["applicable_ceilings"] if item["ceiling"].startswith(FEDERATION_CEILING_PREFIX)]
+        if self.federation_verifier is None:
+            if admission_markers:return result("FEDERATION_POLICY_REQUIRED")
+        else:
+            if len(admission_markers)!=1:return result("FEDERATION_BINDING")
+            operation={name:value for name,value in actual.items() if name not in ("version","demand","classification_profile")}
+            federation=self.federation_verifier.evaluate(actual_operation=operation,evaluated_at=now,clock_healthy=clock_healthy)
+            if not federation.admitted:return result(federation.reason)
+            if admission_markers[0]["ceiling"]!=federation.standing_ceiling_name:return result("FEDERATION_BINDING")
+            if current_claims["iat"]<federation.ingress_at:return result("FEDERATION_ADMISSION")
+            try:
+                bound=Fraction(str(admission_markers[0]["value"]))
+                if (bound>federation.exportable_base*federation.factor.applied_factor
+                        or Fraction(str(current_claims["ktp"]["e_base"]))>bound):return result("FEDERATION_STANDING")
+            except (ValueError,TypeError,ZeroDivisionError):return result("FEDERATION_STANDING")
         if self.ambient_verifier is not None:
             operation={name:value for name,value in actual.items() if name not in ("version","demand","classification_profile")}
             ambient=self.ambient_verifier.evaluate(actual_operation=operation,evaluated_at=now,clock_healthy=clock_healthy)
@@ -200,6 +225,11 @@ class InstalledNativeEvaluationVerifier:
             raw=verified.canonical_body_bytes
             expiry=self.local_profile_expires_at
         body=_parse_jcs_object(raw)
+        if federation is not None:
+            entries=[item for item in body["inputs"] if item["name"]=="federation" and item["layer"]=="term"]
+            if (len(entries)!=1 or entries[0].get("value")!=federation.geometry_value()
+                    or not {federation.profile_digest,federation.frame_digest}<=set(entries[0]["evidence_digests"])):
+                return result("FEDERATION_BINDING")
         if ambient is not None:
             entries=[item for item in body["inputs"] if item["name"]=="ambient_repair" and item["layer"]=="term"]
             if (len(entries)!=1 or entries[0].get("value")!=ambient.geometry_value()
@@ -250,6 +280,7 @@ class InstalledNativeEvaluationVerifier:
         if boundary is not None:expiry=min(expiry,boundary.expires_at)
         if repair is not None:expiry=min(expiry,repair.expires_at)
         if ambient is not None:expiry=min(expiry,ambient.expires_at)
+        if federation is not None:expiry=min(expiry,federation.expires_at)
         if now>=expiry:return result("NATIVE_EVALUATION_EXPIRED")
         policies=self.adjudication_verifiers if self.adjudication_verifier is None else (self.adjudication_verifier,)
         if policies:

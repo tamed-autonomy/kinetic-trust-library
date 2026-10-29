@@ -1133,6 +1133,41 @@ recorded ingress cannot be applied to that old admission. The source owns actual
 forward-effective version/admission history and revocations. The sealed result
 retains the raw current evidence, semantic frame, factor and void clauses and can
 derive an imported standing value under independently supplied receiver ceilings.
-Installed standing/claims/current-use and cross-zone bond integration remain
-implementation work. Source fixtures model authority facts; actual signature,
-registry, admission and export provenance need production adapters.
+Source fixtures model authority facts; actual signature, registry, admission and
+export provenance need production adapters. Cross-zone bonds and additional
+record/person/multilateral routes remain implementation work.
+
+The installed software import route selects
+`standing_binding: admission-digest-ceiling-v1` in its federation profile.
+`InstalledStandingVerifier.federation_verifier` requires admissible current
+evidence and derives the imported amount directly, retaining receiver identity,
+root, generation/IAL/trajectory/adversity and repair ceiling checks. It never
+adds local PoR/root/peer contributions to that amount. Unavailable import fails
+this explicitly selected import-only route; an independently installed local
+route remains a separate selection.
+
+The profile uses the proof schema's existing further-declared-ceiling mechanism:
+one `federation_ingress.<digest>` ceiling binds the resulting receiver-bounded
+amount to the deployment/federation profiles, admission ID/time, subject/zones,
+admission-time agreement body and attestation payload identity. This is a named
+provisional Library interoperability profile, not a new RFC-standard wire claim.
+The prefix is reserved against provider-supplied additional ceilings. Clock-only
+refresh does not change its identity, while another admission or agreement cannot
+reuse it. No imported allocation shares are fabricated; wire `peer_share` carries
+the actual receiver deployment declaration.
+
+`NativeCoreContext.federation_profile_bytes` requires symmetric current standing
+evidence and consistent receiving topology. Claims retain the receiver zone and
+cannot outlive federation support. Native geometry requires the matching
+`federation_profile_digest` selection and carries the complete bound model and
+evidence digests. A real Ed25519 fixture produces base standing 56 and effective
+trust 33.6 under unchanged local R 0.4, without local contribution operands.
+
+`InstalledNativeEvaluationVerifier.federation_verifier` refreshes the source after
+boundary/repair checks, requires exactly one matching admission ceiling, rejects
+proofs predating admission or exceeding the current imported bound, and checks
+the exact current geometry model/profile/frame evidence. A still-sufficient
+standing amount does not excuse a stale frame after lowering changes. A marked
+proof without the selected policy is rejected. The result retains `.federation`
+and expires no later than its support. Current invalidity, severance or a changed
+admission cannot silently turn an old imported proof into local standing.

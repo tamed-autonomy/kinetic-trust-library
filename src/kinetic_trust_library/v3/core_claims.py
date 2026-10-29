@@ -8,6 +8,7 @@ Person standing uses a separate source contract and is not synthesized here.
 from dataclasses import dataclass
 from decimal import Decimal
 from kinetic_trust_library.errors import ValidationError
+from kinetic_trust_library._decimal import as_decimal
 from .core_projection import NativeCoreContext, NativeCoreProjection
 from .installed_standing import NativeStandingAssessment
 from .native_proof_profile import RootProofBinding, native_schema_bundle
@@ -55,6 +56,14 @@ class NativeCoreClaimsSource:
             raise ValidationError("proof audience differs from the actual operation")
         deployment = _digest(profile, self.context.algorithm)
         invocation = digest_demand_operation(operation, algorithm=self.context.algorithm)
+        federation=self.standing.federation
+        if (self.context.federation_profile_bytes is not None)!=(federation is not None):
+            raise ValidationError("Core claims disagree on federation selection")
+        if federation is not None and (federation.profile_bytes!=self.context.federation_profile_bytes or not federation.admitted
+                or federation.deployment_digest!=deployment or federation.operation_digest!=invocation
+                or federation.evaluated_at!=self.context.evaluated_at or federation.receiving_zone!=metadata["zone"]
+                or type(metadata["exp"]) is not int or metadata["exp"]>federation.expires_at):
+            raise ValidationError("Core proof cannot omit, contradict or outlive federation admission evidence")
         ambient=None if self.core.environment_assessment is None else self.core.environment_assessment.ambient
         if self.core.risk is not None:
             if (self.context.ambient_profile_bytes is not None)!=(ambient is not None):
@@ -136,7 +145,7 @@ class NativeCoreClaimsSource:
             context={f.factor: _wire_number(f.value) for f in self.core.risk.factors} if measured else None,
             soul=soul_claim,
             generation=generation,lineage="sponsored" if generation < 3 else "independent" if generation < 7 else "guarantor",
-            zone=metadata["zone"],peer_share=_wire_number(self.standing.base.peer_share),
+            zone=metadata["zone"],peer_share=_wire_number(as_decimal(_parse_jcs_object(self.context.deployment_profile_bytes)["peer_share"],name="declared peer share",minimum=0,maximum=20)),
             applicable_ceilings=[{"ceiling": name,"value": _wire_number(value)} for name,value in self.standing.base.ceilings],
             advancement_floor=metadata["advancement_floor"],root_instrument=root)
         for name in ("sponsor", "ingress_path"):

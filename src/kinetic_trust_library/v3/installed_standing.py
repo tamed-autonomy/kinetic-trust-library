@@ -17,6 +17,8 @@ from .demand_supplier import _digest
 from .root_lifecycle import _time
 from .trust_proof_json import _parse_jcs_object
 from .installed_repair import InstalledRepairVerifier,RepairAssessment
+from .federation import InstalledFederationVerifier,FederationAssessment,FEDERATION_CEILING_PREFIX
+from .imported_standing import BoundedStanding
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,7 +28,7 @@ class AuthenticatedStandingEvidence:
 
 @dataclass(frozen=True, slots=True, init=False)
 class NativeStandingAssessment:
-    base: NativeBaseTrust
+    base: BoundedStanding
     roots: AssessedRootSelection
     original_evidence: bytes
     authenticated_body_bytes: bytes
@@ -34,6 +36,7 @@ class NativeStandingAssessment:
     operation_digest: str
     evaluated_at: int
     repair: RepairAssessment | None
+    federation: FederationAssessment | None
 
     def __init__(self, *args, **kwargs):
         raise TypeError("NativeStandingAssessment is derived by an installed standing verifier")
@@ -45,6 +48,7 @@ class InstalledStandingVerifier:
     adapter: object
     algorithm: str
     repair_verifier: InstalledRepairVerifier | None = None
+    federation_verifier: InstalledFederationVerifier | None = None
 
     def __post_init__(self):
         if (type(self.deployment_profile_bytes) is not bytes or self.algorithm not in ("sha256", "sha384")
@@ -55,6 +59,10 @@ class InstalledStandingVerifier:
                 or self.repair_verifier.deployment_profile_bytes!=self.deployment_profile_bytes
                 or self.repair_verifier.algorithm!=self.algorithm):
             raise ValidationError("repair and standing policies must share a deployment/digest algorithm")
+        if self.federation_verifier is not None and (type(self.federation_verifier) is not InstalledFederationVerifier
+                or self.federation_verifier.deployment_profile_bytes!=self.deployment_profile_bytes or self.federation_verifier.algorithm!=self.algorithm
+                or _parse_jcs_object(self.federation_verifier.profile_bytes).get("standing_binding")!="admission-digest-ceiling-v1"):
+            raise ValidationError("federation standing requires the same deployment and declared admission binding")
 
     def evaluate(self, evidence: bytes, *, roots: AssessedRootSelection,
                  actual_operation: dict, evaluated_at: int) -> NativeStandingAssessment:
@@ -65,9 +73,13 @@ class InstalledStandingVerifier:
         profile = _parse_jcs_object(self.deployment_profile_bytes)
         deployment_digest = _digest(profile, self.algorithm)
         repair=None
+        federation=None
         if self.repair_verifier is not None:
             repair=self.repair_verifier.evaluate(actual_operation=operation,evaluated_at=evaluated_at,clock_healthy=True)
             if not repair.reentry_eligible:raise ValidationError(repair.reason)
+        if self.federation_verifier is not None:
+            federation=self.federation_verifier.evaluate(actual_operation=operation,evaluated_at=evaluated_at,clock_healthy=True)
+            if not federation.admitted:raise ValidationError(federation.reason)
         root_context = _parse_jcs_object(roots.context_bytes)
         if (roots.evaluated_at != evaluated_at or roots.algorithm != self.algorithm
                 or root_context.get("deployment_digest") != deployment_digest
@@ -95,14 +107,15 @@ class InstalledStandingVerifier:
             if type(crisis) is not bool or (crisis and friction < Decimal("0.9")):
                 raise ValidationError("standing adversity evidence is inconsistent")
             extra = body["additional_ceilings"]
-            if type(extra) is not dict or set(extra) & {"generation", "ial", "trajectory", "adversity", "external_root_missing","repair_reentry"}:
+            if (type(extra) is not dict or set(extra) & {"generation", "ial", "trajectory", "adversity", "external_root_missing","repair_reentry"}
+                    or any(type(name) is not str or name.startswith(FEDERATION_CEILING_PREFIX) for name in extra)):
                 raise ValidationError("additional ceilings cannot replace built-in ceilings")
             ceilings = {**extra, "generation": (25,35,45,55,65,75,85)[generation] if generation < 7 else 100,
                         "ial": {1:40,2:80,3:95}[ial],
                         "trajectory": 50 if trajectory < 1000 else 70 if trajectory < 10000 else 100,
                         "adversity": 100 if crisis else 90 if friction > Decimal("0.7") else 80 if friction > Decimal("0.5") else 60}
             if repair is not None and repair.standing_ceiling is not None:ceilings["repair_reentry"]=repair.standing_ceiling
-            base = calculate_native_base_trust(
+            base = federation.derive_standing(ceilings=ceilings,root_available=roots.selected is not None) if federation is not None else calculate_native_base_trust(
                 por_contribution=body["por_contribution"], root_score=0 if roots.selected is None else
                     Fraction(roots.selected.score_numerator,roots.selected.score_denominator),
                 peer_share=profile["peer_share"], peer_score=body["peer_score"], ceilings=ceilings)
@@ -113,7 +126,7 @@ class InstalledStandingVerifier:
                             ("authenticated_body_bytes", authenticated.body_bytes),
                             ("deployment_digest", deployment_digest),
                             ("operation_digest", digest_demand_operation(operation, algorithm=self.algorithm)),
-                            ("evaluated_at", evaluated_at),("repair",repair)):
+                            ("evaluated_at", evaluated_at),("repair",repair),("federation",federation)):
             object.__setattr__(result, name, value)
         return result
 

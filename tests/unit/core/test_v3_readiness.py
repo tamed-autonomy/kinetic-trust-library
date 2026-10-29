@@ -377,6 +377,50 @@ class ReadinessTests(unittest.TestCase):
         native=replace(native,ambient_verifier=replace(ambient_verifier,profile_bytes=rfc8785.dumps(ambient_profile)))
         self.assertEqual(whole().reason,"AMBIENT_HOSTING_FORBIDDEN")
         geometry["inputs"].remove(item);native=no_norm
+        from tests.unit.core.test_v3_federation import fixture as federation_fixture
+        federation_policy,federation_state,_,federation_profile,_=federation_fixture(operation,deployment,1000,"zone:alpha")
+        federation_profile["standing_binding"]="admission-digest-ceiling-v1"
+        federation_profile["enforcement_classes"]["blue"]["factor_ceiling"]=1
+        federation_state["profile_digest"]=_digest(federation_profile,"sha256")
+        federation_policy=replace(federation_policy,profile_bytes=rfc8785.dumps(federation_profile))
+        current_federation=federation_policy.evaluate(actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        marker=current_federation.standing_ceiling_name
+        ordinary["ktp"]["applicable_ceilings"].append(dict(ceiling=marker,value=60));set_repair_ceiling(75)
+        self.assertEqual(whole().reason,"FEDERATION_POLICY_REQUIRED")
+        native=replace(no_norm,federation_verifier=federation_policy)
+        self.assertEqual(whole().reason,"FEDERATION_BINDING")
+        federation_term=dict(name="federation",layer="term",state="modeled",source="urn:test:federation-source",
+            value=current_federation.geometry_value(),evidence_digests=sorted([current_federation.profile_digest,current_federation.frame_digest]))
+        geometry["inputs"].append(federation_term)
+        self.assertEqual(whole().reason,"NATIVE_PREREQUISITES_VALID")
+        self.assertTrue(whole().federation.admitted)
+        federation_state["expires_at"]=1002
+        self.assertEqual(whole().expires_at,1002)
+        federation_state["expires_at"]=1007;federation_state["admission_id"]="admission:replaced"
+        self.assertEqual(whole().reason,"FEDERATION_BINDING")
+        federation_state["admission_id"]="admission:1"
+        original_ingress=federation_state["ingress_at"];federation_state["ingress_at"]=999
+        later_admission=federation_policy.evaluate(actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        next(entry for entry in ordinary["ktp"]["applicable_ceilings"] if entry["ceiling"]==marker)["ceiling"]=later_admission.standing_ceiling_name
+        set_repair_ceiling(75)
+        self.assertEqual(whole().reason,"FEDERATION_ADMISSION")  # A correctly named marker still cannot predate its ingress.
+        next(entry for entry in ordinary["ktp"]["applicable_ceilings"] if entry["ceiling"]==later_admission.standing_ceiling_name)["ceiling"]=marker
+        federation_state["ingress_at"]=original_ingress;set_repair_ceiling(75)
+        federation_state["lowered_factors"]=[dict(policy="decay",factor="0.5")]
+        self.assertEqual(whole().reason,"FEDERATION_STANDING")
+        federation_state["lowered_factors"]=[dict(policy="decay",factor="0.75")]
+        self.assertEqual(whole().reason,"FEDERATION_BINDING")  # Still enough standing, but the old semantic frame is stale.
+        current_federation=federation_policy.evaluate(actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        federation_term["value"]=current_federation.geometry_value()
+        federation_term["evidence_digests"]=sorted([current_federation.profile_digest,current_federation.frame_digest])
+        self.assertEqual(whole().reason,"NATIVE_PREREQUISITES_VALID")
+        federation_state["lowered_factors"]=[];federation_state["attestation"]["current_valid"]=False
+        self.assertEqual(whole().reason,"FEDERATION_EVIDENCE_INVALID")
+        federation_state["attestation"]["current_valid"]=True
+        ordinary["ktp"]["applicable_ceilings"].append(dict(ceiling=marker+"extra",value=60));set_repair_ceiling(75)
+        self.assertEqual(whole().reason,"FEDERATION_BINDING")
+        ordinary["ktp"]["applicable_ceilings"]=[entry for entry in ordinary["ktp"]["applicable_ceilings"] if not entry["ceiling"].startswith("federation_ingress.")]
+        set_repair_ceiling(75);geometry["inputs"].remove(federation_term);native=no_norm
         from kinetic_trust_library.v3.human_eligibility import InstalledHumanEligibilityVerifier,AuthenticatedHumanContext,combine_human_origin
         class HumanSource:
             def resolve(self,**kwargs):return AuthenticatedHumanContext(rfc8785.dumps(human_fixture_data["request"]),

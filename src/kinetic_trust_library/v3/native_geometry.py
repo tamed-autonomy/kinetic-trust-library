@@ -67,7 +67,7 @@ class NativeGeometrySource:
             raise ValidationError("geometry demand belongs to another Core invocation")
         profile=_parse_jcs_object(self.evaluation_profile_bytes)
         required={"id","release","evaluator","core_deployment_digest","input_order","sources","magnitudes","thresholds","numeric_convention","constraint_policy"}
-        if (not required<=set(profile) or set(profile)-required-{"supervision_rail_profile_digest","ambient_repair_profile_digest"}
+        if (not required<=set(profile) or set(profile)-required-{"supervision_rail_profile_digest","ambient_repair_profile_digest","federation_profile_digest"}
                 or profile["core_deployment_digest"]!=self.demand.deployment_digest
                 or profile["input_order"]!="layer-then-name-v1"
                 or profile["numeric_convention"]!="exact-decimal-boundaries-binary64-margin-v1"
@@ -84,6 +84,10 @@ class NativeGeometrySource:
             if profile.get("ambient_repair_profile_digest")!=_digest(_parse_jcs_object(context.ambient_profile_bytes),context.algorithm):
                 raise ValidationError("ambient geometry profile differs from the selected Core policy")
         elif "ambient_repair_profile_digest" in profile:raise ValidationError("ambient geometry requires a selected Core policy")
+        if context.federation_profile_bytes is not None:
+            if profile.get("federation_profile_digest")!=_digest(_parse_jcs_object(context.federation_profile_bytes),context.algorithm):
+                raise ValidationError("federation geometry profile differs from the selected Core policy")
+        elif "federation_profile_digest" in profile:raise ValidationError("federation geometry requires a selected Core policy")
         if self.supervision_rails is not None:
             rails=self.supervision_rails
             if (type(rails) is not SupervisionRailAssessment or rails.core is not self.claim_source.core
@@ -186,6 +190,10 @@ class NativeGeometrySource:
             gates["soul"]="failed" if veto else "undetermined"
             return finish("SOVEREIGNTY_CONSTRAINT" if veto else "SOVEREIGNTY_UNDETERMINED")
         gates["soul"]="passed"
+        federation=self.claim_source.standing.federation
+        if federation is not None:
+            add("federation","term","modeled",profile["sources"]["core"],
+                (federation.profile_bytes,federation.frame_bytes,federation.authenticated_state_bytes,federation.source_evidence_bytes),federation.geometry_value())
         ambient=core.environment_assessment.ambient
         if ambient is not None:
             add("ambient_repair","term","modeled",profile["sources"]["environment"],

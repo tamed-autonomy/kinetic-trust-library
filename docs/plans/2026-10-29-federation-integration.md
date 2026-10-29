@@ -14,7 +14,10 @@ The source owns actual signatures, current registry/acceptance, exportable earne
 standing and forward-only version/admission history. One-link/current-validity
 checks from item 4 are implemented for software standing attestations; other
 record-delivery/person/multilateral routes and actual deployment adapters remain.
-Items 3, 5 and full native producer/current-use composition are still pending.
+Item 3 now exists for an explicitly selected import-only software route, including
+the admission-digest-ceiling profile, Core/claims/geometry and current-use refresh.
+Real signed native production and modeled current-use tests cover that route.
+Item 5, additional item 4 routes and full deployment/API selection remain pending.
 
 Next implementation:
 

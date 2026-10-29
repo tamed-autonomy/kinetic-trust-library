@@ -5,14 +5,15 @@ from fractions import Fraction
 import unittest
 
 
-def fixture():
+def fixture(operation=None,deployment=None,now=1000,receiving_zone="zone-b"):
     import rfc8785
     from kinetic_trust_library.v3.federation import InstalledFederationVerifier,AuthenticatedFederationContext
     from kinetic_trust_library.v3.demand_supplier import _digest
     from kinetic_trust_library.v3.demand_operation import digest_demand_operation
     op=dict(subject="urn:subject:x",actor="urn:agent:x",audience="urn:service:b",operation="urn:action:read",
         resource="urn:resource:r",parameters={},request_id="request:1",replay_domain="urn:domain:b")
-    deployment=dict(id="urn:test:deployment")
+    if operation is not None:op=operation
+    if deployment is None:deployment=dict(id="urn:test:deployment")
     profile=dict(id="urn:test:federation",version=1,receiving_zone="zone-b",formula="minimum-applicable-directional-terms-v1",
         enforcement_classes={"blue":dict(rank=2,factor_ceiling="0.7"),"cyan":dict(rank=1,factor_ceiling="0.5")},
         subject_profiles=["software"],lowering_policies=["decay","liveness"])
@@ -34,6 +35,17 @@ def fixture():
         admission_id="admission:1",ingress_at=900,subject=op["actor"],subject_profile="software",from_zone="zone-a",to_zone="zone-b",
         enforcement_class="blue",action_class="read",substrate_profile="software",receiver_accepting=True,
         required_sovereignty=["consent"],lowered_factors=[],agreement=agreement,attestation=attestation)
+    if receiving_zone!="zone-b":
+        def replace_zone(value):
+            if type(value) is dict:return {(receiving_zone if key=="zone-b" else key):replace_zone(item) for key,item in value.items()}
+            if type(value) is list:return [replace_zone(item) for item in value]
+            return receiving_zone if value=="zone-b" else value
+        profile=replace_zone(profile);state=replace_zone(state)
+    shift=now-1000
+    for obj,keys in ((state,("checked_at","expires_at","ingress_at")),(state["agreement"],("starts_at","expires_at")),
+                     (state["attestation"],("attested_at","expires_at"))):
+        for key in keys:obj[key]+=shift
+    state["profile_digest"]=_digest(profile,"sha256")
     calls=[]
     class Source:
         def resolve(self,**kw):
@@ -55,6 +67,7 @@ class FederationTests(unittest.TestCase):
         self.assertEqual(result.exportable_base,80)  # Neither total 85 nor foreign R/E_trust.
         self.assertEqual(result.derive_standing(ceilings=dict(generation=100,ial=95,trajectory=100,adversity=100),root_available=True).base_trust,56)
         self.assertEqual(result.expires_at,1007)
+        with self.assertRaises(ValidationError):result.derive_standing(ceilings=None,root_available=True)
         state["checked_at"]=1001
         newer=v.evaluate(actual_operation=op,evaluated_at=1001,clock_healthy=True)
         self.assertEqual(result.frame_digest,newer.frame_digest)
