@@ -30,6 +30,7 @@ from .installed_environment import NativeEnvironmentAssessment
 from .enclosure import EnclosureInputs, NativeEnclosureAssessment, _profile as _enclosure_profile
 from .boundary import BoundaryAssessment
 from .installed_repair import _profile as _repair_profile
+from .installed_ambient_repair import _profile as _ambient_profile
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +41,7 @@ class NativeCoreContext:
     algorithm: str
     enclosure_profile_bytes: bytes | None = None
     repair_profile_bytes: bytes | None = None
+    ambient_profile_bytes: bytes | None = None
 
     def __post_init__(self):
         if (type(self.deployment_profile_bytes) is not bytes or type(self.operation_bytes) is not bytes
@@ -55,6 +57,9 @@ class NativeCoreContext:
         if self.repair_profile_bytes is not None:
             if type(self.repair_profile_bytes) is not bytes:raise ValidationError("repair profile must be immutable installed bytes")
             _repair_profile(self.repair_profile_bytes)
+        if self.ambient_profile_bytes is not None:
+            if type(self.ambient_profile_bytes) is not bytes:raise ValidationError("ambient profile must be immutable installed bytes")
+            _ambient_profile(self.ambient_profile_bytes)
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -191,6 +196,15 @@ def project_classified_native_core(
             or environment.operation_digest != demand.operation_digest
             or environment.evaluated_at != context.evaluated_at):
         raise ValidationError("environment belongs to another Core context")
+    ambient=environment.ambient
+    if context.ambient_profile_bytes is not None:
+        if (ambient is None or ambient.profile_bytes!=context.ambient_profile_bytes or ambient.deployment_digest!=deployment_digest
+                or ambient.operation_digest!=operation_digest or ambient.evaluated_at!=context.evaluated_at
+                or ambient.expires_at<=context.evaluated_at):
+            raise ValidationError("selected ambient profile requires current bound environment evidence")
+        if ambient.parent_zone is not None and context.enclosure_profile_bytes is None:
+            raise ValidationError("nested ambient measurement requires current enclosure topology")
+    elif ambient is not None:raise ValidationError("ambient evidence requires an installed Core profile")
     if context.enclosure_profile_bytes is not None:
         if (type(enclosure) is not NativeEnclosureAssessment or enclosure.profile_bytes != context.enclosure_profile_bytes
                 or enclosure.deployment_digest != deployment_digest or enclosure.operation_digest != operation_digest
@@ -198,6 +212,10 @@ def project_classified_native_core(
             raise ValidationError("selected enclosure profile requires current bound source evidence")
     elif enclosure is not None:
         raise ValidationError("enclosure evidence requires an installed Core profile")
+    if ambient is not None and enclosure is not None:
+        body=_parse_jcs_object(enclosure.authenticated_body_bytes)
+        if (ambient.zone_id!=body["zone_id"] or ambient.parent_zone!=body["enclosure_zone"]
+                or ambient.topology_epoch!=body["topology_epoch"]):raise ValidationError("ambient evidence differs from current enclosure topology")
     if boundary is not None and enclosure is not None:
         body=_parse_jcs_object(enclosure.authenticated_body_bytes)
         if (boundary.zone_id!=body["zone_id"] or boundary.enclosure_zone!=body["enclosure_zone"]

@@ -309,6 +309,42 @@ class ReadinessTests(unittest.TestCase):
         repair_state["breaches"][0]["record_facts"]=None
         self.assertEqual(whole().reason,"REPAIR_UNRECONCILED")
         native=no_norm
+        from tests.unit.core.test_v3_installed_ambient import fixture as ambient_fixture
+        ambient_verifier,ambient_state,_,ambient_profile,_=ambient_fixture(operation,deployment,1000,"zone:alpha",None)
+        ambient_state["current"].update(prior_stock=2,arrivals=[])
+        native=replace(no_norm,ambient_verifier=ambient_verifier)
+        ambient_state["topology_epoch"]=4
+        self.assertEqual(whole().reason,"AMBIENT_TOPOLOGY")
+        ambient_state["topology_epoch"]=5
+        self.assertEqual(whole().reason,"AMBIENT_BINDING")
+        current_ambient=ambient_verifier.evaluate(actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        item=dict(name="ambient_repair",layer="term",state="modeled",source="urn:test:ambient-source",
+            value=current_ambient.geometry_value(),evidence_digests=sorted([current_ambient.profile_digest,current_ambient.frame_digest]))
+        geometry["inputs"].append(item)
+        with_ambient=whole()
+        self.assertEqual(with_ambient.reason,"NATIVE_PREREQUISITES_VALID")
+        self.assertEqual(with_ambient.ambient.pressure_floor,0)
+        ambient_state["expires_at"]=1002
+        self.assertEqual(whole().expires_at,1002)
+        ambient_state["expires_at"]=1007;ambient_state["ledger_head"]="sha256:"+"b"*64;ambient_state["window_ledger_head"]=ambient_state["ledger_head"]
+        self.assertEqual(whole().reason,"AMBIENT_BINDING")
+        current_ambient=ambient_verifier.evaluate(actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        item["value"]=current_ambient.geometry_value()
+        self.assertEqual(whole().reason,"AMBIENT_BINDING")
+        item["evidence_digests"]=sorted([current_ambient.profile_digest,current_ambient.frame_digest])
+        self.assertEqual(whole().reason,"NATIVE_PREREQUISITES_VALID")
+        ambient_state["current"].update(prior_stock=10,arrivals=[dict(lineage="lineage:"+str(i),counts={"act-outside-decision":1}) for i in range(3)])
+        self.assertEqual(whole().reason,"AMBIENT_PRESSURE")
+        ambient_state["reproduction_at_idle"]=".5"
+        self.assertEqual(whole().reason,"AMBIENT_PROFILE_INVALID")
+        ambient_state["reproduction_at_idle"]=".1"
+        ambient_profile["declared_capacity"]=0
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        zero=replace(ambient_verifier,profile_bytes=rfc8785.dumps(ambient_profile))
+        ambient_state["profile_digest"]=_digest(ambient_profile,"sha256")
+        native=replace(native,ambient_verifier=zero)
+        self.assertEqual(whole().reason,"AMBIENT_HOSTING_FORBIDDEN")
+        geometry["inputs"].remove(item);native=no_norm
         from kinetic_trust_library.v3.human_eligibility import InstalledHumanEligibilityVerifier,AuthenticatedHumanContext,combine_human_origin
         class HumanSource:
             def resolve(self,**kwargs):return AuthenticatedHumanContext(rfc8785.dumps(human_fixture_data["request"]),

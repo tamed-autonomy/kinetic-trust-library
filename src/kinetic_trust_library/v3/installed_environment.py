@@ -8,7 +8,9 @@ to replace missing measurements. Operational provider failures propagate.
 from dataclasses import dataclass
 from kinetic_trust_library.errors import ValidationError
 from .risk import _FACTORS
-from .evidence_state import FactorEvidenceState, UndefinedInputState, assess_required_factor
+from .evidence_state import FactorEvidenceState, UndefinedInputState, assess_required_factor,_factor_state,canonical_undefined_inputs
+from .installed_ambient_repair import InstalledAmbientRepairVerifier,AmbientRepairAssessment
+from decimal import Decimal
 from .demand_operation import canonical_demand_operation_bytes, digest_demand_operation
 from .demand_supplier import _digest
 from .trust_proof_json import _parse_jcs_object
@@ -28,6 +30,7 @@ class NativeEnvironmentAssessment:
     deployment_digest: str
     operation_digest: str
     evaluated_at: int
+    ambient: AmbientRepairAssessment | None
 
     def __init__(self, *args, **kwargs):
         raise TypeError("NativeEnvironmentAssessment is derived by an installed environment verifier")
@@ -38,12 +41,16 @@ class InstalledEnvironmentVerifier:
     deployment_profile_bytes: bytes
     adapter: object
     algorithm: str
+    ambient_verifier: InstalledAmbientRepairVerifier | None = None
 
     def __post_init__(self):
         if (type(self.deployment_profile_bytes) is not bytes or self.algorithm not in ("sha256", "sha384")
                 or not callable(getattr(self.adapter, "verify", None))):
             raise ValidationError("installed environment verifier is invalid")
         profile = _parse_jcs_object(self.deployment_profile_bytes)
+        if self.ambient_verifier is not None and (type(self.ambient_verifier) is not InstalledAmbientRepairVerifier
+                or self.ambient_verifier.deployment_profile_bytes!=self.deployment_profile_bytes or self.ambient_verifier.algorithm!=self.algorithm):
+            raise ValidationError("ambient and environment policies must share the deployment and digest algorithm")
         declared = profile.get("risk_factors")
         if type(declared) is not dict or set(declared) != set(_FACTORS):
             raise ValidationError("installed environment requires exactly five Risk Factors")
@@ -85,12 +92,24 @@ class InstalledEnvironmentVerifier:
                 undefined.append(UndefinedInputState(**failure))
             factors.append(assess_required_factor(factor=name, required_signals=required,
                 populated_signals=signals, measured_stress=candidate.get("measured_stress"), feed_undefined=tuple(undefined)))
+        ambient=None
+        if self.ambient_verifier is not None:
+            ambient=self.ambient_verifier.evaluate(actual_operation=operation,evaluated_at=evaluated_at,clock_healthy=True)
+            for index,factor in enumerate(factors):
+                if factor.factor!="adversarial_pressure":continue
+                if ambient.pressure_floor is None:
+                    missing=canonical_undefined_inputs((*factor.undefined_inputs,UndefinedInputState(
+                        "ambient_repair","feed","undefined"),UndefinedInputState(factor.factor,"term","undefined")))
+                    factors[index]=_factor_state(factor.factor,"unobservable",None,Decimal(1),missing)
+                elif factor.state=="observable":
+                    value=max(factor.value,ambient.pressure_floor)
+                    factors[index]=_factor_state(factor.factor,"observable",value,value,factor.undefined_inputs)
         result = object.__new__(NativeEnvironmentAssessment)
         for name, value in (("factors", tuple(factors)), ("original_evidence", evidence),
                             ("authenticated_body_bytes", authenticated.body_bytes),
                             ("deployment_digest", _digest(profile, self.algorithm)),
                             ("operation_digest", digest_demand_operation(operation, algorithm=self.algorithm)),
-                            ("evaluated_at", evaluated_at)):
+                            ("evaluated_at", evaluated_at),("ambient",ambient)):
             object.__setattr__(result, name, value)
         return result
 

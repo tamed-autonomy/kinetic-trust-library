@@ -1,5 +1,36 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 installed ambient repair checkpoint
+
+Connected pooled ambient reference accounting to authenticated current evidence,
+normalizer, environment, Core, claims, geometry and native current-use checking.
+Actual weighted closures come from current valid record classes; windows, periods,
+repairer history/order and the current ledger cut are checked. Parent uncertainty
+and unknown capacity remain unobservable, with restrictive decision stress.
+Known zero with verified empty stock does not fabricate a 0/0 utilization and
+still preserves inherited heat/bank.
+
+Real fixture proof production covers ambient pressure 0.8 raising R from 0.4 to
+0.496 and reducing measured E_trust from 42 to 35.28. Current-use tests reject
+changed frames, insufficient pressure, topology conflict, invalid reference K,
+prohibited hosting and support-expiry extension. Source authority, lineage/audit
+completeness, catalogue meanings and normalizer calibration are modeled provider
+facts; no deployed measurement or runtime hosting claim follows.
+
+Denial-path tests exposed an implementation error in the first geometry draft:
+new wire reasons and an input failure before the prior gate were not permitted.
+The corrected producer preserves the existing order/vocabulary, reports
+`INPUT_UNAVAILABLE` and retains the detailed cause in its bound model. The facade
+uses detailed internal `AMBIENT_*` results. Supplier review verified both paths.
+Per-entry-class capacity composition, recovery tiers and rule-repair amendments
+remain pending. Empty-backlog treatment remains explicit reference-policy
+reconciliation, not an invented universal startup requirement.
+
+Validation: 971 tests pass in the full suite. Thirteen focused installed-ambient,
+readiness and rail tests pass from the built wheel; imports remain lazy without
+optional proof packages. Supplier review found no remaining actionable defect
+in the scoped producer/current-use paths after the denial-format correction.
+
 ## 2026-10-29 ambient accounting checkpoint
 
 Added pure exact reference helpers for lineage-capped arrival versus uncapped

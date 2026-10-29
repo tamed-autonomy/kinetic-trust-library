@@ -16,6 +16,9 @@ from .root_lifecycle import _time
 from .adjudication import InstalledAdjudicationVerifier, AdjudicationAssessment
 from .boundary import InstalledBoundaryVerifier, BoundaryAssessment
 from .installed_repair import InstalledRepairVerifier,RepairAssessment
+from .installed_ambient_repair import InstalledAmbientRepairVerifier,AmbientRepairAssessment
+from fractions import Fraction
+from .risk import _FACTORS
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -32,6 +35,7 @@ class NativeEvaluationResult:
     adjudications: tuple[AdjudicationAssessment, ...]
     boundary: BoundaryAssessment | None
     repair: RepairAssessment | None
+    ambient: AmbientRepairAssessment | None
 
     def __init__(self,*args,**kwargs):
         raise TypeError("native evaluation results are derived by an installed verifier")
@@ -48,6 +52,7 @@ class InstalledNativeEvaluationVerifier:
     adjudication_verifiers: tuple[InstalledAdjudicationVerifier, ...] = ()
     boundary_verifier: InstalledBoundaryVerifier | None = None
     repair_verifier: InstalledRepairVerifier | None = None
+    ambient_verifier: InstalledAmbientRepairVerifier | None = None
 
     def __post_init__(self):
         if (type(self.association_verifier) is not InstalledRequestAssociationVerifier
@@ -87,6 +92,10 @@ class InstalledNativeEvaluationVerifier:
         if self.repair_verifier is not None and (type(self.repair_verifier) is not InstalledRepairVerifier
                 or self.repair_verifier.deployment_profile_bytes!=deployment):
             raise ValidationError("repair policy differs from native deployment")
+        if self.ambient_verifier is not None and (type(self.ambient_verifier) is not InstalledAmbientRepairVerifier
+                or self.ambient_verifier.deployment_profile_bytes!=deployment or self.ambient_verifier.algorithm!=self.association_verifier.algorithm
+                or _parse_jcs_object(self.ambient_verifier.profile_bytes)["zone_id"]!=self.readiness_verifier.readiness_verifier.receiving_zone):
+            raise ValidationError("ambient policy differs from native deployment/receiving zone")
 
     def verify(self, request_bytes: bytes, association_bytes: bytes, compact_proof: str, *,
                decision_bytes: bytes, attestation_bytes: bytes, invocation_evidence: bytes,
@@ -113,12 +122,13 @@ class InstalledNativeEvaluationVerifier:
         adjudications=()
         boundary=None
         repair=None
+        ambient=None
         def result(reason,supervision="silent_veto",expiry=None):
             value=object.__new__(NativeEvaluationResult)
             for name,member in (("reason",reason),("checked_at",now),("supervision",supervision),
                 ("tightened_constraints_bytes",constraints),("canonical_geometry_bytes",raw),
                 ("association",association),("readiness",readiness),("expires_at",expiry),("adjudication",adjudication),
-                ("adjudications",adjudications),("boundary",boundary),("repair",repair)):
+                ("adjudications",adjudications),("boundary",boundary),("repair",repair),("ambient",ambient)):
                 object.__setattr__(value,name,member)
             return value
         if association.reason!="RB_BOUND":return result(association.reason)
@@ -149,6 +159,31 @@ class InstalledNativeEvaluationVerifier:
                 declared=[item for item in current_claims["ktp"]["applicable_ceilings"] if item["ceiling"]=="repair_reentry"]
                 if len(declared)!=1 or Decimal(str(declared[0]["value"]))>repair.standing_ceiling:
                     return result("REPAIR_CEILING")
+        if self.ambient_verifier is not None:
+            operation={name:value for name,value in actual.items() if name not in ("version","demand","classification_profile")}
+            ambient=self.ambient_verifier.evaluate(actual_operation=operation,evaluated_at=now,clock_healthy=clock_healthy)
+            if boundary is not None and (ambient.zone_id!=boundary.zone_id or ambient.parent_zone!=boundary.enclosure_zone
+                    or ambient.topology_epoch!=boundary.topology_epoch):return result("AMBIENT_TOPOLOGY")
+            ingress=association.proof_verification.ingress_verification
+            if ingress is not None:
+                topology=_parse_jcs_object(ingress.authenticated_state_bytes)["topology"];rings=topology["rings"]
+                if (ambient.topology_epoch!=topology["epoch"] or ambient.zone_id!=rings[-1]["zone_id"]
+                        or ambient.parent_zone!=(None if len(rings)==1 else rings[-2]["zone_id"])):return result("AMBIENT_TOPOLOGY")
+            elif ambient.parent_zone is not None or _parse_jcs_object(self.association_verifier.proof_verifier.expected_context_bytes)["ring_depth"]>0:
+                return result("AMBIENT_TOPOLOGY")
+            if ambient.criticality_valid is False:return result("AMBIENT_PROFILE_INVALID")
+            if ambient.consequential_hosting_forbidden:return result("AMBIENT_HOSTING_FORBIDDEN")
+            if ambient.pressure_floor is None:return result("AMBIENT_INPUT_UNAVAILABLE")
+            current_claims=_parse_jcs_object(association.proof_verification.authenticated_payload_bytes)["ktp"]
+            deployment=_parse_jcs_object(self.ambient_verifier.deployment_profile_bytes)
+            try:
+                stresses={name:Fraction(str(current_claims["context"][name])) for name in _FACTORS}
+                local_r=sum((stresses[name]*Fraction(str(deployment["risk_factors"][name]["weight"])) for name in _FACTORS),Fraction(0))
+                if (any(not 0<=value<=1 for value in stresses.values()) or stresses["adversarial_pressure"]<Fraction(ambient.pressure_floor)
+                        or Fraction(str(current_claims["r"]))<local_r
+                        or Fraction(str(current_claims["e_trust"]))>Fraction(str(current_claims["e_base"]))*(1-local_r)):
+                    return result("AMBIENT_PRESSURE")
+            except (ValueError,KeyError,TypeError,ZeroDivisionError):return result("AMBIENT_PRESSURE")
         if self.association_verifier.crosses_trust_boundary:
             binding=association.carrier_binding
             if binding is None or binding.verified_at!=now or geometry_body_bytes is not None:
@@ -165,6 +200,15 @@ class InstalledNativeEvaluationVerifier:
             raw=verified.canonical_body_bytes
             expiry=self.local_profile_expires_at
         body=_parse_jcs_object(raw)
+        if ambient is not None:
+            entries=[item for item in body["inputs"] if item["name"]=="ambient_repair" and item["layer"]=="term"]
+            if (len(entries)!=1 or entries[0].get("value")!=ambient.geometry_value()
+                    or not {ambient.profile_digest,ambient.frame_digest}<=set(entries[0]["evidence_digests"])):
+                return result("AMBIENT_BINDING")
+            pressure=[item for item in body["inputs"] if item["name"]=="adversarial_pressure" and item["layer"]=="term"]
+            try:
+                if len(pressure)!=1 or Fraction(str(pressure[0].get("value")))<Fraction(ambient.pressure_floor):return result("AMBIENT_PRESSURE")
+            except (ValueError,TypeError):return result("AMBIENT_PRESSURE")
         actual=_parse_jcs_object(association.canonical_request_bytes)
         if (rfc8785.dumps(body["association"])!=association.canonical_association_bytes
                 or any(body[name]!=actual[name] for name in ("subject","actor","audience"))):
@@ -205,6 +249,7 @@ class InstalledNativeEvaluationVerifier:
         expiry=min(expiry,readiness.expires_at,claims["exp"])
         if boundary is not None:expiry=min(expiry,boundary.expires_at)
         if repair is not None:expiry=min(expiry,repair.expires_at)
+        if ambient is not None:expiry=min(expiry,ambient.expires_at)
         if now>=expiry:return result("NATIVE_EVALUATION_EXPIRED")
         policies=self.adjudication_verifiers if self.adjudication_verifier is None else (self.adjudication_verifier,)
         if policies:

@@ -67,7 +67,7 @@ class NativeGeometrySource:
             raise ValidationError("geometry demand belongs to another Core invocation")
         profile=_parse_jcs_object(self.evaluation_profile_bytes)
         required={"id","release","evaluator","core_deployment_digest","input_order","sources","magnitudes","thresholds","numeric_convention","constraint_policy"}
-        if (not required<=set(profile) or set(profile)-required-{"supervision_rail_profile_digest"}
+        if (not required<=set(profile) or set(profile)-required-{"supervision_rail_profile_digest","ambient_repair_profile_digest"}
                 or profile["core_deployment_digest"]!=self.demand.deployment_digest
                 or profile["input_order"]!="layer-then-name-v1"
                 or profile["numeric_convention"]!="exact-decimal-boundaries-binary64-margin-v1"
@@ -80,6 +80,10 @@ class NativeGeometrySource:
                        for spec in profile["magnitudes"].values())
                 or type(profile["release"]) is not str or len(profile["release"])>255 or "unreleased" not in profile["release"].lower()):
             raise ValidationError("installed native geometry profile is invalid")
+        if context.ambient_profile_bytes is not None:
+            if profile.get("ambient_repair_profile_digest")!=_digest(_parse_jcs_object(context.ambient_profile_bytes),context.algorithm):
+                raise ValidationError("ambient geometry profile differs from the selected Core policy")
+        elif "ambient_repair_profile_digest" in profile:raise ValidationError("ambient geometry requires a selected Core policy")
         if self.supervision_rails is not None:
             rails=self.supervision_rails
             if (type(rails) is not SupervisionRailAssessment or rails.core is not self.claim_source.core
@@ -182,6 +186,10 @@ class NativeGeometrySource:
             gates["soul"]="failed" if veto else "undetermined"
             return finish("SOVEREIGNTY_CONSTRAINT" if veto else "SOVEREIGNTY_UNDETERMINED")
         gates["soul"]="passed"
+        ambient=core.environment_assessment.ambient
+        if ambient is not None:
+            add("ambient_repair","term","modeled",profile["sources"]["environment"],
+                (ambient.profile_bytes,ambient.normalizer_profile_bytes,ambient.frame_bytes,ambient.authenticated_state_bytes,ambient.source_evidence_bytes),ambient.geometry_value())
         authority=self.authority_adapter.verify(evaluation_profile_bytes=self.evaluation_profile_bytes,
             deployment_profile_bytes=context.deployment_profile_bytes,operation_bytes=context.operation_bytes,
             compact_proof=self.compact_proof,evaluated_at=evaluated_at)
@@ -205,6 +213,11 @@ class NativeGeometrySource:
             gates["prior"]="failed" if prior_level=="silent_veto" and prior_state=="observed" else "undetermined"
             return finish("PRIOR_VETO" if gates["prior"]=="failed" else "INPUT_UNAVAILABLE")
         gates["prior"]="passed"
+        if ambient is not None and (ambient.criticality_valid is False or ambient.consequential_hosting_forbidden):
+            gates["inputs"]="failed"
+            # Keep the RFC's ordered gates and closed wire reason vocabulary.
+            # The bound ambient model retains the precise profile/hosting cause.
+            return finish("INPUT_UNAVAILABLE")
         if type(grant) is not dict or grant.get("state") not in ("observed",*_MISSING):
             raise ValidationError("geometry grant state is invalid")
         if set(grant)!=({"state","ceilings"} if grant["state"]=="observed" else {"state"}):

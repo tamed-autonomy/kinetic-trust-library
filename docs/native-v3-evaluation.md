@@ -929,10 +929,9 @@ zero or no accountable roots still establishes zero.
 `reference_criticality_valid` evaluates the informative reference condition
 `K > 1/(1-sqrt(g))` by exact rational comparison, avoiding rounded square roots.
 The deployment owns the normative K declaration and actual reproduction evidence.
-These functions do not authenticate audit data, normalize an adversarial-pressure
-feed, execute recovery tiers or implement the installed current-source/Core
-composition. Those paths remain pending; arithmetic tests do not establish
-ambient repair conformance or authorize hosting.
+These pure functions do not authenticate audit data or execute recovery tiers.
+The installed reference composition below consumes them; arithmetic tests alone
+do not establish ambient repair conformance or authorize hosting.
 
 The draft's "above one, the stock necessarily grows" statement needs a precise
 time-scale interpretation alongside repairer intervals and demonstrated capacity.
@@ -941,3 +940,68 @@ is two and capped arrival is three. The helpers report actual `stock_change`
 separately from `durable_capacity_exceeded`; they do not falsify anchored records
 to make those meanings coincide. Both this distinction and the selected bank
 policy must remain explicit when composing the final tagged requirements.
+
+### Installed ambient evidence and current use
+
+`InstalledAmbientRepairVerifier` binds an approved reference profile and a
+separately pinned normalizer to exact deployment/operation/time/zone scope.
+Its source authenticates complete zone-wide lineage counts and actual breach
+classes, carried stock/bank, accountable roots, current anchors/order, sustained
+backlog and repairer history, inward parent/epoch, reproduction evidence and the
+actual operation's consequential classification. Those are Service/provider
+facts, not caller-supplied assertions. Declared source signals refer to existing
+catalogue inputs; the internal `ambient_repair` feed label adds no catalogue
+signal or interoperable wire declaration.
+
+Capacity windows must be complete, contiguous, equal to the declared period and
+within their freshness bound. Their final `window_ledger_head` must match the
+independently authenticated current `ledger_head`: a newer timestamp cannot hide
+new audit entries outside an older stock window. Record classes fix hard/soft
+weights; only currently valid anchors close stock, including records excluded
+from demonstrated throughput by repairer intervals. The source owns completeness
+and the catalogue/entry-class interpretation; this verifier does not implement
+an audit chain or consensus.
+
+The normalizer declares its formula, unit, identity/version and digest. Checked
+corners require zero heat with no excess/debt, positive heat for positive excess
+or bank, and a combined result no lower than either component. These checks do
+not prove global calibration. The assessment retains exact capacity/metrics,
+the raw authenticated frame, source evidence and a semantic frame digest. Only
+`checked_at` and support expiry are omitted from that semantic digest; changed
+ledger, counters, topology, profile or evidence still changes it. Exact ratios
+may use the internal bounded `n`/`d` string form; there is no new public wire
+precision rule.
+
+Select the verifier on `InstalledEnvironmentVerifier` and its exact profile as
+`NativeCoreContext.ambient_profile_bytes`. Known pressure can only raise the
+adversarial-pressure factor; it cannot repair missing baseline measurements.
+Unknown capacity, reproduction or enclosing pressure remains unobservable with
+decision stress one, not a fabricated measured value. Core requires matching
+policy/invocation/time and current enclosure zone/parent/epoch. Claims cannot
+omit the selection, change zone or outlive its support.
+
+Native geometry binds `ambient_repair_profile_digest`, records the current model
+and semantic evidence, and respects the RFC's ordered gates and closed reason
+vocabulary. Invalid reference criticality or known-zero capacity with open stock
+for a consequential act stops at the input gate after the prior gate, using
+`INPUT_UNAVAILABLE`; the model retains the detailed cause. A known zero with
+proven empty stock contributes no new local heat while its 0/0 utilization stays
+undefined; inherited heat and existing bank still apply. This does not grant an
+action or erase a prior veto.
+
+`InstalledNativeEvaluationVerifier.ambient_verifier` rechecks the current source,
+receiver/topology, pressure and semantic evidence at use. Signed factors and
+weighted local-risk bounds must support the current floor. Geometry must carry
+the exact current model and profile/frame evidence digests, including an adequate
+adversarial-pressure term. A frame match alone cannot excuse lower signed risk
+or inflated capacity. The result retains `NativeEvaluationResult.ambient` and
+its expiry cannot extend beyond ambient support. Internal `AMBIENT_*` reasons
+give precise diagnoses without adding unsupported geometry wire enums.
+
+This checkpoint uses a pooled reference capacity. The RFC's full per-entry-class
+capacity declarations/composition, recovery tiers and rule-repair amendments
+remain implementation work. The empty-backlog case also needs reconciliation:
+this reference leaves a positive declaration without qualifying demonstration
+unknown; it does not claim that the RFC universally requires startup denial or
+that an unmeasured declaration is measured throughput. A final approved policy
+can resolve that selection without changing the Core measurement boundary.

@@ -55,6 +55,15 @@ class NativeCoreClaimsSource:
             raise ValidationError("proof audience differs from the actual operation")
         deployment = _digest(profile, self.context.algorithm)
         invocation = digest_demand_operation(operation, algorithm=self.context.algorithm)
+        ambient=None if self.core.environment_assessment is None else self.core.environment_assessment.ambient
+        if self.core.risk is not None:
+            if (self.context.ambient_profile_bytes is not None)!=(ambient is not None):
+                raise ValidationError("Core claims disagree on ambient profile selection")
+            if ambient is not None and (ambient.profile_bytes!=self.context.ambient_profile_bytes
+                    or ambient.deployment_digest!=deployment or ambient.operation_digest!=invocation
+                    or ambient.evaluated_at!=self.context.evaluated_at or ambient.zone_id!=metadata["zone"]
+                    or type(metadata["exp"]) is not int or metadata["exp"]>ambient.expires_at):
+                raise ValidationError("Core proof cannot omit, contradict or outlive ambient evidence")
         repair=self.standing.repair
         if (self.context.repair_profile_bytes is not None)!=(repair is not None):
             raise ValidationError("Core claims disagree on repair policy selection")
