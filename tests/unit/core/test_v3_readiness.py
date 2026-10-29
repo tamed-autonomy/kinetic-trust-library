@@ -62,6 +62,10 @@ class ReadinessTests(unittest.TestCase):
                 assessment_spec_digest=d("assessment-spec"),max_age_seconds=300,required_checks=["rollback","permissions"],assessor_ids=["assessor-1"])])
         deployment=json.loads((Path(__file__).parents[3]/"spec/proposals/demand-supplier-v1.json").read_text())["deployment_profile"]
         deployment["standing_policy"]=dict(mode="history-with-scoped-readiness-v1",profile_id=profile["profile_id"],version=2,digest=digest(profile))
+        from tests.unit.core._v3_human_fixture import human_fixture
+        human_fixture_data=human_fixture(operation)
+        deployment["human_policy"]=dict(mode="operation-eligibility-v1",profile_id=human_fixture_data["profile"]["profile_id"],
+            version=2,digest=digest(human_fixture_data["profile"]))
         request=dict(request_id=operation["request_id"],subject=subject,operation_id=operation["operation"],scope=scope,
             deployment_profile_digest=digest(deployment),readiness_profile_digest=digest(profile))
         challenge=dict(challenge_id="challenge-1",nonce=base64.urlsafe_b64encode(bytes(range(32))).rstrip(b"=").decode(),issued_at=900)
@@ -190,6 +194,34 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(combined.supervision,"stable")
         self.assertEqual(combined.expires_at,1006)
         self.assertEqual(combined.readiness.proof_verification.root_verification.checked_at,1000)
+        from kinetic_trust_library.v3.human_eligibility import InstalledHumanEligibilityVerifier,AuthenticatedHumanContext,combine_human_origin
+        class HumanSource:
+            def resolve(self,**kwargs):return AuthenticatedHumanContext(rfc8785.dumps(human_fixture_data["request"]),
+                rfc8785.dumps(human_fixture_data["context"]),b"fixture-authenticated-human-origin")
+        hv=InstalledHumanEligibilityVerifier(rfc8785.dumps(deployment),rfc8785.dumps(human_fixture_data["profile"]),HumanSource(),2,"zone:alpha","service-recovery")
+        def human_result():return hv.evaluate(rfc8785.dumps(human_fixture_data["claims"]),actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        joined=combine_human_origin(combined,human_result(),now=1000,clock_healthy=True)
+        self.assertEqual(joined.reason,"HUMAN_ORIGIN_PREREQUISITES_VALID")
+        self.assertEqual(joined.supervision,combined.supervision)
+        self.assertEqual(joined.expires_at,combined.expires_at)
+        other_operation={**operation,"request_id":"other-human-invocation"}
+        human_fixture_data["request"]["request_id"]=other_operation["request_id"]
+        other_human=hv.evaluate(rfc8785.dumps(human_fixture_data["claims"]),actual_operation=other_operation,evaluated_at=1000,clock_healthy=True)
+        self.assertEqual(other_human.reason,"HUMAN_ELIGIBLE")
+        self.assertEqual(combine_human_origin(combined,other_human,now=1000,clock_healthy=True).reason,"HUMAN_CONTEXT_MISMATCH")
+        human_fixture_data["request"]["request_id"]=operation["request_id"]
+        delegation=human_fixture_data["claims"]["delegations"][0]
+        delegation.update(expires_at=1002,version=2)
+        human_fixture_data["context"]["active_delegations"][delegation["delegation_id"]]=digest(delegation)
+        human_fixture_data["context"]["state_epoch"]+=1
+        self.assertEqual(combine_human_origin(combined,human_result(),now=1000,clock_healthy=True).expires_at,1002)
+        delegation.update(expires_at=1150,version=3)
+        human_fixture_data["context"]["active_delegations"][delegation["delegation_id"]]=digest(delegation)
+        human_fixture_data["context"]["state_epoch"]+=1
+        human_fixture_data["context"]["status"]="suspended"
+        self.assertEqual(combine_human_origin(combined,human_result(),now=1000,clock_healthy=True).supervision,"silent_veto")
+        human_fixture_data["context"]["status"]="active"
+        self.assertEqual(combine_human_origin(combined,human_result(),now=1001,clock_healthy=True).reason,"HUMAN_UNAVAILABLE")
         state["status"]="revoked"
         restricted=whole()
         self.assertEqual(restricted.supervision,"silent_veto")

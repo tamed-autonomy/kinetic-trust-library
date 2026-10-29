@@ -28,6 +28,7 @@ class AuthenticatedReadinessContext:
 @dataclass(frozen=True, slots=True, init=False)
 class ReadinessVerificationResult:
     reason: str
+    conformance_level: int
     checked_at: int
     operation_bytes: bytes
     attestation_bytes: bytes | None
@@ -82,7 +83,7 @@ class InstalledReadinessVerifier:
             raise ValidationError("readiness evaluation requires immutable evidence and trusted time")
         operation_bytes=canonical_demand_operation_bytes(actual_operation)
         operation=_parse_jcs_object(operation_bytes)
-        values=dict(reason="READINESS_UNAVAILABLE",checked_at=evaluated_at,operation_bytes=operation_bytes,
+        values=dict(reason="READINESS_UNAVAILABLE",conformance_level=self.conformance_level,checked_at=evaluated_at,operation_bytes=operation_bytes,
             attestation_bytes=None,actual_request_bytes=None,authenticated_state_bytes=None,trusted_keys_bytes=None,
             attestation_digest=None,request_digest=None,readiness_profile_digest=None,deployment_profile_digest=None,
             readiness_epoch=None,expires_at=None)

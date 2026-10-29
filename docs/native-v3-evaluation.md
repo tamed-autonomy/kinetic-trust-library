@@ -262,11 +262,60 @@ they are not a native compatibility mode. Fresh unsafe-test-key native records
 exercise the composed profile. Final RFC reconciliation must update this
 reference and regenerate canonical fixtures upstream.
 
+## Human-origin eligibility
+
+`InstalledHumanEligibilityVerifier(deployment_profile_bytes, human_profile_bytes,
+adapter, conformance_level, receiving_zone, purpose_id)` installs an exact
+`human_policy` binding to a separately approved profile. Missing binding rejects;
+it does not select legacy human scoring. The resolver independently authenticates
+the actual human/session, actor classification, approved criterion meaning and
+registry, grants/delegation, current status and durable correction epoch/maps.
+Candidate labels cannot select a human or software execution path.
+
+`resolve` receives the immutable profiles and canonical operation, trusted check
+time/level, receiving zone and purpose, without candidate evidence claims.
+It returns `AuthenticatedHumanContext(actual_request_bytes, context_bytes,
+evidence_bytes)`. The context is the RFC reference's complete `TrustedContext`:
+principal/actor/type, authentication digest, profile/version floor and registry,
+state epoch/check time/status and active evidence/grant/delegation ID-to-complete-
+digest maps. Constructing those fields proves none of their real-world facts.
+
+`evaluate(claims_bytes, actual_operation=..., evaluated_at=...,
+clock_healthy=...)` consumes a closed canonical object with `evidence`, `grants`
+and `delegations` arrays. It binds principal, actor, request, operation, exact
+zone/resource/parameters/purpose and current state, then applies the RFC's
+qualification and direct-delegation checks. An active but unsatisfied assessment
+does not qualify. Corrected content remains unusable until its active digest
+and epoch are updated. A delegation cannot outlive or widen its source grant.
+Rejected claims remain untrusted review context, never authoritative evidence.
+
+The result retains the complete unsigned decision body and trusted evidence.
+It is personal information, not a human JWT, capacity value or permission.
+Registry authentication, meaningful independent assessment and review,
+correction propagation, lawful purpose/access and retention are source/product
+responsibilities; a digest cannot detect forbidden ranking hidden in criteria.
+
+`combine_human_origin(native_result, human_result, now=..., clock_healthy=...)`
+joins an independently authenticated human-origin prerequisite to the software
+executor's native evaluation. It requires the same current second, operation,
+principal/actor, deployment, level and zone, preserves native supervision and
+constraint bytes, and shortens expiry where needed. Failure only adds a veto;
+qualifications never add standing or capacity, and the agent still needs its
+own proof/readiness/grants. Selection of this composition must follow the
+authenticated principal type in the service, never an applicant-provided flag.
+
+Direct human execution still requires the RFC's separately reviewed human
+authorization/capacity adapter. This Library does not synthesize software
+generation, model, tier or E values for that route. An eligible unsigned body
+alone cannot enable it; network use must authenticate the complete body and
+bind the actual request/proof through that reviewed adapter. The existing
+experimental person-subject proof-shape fixtures are not such an adapter.
+
 ## Remaining release gates
 
 The source adapters in the integration tests are explicitly fixtures. Real
 instrument/event source adapters and fencing, production source profiles,
-person standing/eligibility/capacity, nested ingress and consuming-service
+reviewed direct-human execution/capacity, privacy storage/disposition, nested ingress and consuming-service
 authorization still require their documented contracts and evidence.
 Repeating root-score arithmetic and exact Decimal values that cannot survive
 the JCS number wire remain precision dependencies. The final RFC tag, public
