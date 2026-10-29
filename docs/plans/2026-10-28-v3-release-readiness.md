@@ -2,6 +2,13 @@
 
 **Target:** Reach an implementation state where final RFC text normally changes a bounded module, schema, vector, or fixture rather than requiring a new Core architecture. This is an engineering target, not a present conformance claim. Reviewed against RFC `main` `9612f79` and the proposal heads in [implementation findings](../research/2026-10-26-v3-first-implementation-findings.md).
 
+**Broader release-set audit, 2026-10-29:** The component table below is not the
+whole RFC release set. [Native release-set coverage](../traceability/v3-release-set.md)
+records additional Library gaps in adjudication, repair, federation, boundary,
+execution observations, hand-back, person standing and declaration/claim
+contracts, with exact source heads and ownership. Those checks are implementation
+work before pre-tag readiness; they are not all Service work or final-tag edits.
+
 | Area | Current branch | Work needed before the final-tag reconciliation can be small |
 | --- | --- | --- |
 | Five-factor risk and missing evidence | Exact calculations, factor-state projection, installed Soul/environment evidence, derived `E_base`, ordered Core and native proof-claim production; all input assessments bind to one invocation | Finish authorization/record composition and decimal-to-wire precision policy. Refreshed PR #164 confirms exact intermediate R/E. Deployment adapters must verify all source prerequisites; generic interfaces do not establish a production source profile. |
