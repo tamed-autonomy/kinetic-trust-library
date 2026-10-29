@@ -16,7 +16,7 @@ human interaction, action, and enforcement.
 The provisional v3 namespace also includes adapted readiness and trajectory
 reference checks, human eligibility semantics and signature primitives from
 nmcitra/ktp-rfc scripts/readiness.py, scripts/trajectory_signatures.py and
-scripts/human_eligibility.py, commit
+scripts/human_eligibility.py and scripts/privacy_evidence.py, commit
 9612f7955d88e25d193dab2a17d51d0c9d9075d0, under Apache-2.0.
 Copyright 2025-2026 Chris Perkins. Modifications isolate readiness signatures,
 load bundled schemas, and integrate installed immutable Library boundaries.

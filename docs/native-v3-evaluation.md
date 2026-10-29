@@ -359,3 +359,49 @@ change correction state or authorize an operation. A restored or newly discovere
 copy requires current disposition/fencing evidence. Receipt and source metadata
 remain purpose-limited personal data. The integration tests explicitly model
 authenticated services and do not demonstrate deployed discovery or destruction.
+
+## Encrypted evidence verification and recovery
+
+`v3.privacy_evidence.InstalledPrivacyEvidenceVerifier` installs exact JCS lookup
+fields `envelope_id`, `zone_id`, `chain_id`, `purpose_id`,
+`privacy_policy_digest`, `issuer_id` and `conformance_level`.
+Its archive resolver receives only `expected_context_bytes` and `checked_at`.
+It returns `AuthenticatedPrivacyArchive(state_bytes, trusted_keys_bytes,
+evidence_bytes)`. The closed state has the exact installed `context`, current
+`checked_at` and independent `anchor` containing `sequence`, `previous_hash`
+and `record_hash`. Registry keys use the shared native JWK contract, with the
+`ktp-privacy-evidence-v1` purpose, issuer/zone, current revocation status and
+creation-time key validity interval.
+
+The source must establish current approved policy, actual archive position and
+trustworthy key/role history. Candidate metadata cannot select the anchor.
+The Library checks the unchanged RFC envelope schema, complete JCS signed body,
+completed-envelope hash, predecessor/genesis shape, exact expected scope and
+classical cryptographic floor. Success is explicitly
+`PRIVACY_OUTER_INTEGRITY_ONLY`, retaining the original envelope and source
+evidence. This can remain valid after a deletion deadline; it grants no right
+to retain ciphertext or recover its content. Threshold/hybrid profiles and
+archive consensus remain separate required deployment contracts.
+
+`InstalledPrivacyEvidenceReader(verifier, access_adapter).open(...)` additionally
+requires the complete actual operation descriptor and a healthy current clock.
+It freshly verifies the archive, refuses recovery at or after `delete_after`,
+then calls `authorize_and_resolve_key` with the installed archive context,
+canonical operation bytes, verified envelope bytes/hash and current time.
+The access service must authenticate and authorize the actual principal/actor,
+purpose, operation and resource, enforce current correction/erasure state, and
+resolve the exact surviving data key through approved custody and wrapping paths.
+It returns `AuthenticatedPrivacyAccess(context_bytes, data_key, evidence_bytes)`.
+Its closed context contains the exact installed `context`, actual `operation`,
+`record_hash`, `key_ref`, current `checked_at` and an `expires_at` no later than
+the signed deletion deadline. These are authenticated service outputs, not
+candidate declarations or a Library authorization decision.
+
+AES-256-GCM checks the original RFC associated data and recovers exact bytes.
+The result is `PRIVACY_BYTES_RECOVERED_UNREVIEWED`; original evidence formats,
+signatures, factual validity and current authority still require their own
+checks. Wrong keys or tags return no plaintext. Data keys are not retained in
+results, and key/plaintext fields are omitted from generated representations.
+This is not secure memory zeroization. Key custody, authorized access, retention,
+restoration and actual destruction remain source obligations. Issuing new
+encrypted envelopes is separate work; these APIs verify and read existing ones.
