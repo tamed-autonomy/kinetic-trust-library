@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from fractions import Fraction
 import re
 
 from kinetic_trust_library._decimal import DecimalLike, as_decimal
@@ -50,7 +51,7 @@ def select_strongest_root(
         raise ValidationError("root candidate digest algorithm differs from policy")
     if len({candidate.instrument_id for candidate in candidates}) != len(candidates):
         raise ValidationError("root candidates contain a duplicate instrument")
-    return min(candidates, key=lambda item: (-item.strength, item.complete_digest)) if candidates else None
+    return min(candidates, key=lambda item: (-Fraction(item.strength), item.complete_digest)) if candidates else None
 
 
 __all__ = ["EligibleRoot", "select_strongest_root"]
