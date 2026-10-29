@@ -31,7 +31,7 @@ class RequestAssociationTests(unittest.TestCase):
                         context={"actual_request":actual_request}, expected={"reason":expected})
             vectors["cases"].append({"id":label,"steps":[step]})
         schemas = [json.loads((root / "src/kinetic_trust_library/v3/schemas" / name).read_text())
-                   for name in ("trust-proof-v3.json","risk-factors-composed-v3.json","soul-constraint-v2.json")]
+                   for name in ("trust-proof-v3.json","risk-factors-native-v3.json","soul-constraint-v2.json")]
         bundle = InstalledSchemaBundle(tuple(rfc8785.dumps(s) for s in schemas), schemas[0]["$id"])
         class Replay:
             def __init__(self): self.requests,self.proofs,self.lock = {},{},Lock()

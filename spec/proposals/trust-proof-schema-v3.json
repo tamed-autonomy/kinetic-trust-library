@@ -141,7 +141,7 @@
         "context": {
           "anyOf": [
             {
-              "$ref": "https://kinetic-trust-protocol.net/specs/schemas/v2/risk-factors.json",
+              "$ref": "https://kinetic-trust-protocol.net/specs/schemas/v3/risk-factors.json",
               "description": "The five weighted Risk Factor inputs (Soul is carried separately as a veto, not a term)"
             },
             {

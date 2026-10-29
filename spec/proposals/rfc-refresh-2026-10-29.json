@@ -1,0 +1,78 @@
+{
+  "status": "provisional-untagged",
+  "snapshots": [
+    {
+      "path": "spec/proposals/trust-proof-schema-v3.json",
+      "source_path": "schemas/trust-proof.json",
+      "source_commit": "223f4259f7441ca97a916d26476a71b6114005a6",
+      "sha256": "6a1405264fe5bf0fa01b2c03bcdad46f088784dc63b4551ffee70014375c02fe"
+    },
+    {
+      "path": "src/kinetic_trust_library/v3/schemas/trust-proof-v3.json",
+      "source_path": "schemas/trust-proof.json",
+      "source_commit": "223f4259f7441ca97a916d26476a71b6114005a6",
+      "sha256": "6a1405264fe5bf0fa01b2c03bcdad46f088784dc63b4551ffee70014375c02fe"
+    },
+    {
+      "path": "src/kinetic_trust_library/v3/schemas/risk-factors-native-v3.json",
+      "source_path": "schemas/risk-factors.json",
+      "source_commit": "223f4259f7441ca97a916d26476a71b6114005a6",
+      "sha256": "e17eda845ec14627ec89f876cca96c945bb00eeb4041e567f201914467f5fdb8"
+    },
+    {
+      "path": "src/kinetic_trust_library/v3/schemas/transaction-record-v3.json",
+      "source_path": "schemas/transaction-record.json",
+      "source_commit": "223f4259f7441ca97a916d26476a71b6114005a6",
+      "sha256": "dbd17400707b5026588841f20daa7b6fa2fbef486d38775db6927928709ff87c"
+    },
+    {
+      "path": "spec/proposals/trust-proof-v3.json",
+      "source_path": "specifications/conformance/trust-proof-v3.json",
+      "source_commit": "223f4259f7441ca97a916d26476a71b6114005a6",
+      "sha256": "883513270cea4d9e6c5378301641287142b03842a71c60e5987e7dbba97182ee"
+    },
+    {
+      "path": "src/kinetic_trust_library/v3/schemas/request-binding-v1.json",
+      "source_path": "schemas/request-binding.json",
+      "source_commit": "1ea01e4d0454d51583bd2eb7bf1e898c9252d722",
+      "sha256": "0382fe68856d35a82d8f6903db054b77fc360efc992203fdaca1392a900d94be"
+    },
+    {
+      "path": "src/kinetic_trust_library/v3/schemas/request-proof-association-v1.json",
+      "source_path": "schemas/request-proof-association.json",
+      "source_commit": "1ea01e4d0454d51583bd2eb7bf1e898c9252d722",
+      "sha256": "531ceb1e0f561a879052281b962cd4d615147e509ee73b8370759758f7109201"
+    },
+    {
+      "path": "spec/proposals/request-binding-v1.json",
+      "source_path": "specifications/conformance/request-binding-v1.json",
+      "source_commit": "1ea01e4d0454d51583bd2eb7bf1e898c9252d722",
+      "sha256": "ed4bb1028a5d566b53894cb38ce05bd27eb4c49ddbff072eadd1bd27f8d5bcc6"
+    },
+    {
+      "path": "src/kinetic_trust_library/v3/schemas/decision-geometry-v1.json",
+      "source_path": "schemas/decision-geometry.json",
+      "source_commit": "5878df1fcbb50f5f45672ddaf2a13c98d666e3d7",
+      "sha256": "fbd46c076d1db19d20766ec9438f303a54977350462243a3e3fc4342b77f5ec8"
+    },
+    {
+      "path": "src/kinetic_trust_library/v3/schemas/decision-geometry-carrier-v1.json",
+      "source_path": "schemas/decision-geometry-carrier.json",
+      "source_commit": "5878df1fcbb50f5f45672ddaf2a13c98d666e3d7",
+      "sha256": "23521e0e504da343c9bdf54630499d737b5e66f8b4315df0aa6ec4663d7092ee"
+    },
+    {
+      "path": "spec/proposals/decision-geometry-v1.json",
+      "source_path": "specifications/conformance/decision-geometry-v1.json",
+      "source_commit": "5878df1fcbb50f5f45672ddaf2a13c98d666e3d7",
+      "sha256": "3465b9e8a254c470498bc5014a958c54dc96b89f22adf8b7b7def503d4c33a63"
+    },
+    {
+      "path": "spec/proposals/demand-input-v1.json",
+      "source_path": "specifications/conformance/demand-input-v1.json",
+      "source_commit": "40f00a02be58f8b43c31485c9ffcb021758372f6",
+      "sha256": "9c264078f8a818a40b8d75d08365b164247a2bd2ff78ed4b9e68cc4be24a7482"
+    }
+  ],
+  "composition_note": "Native root/person composition is separately selected; source snapshots do not establish full release conformance."
+}

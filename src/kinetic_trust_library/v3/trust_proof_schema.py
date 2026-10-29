@@ -1,6 +1,6 @@
 """Provisional RFC PR #195 closed payload schema validation (stage 6).
 
-Bundled proposal schema and frozen v2 references are loaded locally. No schema
+Bundled proposal schema and native v3 Risk Factors are loaded locally. No schema
 reference is fetched from a proof or the network. Shape alone is not authority.
 """
 
@@ -26,7 +26,7 @@ def _validator() -> Any:
     schemas = [
         json.loads(base.joinpath(name).read_text(encoding="utf-8"))
         for name in (
-            "trust-proof-v3.json", "risk-factors-v2.json", "soul-constraint-v2.json"
+            "trust-proof-v3.json", "risk-factors-native-v3.json", "soul-constraint-v2.json"
         )
     ]
     registry = Registry(retrieve=_no_network).with_resources(

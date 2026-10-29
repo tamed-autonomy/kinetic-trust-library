@@ -13,6 +13,13 @@ VECTORS = Path(__file__).parents[3] / "spec/proposals/demand-input-v1.json"
 
 
 class ProposedFiveFactorRisk(unittest.TestCase):
+    def test_refreshed_core_maintenance_example_preserves_all_decimal_digits(self):
+        values=dict(evidence_density="0.03125",trust_trend="0.12",adversarial_pressure="0.0005",update_resistance="0.1",attestation_coverage="0")
+        weights=dict(zip(values,("0.29","0.29","0.24","0.12","0.06")))
+        risk=calculate_five_factor_risk(values,weights)
+        self.assertEqual(risk,Decimal("0.0559825"))
+        self.assertEqual(Decimal(95)*(1-risk),Decimal("89.6816625"))
+
     def test_stadium_vector_has_exact_five_factor_arithmetic(self):
         cases = json.loads(VECTORS.read_text())["vectors"]
         kickoff = next(case for case in cases if case["id"].startswith("DI10-"))

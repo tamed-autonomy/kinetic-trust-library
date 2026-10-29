@@ -28,7 +28,7 @@ class ProposedTrustProofSchema(unittest.TestCase):
                 self.assertFalse(trust_proof_schema_valid(payload))
         self.assertEqual(len(observed), 22)
 
-    def test_proposal_schema_conflicts_with_its_clear_vector(self):
+    def test_refreshed_native_schema_accepts_clear_without_legacy_six_factor_context(self):
         vectors = json.loads(VECTORS.read_text())
         clear = next(case for case in vectors["cases"] if case["id"] == "clear")
         _, payload = parse_proof_json_objects(parse_compact_framing(clear["jws"]))
@@ -38,6 +38,8 @@ class ProposedTrustProofSchema(unittest.TestCase):
         self.assertEqual(clear["expected"]["reason"], "TP_CLEAR")
         self.assertEqual(len(payload["ktp"]["context"]), 5)
         self.assertIn("moment_criticality", risk_schema["required"])
+        self.assertTrue(trust_proof_schema_valid(payload))
+        payload["ktp"]["context"]["moment_criticality"]=0.5
         self.assertFalse(trust_proof_schema_valid(payload))
 
 

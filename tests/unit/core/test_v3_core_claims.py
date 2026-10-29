@@ -10,7 +10,7 @@ from kinetic_trust_library.v3.core_claims import NativeCoreClaimsSource, _wire_n
 
 @unittest.skipUnless(all(find_spec(n) for n in ("rfc8785", "jsonschema", "cryptography")), "install v3-proofs")
 class CoreClaimsTests(unittest.TestCase):
-    def test_native_bundle_uses_v3_risk_id_without_rewriting_proposal_snapshot(self):
+    def test_native_bundle_uses_direct_v3_risk_id_without_runtime_reference_rewrite(self):
         from kinetic_trust_library.v3.native_proof_profile import native_schema_bundle
         schemas=[json.loads(raw) for raw in native_schema_bundle().schemas]
         new_id="https://kinetic-trust-protocol.net/specs/schemas/v3/risk-factors.json"
@@ -18,7 +18,8 @@ class CoreClaimsTests(unittest.TestCase):
         context=schemas[0]["$defs"]["ktpClaims"]["properties"]["context"]
         self.assertEqual(context["anyOf"][0]["$ref"],new_id)
         original=json.loads((Path(__file__).parents[3]/"src/kinetic_trust_library/v3/schemas/trust-proof-composed-v3.json").read_text())
-        self.assertIn("/v2/",original["$defs"]["ktpClaims"]["properties"]["context"]["anyOf"][0]["$ref"])
+        self.assertEqual(original["$defs"]["ktpClaims"]["properties"]["context"]["anyOf"][0]["$ref"],new_id)
+        self.assertEqual(schemas[0],original)
 
     def test_wire_conversion_preserves_value_or_requires_precision_profile(self):
         self.assertEqual(_wire_number(Decimal("0.1")),.1)

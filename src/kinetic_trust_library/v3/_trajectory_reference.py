@@ -234,12 +234,10 @@ RISK_SCHEMA = json.loads(ROOT.joinpath('schemas/risk-factors-native-v3.json').re
 def _no_network(uri):
     raise InvalidRecord('uninstalled schema reference')
 
-# Explicit development composition; the original schema bytes remain intact.
-OLD_RISK_ID = 'https://kinetic-trust-protocol.net/specs/schemas/v2/risk-factors.json'
+# Refreshed upstream record schema closes directly over native five-factor R.
 EXPECTED_REF = SCHEMA['$defs']['oracleAttestation']['properties']['risk_factors']
-if EXPECTED_REF['$ref'] != OLD_RISK_ID:
+if EXPECTED_REF['$ref'] != RISK_SCHEMA['$id']:
     raise InvalidRecord('trajectory risk reference changed; reconcile source snapshots')
-EXPECTED_REF['$ref'] = RISK_SCHEMA['$id']
 REGISTRY = Registry(retrieve=_no_network).with_resource(RISK_SCHEMA['$id'], Resource.from_contents(RISK_SCHEMA))
 VALIDATOR = Draft202012Validator(SCHEMA, registry=REGISTRY, format_checker=installed_format_checker())
 STATE_VALIDATOR = Draft202012Validator({'$defs': SCHEMA['$defs'], '$ref': '#/$defs/agentState'})

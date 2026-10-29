@@ -1,8 +1,8 @@
 """Explicit development composition of RFC PR #164/#195/#201/#203 schemas.
 
-PR #164 now gives the five-factor schema a v3 ID. PR #201's proof snapshot
-still refers to v2, so this composition changes that one reference explicitly.
-The original snapshots and released v2 registry remain byte-preserved.
+The refreshed source schemas reference the native five-factor v3 ID directly.
+Root/person overlays remain explicitly selected. Prior snapshots are archived;
+the released v2 registry is unchanged and is not selected as a fallback.
 """
 from dataclasses import dataclass
 from importlib.resources import files
@@ -22,9 +22,8 @@ def native_schema_bundle() -> InstalledSchemaBundle:
         "trust-proof-composed-v3.json", "risk-factors-native-v3.json",
         "soul-constraint-v2.json", "root-instrument-v3.json"))
     context = schemas[0]["$defs"]["ktpClaims"]["properties"]["context"]["anyOf"][0]
-    if context["$ref"] != "https://kinetic-trust-protocol.net/specs/schemas/v2/risk-factors.json":
+    if context["$ref"] != schemas[1]["$id"]:
         raise ValidationError("proof composition source reference changed; reconcile the RFC snapshots")
-    context["$ref"] = schemas[1]["$id"]
     return InstalledSchemaBundle(tuple(rfc8785.dumps(s) for s in schemas), schemas[0]["$id"])
 
 

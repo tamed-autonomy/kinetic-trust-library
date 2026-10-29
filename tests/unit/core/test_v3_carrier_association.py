@@ -19,7 +19,7 @@ class CarrierAssociationTests(unittest.TestCase):
         proofs=json.loads((root/"spec/proposals/trust-proof-v3.json").read_text())
         context=vectors["contexts"]["complete"]
         schemas=[json.loads((root/"src/kinetic_trust_library/v3/schemas"/n).read_text()) for n in
-                 ("trust-proof-v3.json","risk-factors-composed-v3.json","soul-constraint-v2.json")]
+                 ("trust-proof-v3.json","risk-factors-native-v3.json","soul-constraint-v2.json")]
         pv=InstalledProofVerifier(InstalledSchemaBundle(tuple(rfc8785.dumps(s) for s in schemas),schemas[0]["$id"]),
             rfc8785.dumps({k["kid"]:k for k in proofs["keys"]}),rfc8785.dumps(proofs["context"]),
             ("ES256",),lambda p,n:True,fixture_software_default=True)

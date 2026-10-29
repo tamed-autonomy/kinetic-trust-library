@@ -143,3 +143,8 @@ actionable defects after the resolution-authority correction. All 1,166 regressi
 tests passed. The built distribution passed 53 focused review/decision/commit/
 native-readiness tests; all 14 pure review tests also passed without optional
 dependencies. No PR, merge or release is part of this checkpoint.
+
+The subsequent native-schema-refresh checkpoint reconciles the observed native
+Risk Factor identifiers, proof/record references and exact example/vector scope;
+see `2026-10-29-native-schema-refresh.md`. Broader release-set and Full production-
+review composition work remain pending.

@@ -14,10 +14,8 @@ class CompleteProofVerifierTests(unittest.TestCase):
         root = Path(__file__).parents[3]
         vectors = json.loads((root / "spec/proposals/trust-proof-v3.json").read_text())
         schema = json.loads((root / "spec/proposals/trust-proof-schema-v3.json").read_text())
-        risk = json.loads((root / "src/kinetic_trust_library/v3/schemas/risk-factors-v2.json").read_text())
-        # Fixture-only composition of #195 with #164's five-factor context.
-        risk["required"].remove("moment_criticality")
-        risk["properties"].pop("moment_criticality")
+        risk = json.loads((root / "src/kinetic_trust_library/v3/schemas/risk-factors-native-v3.json").read_text())
+        # Refreshed upstream proof and native five-factor schema close directly.
         soul = json.loads((root / "src/kinetic_trust_library/v3/schemas/soul-constraint-v2.json").read_text())
         bundle = InstalledSchemaBundle(tuple(rfc8785.dumps(s) for s in (schema, risk, soul)), schema["$id"])
         for case in vectors["cases"]:

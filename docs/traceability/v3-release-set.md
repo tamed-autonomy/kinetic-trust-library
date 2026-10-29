@@ -1,6 +1,7 @@
 # Provisional 3.0 release-set coverage audit
 
-Checked 2026-10-29 on `codex/ktp-v3-library-planning`, checkpoint `3432c9e`.
+Initial inventory checked 2026-10-29 on `codex/ktp-v3-library-planning`, checkpoint
+`3432c9e`. Subsequent scoped checkpoints below refine that inventory.
 This is an implementation inventory, not a conformance claim. The latest
 available released baseline remains RFC `v2.1.0`, commit
 `15520035267546e1035aad7beea0cc3cf9ef8f2c`. A fresh fetch found no 3.0 tag;
@@ -18,7 +19,7 @@ explicit. An RFC freeze today would still leave substantial Library changes.
 
 Inspected the original implementation plans, current `v3/` source and focused
 tests, package exports/pin, RFC proposal source text/schemas and boundary suites.
-The latest completed checkpoint passed 926 tests. That count establishes the
+The initial inventory checkpoint passed 926 tests. That count establishes the
 tested branch behavior only; it is not a denominator for RFC coverage.
 The newly inventoried suites below have not been executed against a native
 implementation merely because their files and vector counts were inspected.
@@ -101,6 +102,16 @@ actual causation/expungement and separate zone-wide revoker accounting are bound
 Grant-time enforcement now composes with Clear under symmetric selection; its
 historical profiles and actual issuance/audit/epoch checks preserve surviving
 bounds. Relational gates remain pending; no ledger write or sanction is claimed.
+
+Native RFC schema refresh checkpoint (2026-10-29): refreshed proof/record schemas
+directly reference native v3 Risk Factors. Native proof and trajectory validation
+no longer rewrite v2 risk references; obsolete native-package aliases are archived.
+Stage 6 accepts the published five-factor clear shape and rejects a sixth member.
+Twelve primary-source snapshot hashes, installed resource closure and exact
+worked-example decimals are checked. Original root/person composition stays
+explicit; frozen released v2 resources are unchanged. This closes the observed
+reference gap, not the complete refreshed RFC/release set. See the native-schema-
+refresh plan for source heads, scope and remaining work.
 
 Historical decision-review checkpoint (2026-10-29): digest-pinned original event
 policies and role intervals preserve actual sampling/trigger/reviewer/SLA terms.
