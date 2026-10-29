@@ -65,6 +65,10 @@ class RootProofBinding:
         selected = self.selection.selected
         if selected is not None:
             expected = _parse_jcs_object(selected.projection_bytes)
+            sponsorship=selected.sponsorship_repair
+            if sponsorship is not None and (not sponsorship.eligible or sponsorship.zone_id!=self.expected_zone
+                    or sponsorship.checked_at!=now or payload["exp"]>sponsorship.expires_at):
+                return False
             if person and (expected["kind"] != "external_attestation" or expected["root_person"] != payload["sub"]):
                 return False
             return (ktp["root_instrument"] == expected and payload["exp"] <= expected["end_time"]

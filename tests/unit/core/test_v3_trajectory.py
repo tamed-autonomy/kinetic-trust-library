@@ -99,10 +99,12 @@ class TrajectoryTests(unittest.TestCase):
         class Adapter:
             unavailable=False
             calls=0
+            genesis_binding=None
             def resolve(self,**kwargs):
                 self.calls+=1
                 if self.unavailable:raise TrajectoryStateUnavailable()
-                return AuthenticatedTrajectoryContext(rfc8785.dumps(state),rfc8785.dumps(keys),b"fixture-authenticated-commit-and-unique-head")
+                return AuthenticatedTrajectoryContext(rfc8785.dumps(state),rfc8785.dumps(keys),b"fixture-authenticated-commit-and-unique-head",
+                    genesis_sponsorship=self.genesis_binding)
         adapter=Adapter()
         verifier=InstalledTrajectoryVerifier(rfc8785.dumps(expected),adapter)
         def verify(record):return verifier.verify(rfc8785.dumps(record),now=now,clock_healthy=True)
@@ -110,6 +112,43 @@ class TrajectoryTests(unittest.TestCase):
         self.assertEqual(result.reason,"TRAJECTORY_VERIFIED")
         self.assertEqual(result.record_hash,records[0]["record_hash"])
         self.assertEqual(result.commit_intent,t.commit_intent(records[0]))
+        from dataclasses import replace
+        from kinetic_trust_library.errors import ValidationError
+        from kinetic_trust_library.v3.trajectory import AuthenticatedGenesisSponsorship,_seconds
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        from tests.unit.core.test_v3_sponsorship_repair import fixture as sponsorship_fixture
+        sponsorship,opening,bond_context,bond_bytes,bond_body,_=sponsorship_fixture()
+        birth=int(_seconds(records[0]["timestamp"]))
+        bond_body.update(subject=records[0]["agent_id"],start_time=birth,end_time=birth+10)
+        bond_context["subject"]=records[0]["agent_id"]
+        opening.update(subject=records[0]["agent_id"],opened_at=birth,checked_at=now,expires_at=now+7,
+            context_digest=_digest(bond_context,"sha256"),body_digest=_digest(bond_body,"sha256"))
+        expected["sponsorship_repair_profile_digest"]=_digest(json.loads(sponsorship.profile_bytes),"sha256")
+        original_verifier=verifier
+        sponsorship=replace(sponsorship,expected_zone=records[0]["zone_id"])
+        opening["zone_id"]=records[0]["zone_id"]
+        verifier=replace(verifier,expected_context_bytes=rfc8785.dumps(expected),sponsorship_repair_verifier=sponsorship)
+        self.assertEqual(verify(records[0]).reason,"TRAJECTORY_INVALID")
+        adapter.genesis_binding=AuthenticatedGenesisSponsorship(records[0]["record_hash"],bond_bytes,rfc8785.dumps(bond_context))
+        self.assertEqual(verify(records[0]).reason,"TRAJECTORY_VERIFIED")
+        self.assertTrue(verify(records[0]).genesis_sponsorship.eligible)
+        for start,end,opened in ((birth+1,birth+10,birth),(birth-10,birth,birth-10)):
+            bond_body.update(start_time=start,end_time=end)
+            opening.update(opened_at=opened,body_digest=_digest(bond_body,"sha256"))
+            self.assertEqual(verify(records[0]).reason,"TRAJECTORY_INVALID")
+        bond_body.update(start_time=birth,end_time=birth+10)
+        opening.update(opened_at=birth,body_digest=_digest(bond_body,"sha256"))
+        opening["counts"]["act-outside-decision"]=2
+        self.assertEqual(verify(records[0]).reason,"TRAJECTORY_INVALID")
+        state.update(head=t.head_binding(records[1]),predecessor=records[0],predecessor_context=expected)
+        self.assertEqual(verify(records[1]).reason,"TRAJECTORY_INVALID")
+        opening["counts"]["act-outside-decision"]=0
+        self.assertEqual(verify(records[1]).reason,"TRAJECTORY_VERIFIED")
+        state.update(head=t.head_binding(records[0]),predecessor=None,predecessor_context=None)
+        adapter.genesis_binding=replace(adapter.genesis_binding,record_hash="sha256:"+"0"*64)
+        self.assertEqual(verify(records[0]).reason,"TRAJECTORY_INVALID")
+        with self.assertRaises(ValidationError):replace(verifier,sponsorship_repair_verifier=None)
+        expected.pop("sponsorship_repair_profile_digest");verifier=original_verifier;adapter.genesis_binding=None
         self.assertEqual(verify(cases[0]["record"]).reason,"TRAJECTORY_INVALID")
         state.update(head=t.head_binding(records[1]),predecessor=records[0],predecessor_context=expected)
         self.assertEqual(verify(records[1]).reason,"TRAJECTORY_VERIFIED")

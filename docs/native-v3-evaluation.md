@@ -818,8 +818,8 @@ must install all applicable policies; omission of an optional component from a
 partial fixture is not a complete repair conformance claim.
 
 This path implements record closure, the re-entry cost and current
-readiness/standing enforcement. Sponsorship restrictions, ambient
-breach/capacity/criticality and rule-repair amendments remain separate work.
+readiness/standing enforcement. Ambient breach/capacity/criticality and rule-repair
+amendments remain separate work.
 Neither an assessment nor a passing test
 proves that a real ceremony, attendance, anchoring or durable breach closure
 occurred; those are provider/Service responsibilities.
@@ -845,3 +845,52 @@ The resulting ceiling flows through standing, Core, proof claims and native
 request verification; ordinary grants, readiness, vetoes and environmental limits
 still apply. A later residual-harm amendment or passage of time alone is not an
 earned act. No adapter/profile may be silently selected or omitted.
+
+### Sponsorship admission under unreconciled breach
+
+`InstalledSponsorshipRepairVerifier` checks an independently authenticated bond
+opening against the root's complete lineage-summed breach inventory at that
+opening. The source authenticates the complete bond or its current anchor,
+actual issuer/subject/opening time, the published policy, counts by entry class,
+and prior blocking history. The Library checks exact deployment, internal policy,
+context, complete-instrument/body digests, identity, zone and current snapshot.
+Today’s counts are not substituted for the opening-time inventory.
+
+The named internal profile declares an aggregate count limit and stricter
+per-entry-class limits/capacities. Aggregate counts cannot exceed the aggregate
+limit; hard breaches across all hard classes together cannot exceed one.
+Per-class limits cannot exceed declared capacity and hard limits cannot exceed
+one. A previously blocked threshold requires the count to fall strictly below
+it. These are immutable current checks, not a durable lock manager. Actual
+opening and protected reservation of sponsor capital remain Service work.
+
+Select the verifier on `InstalledRootVerifier` and bind its exact profile digest
+in the installed root context as `sponsorship_repair_profile_digest`. A selected
+policy cannot be omitted. A void opening earns no root credit, and
+`RootAssessment.sponsorship_repair` retains its reason/evidence. Proof binding
+also enforces the assessment's zone and support expiry, while preserving the
+instrument's real end time. Source operational failures propagate.
+
+For native birth, `InstalledTrajectoryVerifier` selects the same profile digest
+in its expected context and the installed sponsorship verifier. The independent
+trajectory source supplies `AuthenticatedGenesisSponsorship`, binding the actual
+signed genesis hash to its complete birth bond and installed identity context.
+This must be the bond establishing that genesis, not an unrelated later bond.
+The opening must be eligible and the bond must cover the exact birth instant:
+`start_time <= birth < end_time`. The same check applies when genesis is the
+accepted predecessor of the first ordinary record. The result retains the sealed
+assessment as `TrajectoryVerificationResult.genesis_sponsorship`.
+
+A bond valid at birth may have expired or closed today; that alone does not
+erase genesis or retained intrinsic standing. Active root credit remains a
+separate current-lifecycle check. An authorized migration genesis continues
+through its explicit checkpoint/revalidated-state route, rather than opening
+another birth bond. For later records, the installed registry/accepted-predecessor
+source owns validation of the established genesis and its selected policy floor;
+these pairwise checks do not re-walk the entire chain. No birth or root assessment
+opens a real bond, mints an identity or authorizes an action.
+
+Draft clarification remains useful for a zero count threshold after blocking:
+the literal required recovery is below zero, which nonnegative counts cannot
+reach. This implementation retains the block and does not invent an automatic
+release; a valid policy amendment or clarified draft can supply that rule.

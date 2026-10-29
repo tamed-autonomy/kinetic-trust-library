@@ -12,6 +12,8 @@ import re
 from kinetic_trust_library.errors import ValidationError,ProofFormatError
 from .trust_proof_json import _parse_jcs_object
 from .root_lifecycle import _time
+from .sponsorship_repair import InstalledSponsorshipRepairVerifier,SponsorshipRepairAssessment
+from .demand_supplier import _digest
 
 
 class TrajectoryStateUnavailable(Exception):
@@ -19,10 +21,18 @@ class TrajectoryStateUnavailable(Exception):
 
 
 @dataclass(frozen=True, slots=True)
+class AuthenticatedGenesisSponsorship:
+    record_hash: str
+    bond_bytes: bytes
+    context_bytes: bytes
+
+
+@dataclass(frozen=True, slots=True)
 class AuthenticatedTrajectoryContext:
     state_bytes: bytes
     trusted_keys_bytes: bytes
     evidence_bytes: bytes
+    genesis_sponsorship: AuthenticatedGenesisSponsorship | None = None
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -35,6 +45,7 @@ class TrajectoryVerificationResult:
     authenticated_state_bytes: bytes | None
     trusted_keys_bytes: bytes | None
     source_evidence_bytes: bytes | None
+    genesis_sponsorship: SponsorshipRepairAssessment | None
 
     def __init__(self,*args,**kwargs):
         raise TypeError("trajectory results are derived by an installed verifier")
@@ -42,7 +53,8 @@ class TrajectoryVerificationResult:
 
 def _expected(value):
     from . import _trajectory_reference as t
-    if (type(value) is not dict or set(value)!={"trusted_level","trusted_profile_digest","expected_agent","expected_zone","expected_chain","minimum_record_format"}
+    required={"trusted_level","trusted_profile_digest","expected_agent","expected_zone","expected_chain","minimum_record_format"}
+    if (type(value) is not dict or not required<=set(value) or set(value)-required-{"sponsorship_repair_profile_digest"}
             or type(value["trusted_level"]) is not int or value["trusted_level"] not in (1,2,3)
             or value["minimum_record_format"]!=t.VERSION):
         raise ValidationError("installed native trajectory expectations are invalid")
@@ -51,7 +63,7 @@ def _expected(value):
         raise ValidationError("installed trajectory profile digest does not meet the trusted level")
     for field in ("expected_agent","expected_zone","expected_chain"):
         t.literal(value[field])
-    return {k:v for k,v in value.items() if k!="minimum_record_format"}
+    return {k:v for k,v in value.items() if k not in ("minimum_record_format","sponsorship_repair_profile_digest")}
 
 
 def _seconds(text):
@@ -81,11 +93,21 @@ def _integrity(record,expected,keys,now):
 class InstalledTrajectoryVerifier:
     expected_context_bytes: bytes
     adapter: object
+    sponsorship_repair_verifier: InstalledSponsorshipRepairVerifier | None = None
 
     def __post_init__(self):
         if type(self.expected_context_bytes) is not bytes or not callable(getattr(self.adapter,"resolve",None)):
             raise ValidationError("installed trajectory verifier is invalid")
-        _expected(_parse_jcs_object(self.expected_context_bytes))
+        expected=_parse_jcs_object(self.expected_context_bytes);_expected(expected)
+        if "sponsorship_repair_profile_digest" in expected:
+            verifier=self.sponsorship_repair_verifier
+            algorithm="sha384" if expected["trusted_level"]==3 else "sha256"
+            if (type(verifier) is not InstalledSponsorshipRepairVerifier or verifier.algorithm!=algorithm
+                    or verifier.expected_zone!=expected["expected_zone"]
+                    or _digest(_parse_jcs_object(verifier.profile_bytes),algorithm)!=expected["sponsorship_repair_profile_digest"]):
+                raise ValidationError("selected trajectory sponsorship policy differs from installed profile/zone")
+        elif self.sponsorship_repair_verifier is not None:
+            raise ValidationError("trajectory sponsorship checks require an explicit profile binding")
 
     def verify(self, record_bytes: bytes, *, now: int, clock_healthy: bool) -> TrajectoryVerificationResult:
         from . import _trajectory_reference as t
@@ -93,7 +115,7 @@ class InstalledTrajectoryVerifier:
         if type(record_bytes) is not bytes or not _time(now):
             raise ValidationError("trajectory verification requires immutable bytes and trusted time")
         values=dict(reason="TRAJECTORY_UNAVAILABLE",checked_at=now,canonical_record_bytes=None,record_hash=None,
-            commit_intent=None,authenticated_state_bytes=None,trusted_keys_bytes=None,source_evidence_bytes=None)
+            commit_intent=None,authenticated_state_bytes=None,trusted_keys_bytes=None,source_evidence_bytes=None,genesis_sponsorship=None)
         def result():
             value=object.__new__(TrajectoryVerificationResult)
             for name,member in values.items():object.__setattr__(value,name,member)
@@ -107,6 +129,7 @@ class InstalledTrajectoryVerifier:
                 or any(type(raw) is not bytes for raw in (source.state_bytes,source.trusted_keys_bytes,source.evidence_bytes))
                 or not source.evidence_bytes):
             raise ValidationError("trajectory resolver returned invalid authenticated context")
+        in_sponsorship_provider=False
         try:
             state=_parse_jcs_object(source.state_bytes)
             expected=_parse_jcs_object(self.expected_context_bytes)
@@ -135,6 +158,24 @@ class InstalledTrajectoryVerifier:
                         or t.canonical(record["previous_state"])!=t.canonical(previous["current_state"])
                         or t.instant(record["timestamp"])<=t.instant(previous["timestamp"])):
                     raise t.InvalidRecord("trajectory continuity failed")
+            birth=record if record["sequence"]==0 else previous if previous["sequence"]==0 else None
+            if self.sponsorship_repair_verifier is not None and birth is not None and birth["migration_checkpoint"] is None:
+                binding=source.genesis_sponsorship
+                if (type(binding) is not AuthenticatedGenesisSponsorship or binding.record_hash!=birth["record_hash"]
+                        or type(binding.bond_bytes) is not bytes or type(binding.context_bytes) is not bytes):
+                    raise t.InvalidRecord("authenticated genesis sponsorship binding is unavailable")
+                in_sponsorship_provider=True
+                sponsorship=self.sponsorship_repair_verifier.evaluate(binding.bond_bytes,context_bytes=binding.context_bytes,
+                    evaluated_at=now,clock_healthy=clock_healthy)
+                in_sponsorship_provider=False
+                bond=_parse_jcs_object(sponsorship.authenticated_bond_body_bytes)
+                birth_time=_seconds(birth["timestamp"])
+                if (not sponsorship.eligible or sponsorship.subject!=birth["agent_id"] or sponsorship.zone_id!=birth["zone_id"]
+                        or sponsorship.opened_at>birth_time or not bond["start_time"]<=birth_time<bond["end_time"]):
+                    raise t.InvalidRecord("genesis bond was not eligible at the actor's birth")
+                values["genesis_sponsorship"]=sponsorship
+            elif self.sponsorship_repair_verifier is None and source.genesis_sponsorship is not None:
+                raise t.InvalidRecord("genesis sponsorship source cannot select an uninstalled policy")
             migration=state["migration"]
             if record["migration_checkpoint"] is not None or record["sequence"]==0 and migration is not None:
                 if (type(migration) is not dict or set(migration)!={"token","checkpoint_digest","approved_state","activated_at"}):
@@ -152,6 +193,7 @@ class InstalledTrajectoryVerifier:
                         <=_seconds(record["oracle_attestation"]["attestation_time"])<=activation):
                     raise t.InvalidRecord("migration activation predates its complete signed genesis")
         except (ValueError,ValidationError,ProofFormatError,KeyError,TypeError,IndexError,UnicodeError,RecursionError):
+            if in_sponsorship_provider:raise
             values["reason"]="TRAJECTORY_INVALID"
             return result()
         values.update(reason="TRAJECTORY_VERIFIED",canonical_record_bytes=record_bytes,record_hash=evidence["record_hash"],
@@ -160,4 +202,4 @@ class InstalledTrajectoryVerifier:
         return result()
 
 
-__all__=["InstalledTrajectoryVerifier","AuthenticatedTrajectoryContext","TrajectoryVerificationResult","TrajectoryStateUnavailable"]
+__all__=["InstalledTrajectoryVerifier","AuthenticatedTrajectoryContext","AuthenticatedGenesisSponsorship","TrajectoryVerificationResult","TrajectoryStateUnavailable"]

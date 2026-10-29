@@ -14,6 +14,7 @@ from kinetic_trust_library.errors import ValidationError, ProofFormatError
 from .root_lifecycle import RootLifecycleEvent, project_root_lifecycle, _time
 from .root_projection import validate_root_projection
 from .trust_proof_json import _parse_jcs_object
+from .sponsorship_repair import InstalledSponsorshipRepairVerifier,SponsorshipRepairAssessment
 
 
 class RootVerificationFailure(Exception):
@@ -37,6 +38,7 @@ class RootAssessment:
     evaluated_at: int
     score_numerator: int
     score_denominator: int
+    sponsorship_repair: SponsorshipRepairAssessment | None
 
     def __init__(self, *args, **kwargs):
         raise TypeError("RootAssessment is derived by an installed root verifier")
@@ -46,10 +48,14 @@ class RootAssessment:
 class InstalledRootVerifier:
     adapter: object
     algorithm: str
+    sponsorship_repair_verifier: InstalledSponsorshipRepairVerifier | None = None
 
     def __post_init__(self):
         if self.algorithm not in ("sha256", "sha384") or not callable(getattr(self.adapter, "verify", None)):
             raise ValidationError("installed root verifier is invalid")
+        if self.sponsorship_repair_verifier is not None and (type(self.sponsorship_repair_verifier) is not InstalledSponsorshipRepairVerifier
+                or self.sponsorship_repair_verifier.algorithm!=self.algorithm):
+            raise ValidationError("root and sponsorship repair policies differ")
 
     def evaluate(self, evidence: bytes, *, context_bytes: bytes, evaluated_at: int) -> RootAssessment:
         import rfc8785
@@ -60,6 +66,7 @@ class InstalledRootVerifier:
         score = Decimal(0)
         exact_score = Fraction(0)
         authenticated = None
+        sponsorship_repair=None
         in_adapter = False
         try:
             if not evidence:
@@ -108,6 +115,16 @@ class InstalledRootVerifier:
                         raise RootVerificationFailure("invalid_instrument")
                     if "proof_sponsor" in context and context["proof_sponsor"] != body["issuer"]:
                         raise RootVerificationFailure("invalid_instrument")
+                    if self.sponsorship_repair_verifier is not None:
+                        in_adapter=True
+                        sponsorship_repair=self.sponsorship_repair_verifier.evaluate(evidence,context_bytes=context_bytes,
+                            evaluated_at=evaluated_at,clock_healthy=True)
+                        in_adapter=False
+                        if (not sponsorship_repair.eligible or sponsorship_repair.authenticated_bond_body_bytes!=authenticated.body_bytes
+                                or "proof_exp" in context and context["proof_exp"]>sponsorship_repair.expires_at):
+                            raise RootVerificationFailure("invalid_instrument")
+                    elif "sponsorship_repair_profile_digest" in context:
+                        raise RootVerificationFailure("invalid_instrument")
                     sponsor = as_decimal(inputs["sponsor_e_base"], name="sponsor standing", minimum=0, maximum=100)
                     stake = as_decimal(inputs["stake_percentage"], name="stake", minimum=1, maximum=50)
                     exact_score = Fraction(sponsor) * Fraction(stake) / 50
@@ -153,6 +170,6 @@ class InstalledRootVerifier:
                             ("evaluated_at", evaluated_at),
                             ("score_numerator", exact_score.numerator), ("score_denominator", exact_score.denominator),
                             ("authenticated_body_bytes", None if authenticated is None else authenticated.body_bytes),
-                            ("events", () if authenticated is None else authenticated.events)):
+                            ("events", () if authenticated is None else authenticated.events),("sponsorship_repair",sponsorship_repair)):
             object.__setattr__(result, name, value)
         return result

@@ -1,5 +1,29 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 sponsorship and genesis checkpoint
+
+Implemented selected sponsorship checks from repair §5.2 against authenticated
+opening-time root-lineage counts and prior blocking history. Aggregate counts,
+the aggregate hard-entry limit of one, per-class capacity bounds and strict
+below-threshold recovery are enforced. Selected root verification rejects a
+void bond's credit; proof binding enforces zone/support expiry. Native trajectory
+genesis and its first successor require a source-bound actual birth bond under
+the selected policy. Supplier review found and verified a timing correction:
+the bond must cover birth, not merely have been opened before it. Valid-at-birth
+but expired-today bonds remain usable as historical birth evidence.
+
+The complete bond/anchor, published policy, opening inventory/history and actual
+birth-bond linkage are modeled authenticated provider facts, distinct from the
+real fixture Ed25519 trajectory signatures. No runtime bond opening or genesis
+minting is claimed. A zero count threshold's literal recovery-below-zero rule
+needs draft clarification; the reference preserves the block. Refreshed RFC
+main/repair/boundary/L11 heads are unchanged and no 3.0 tag is present.
+
+Validation: the full suite passes 955 tests. Eleven focused sponsorship,
+trajectory, root and Core-claims tests pass from the built wheel, including
+birth-interval rejection and the first-successor check. Imports remain lazy;
+without optional proof dependencies five sponsorship/trajectory tests skip.
+
 ## 2026-10-29 earned repair recovery checkpoint
 
 Added explicitly pinned ordinary-rail ceiling recovery to the selected repair
