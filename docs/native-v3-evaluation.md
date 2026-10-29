@@ -455,3 +455,62 @@ then use the installed verifier. Commit failures, uncertain storage outcomes,
 orphan-key cleanup, retries, uniqueness, lawful retention and destruction remain
 product responsibilities. No receipt, zeroization or original-evidence truth is
 established by issuance.
+
+## Nested ingress and current topology
+
+`v3.ingress.InstalledIngressVerifier` installs exact JCS `context_bytes`,
+`receipt_profile_bytes`, a topology/session source and receipt verifier.
+The closed context binds `subject`, `receiving_zone`, `receipt_profile_id`,
+`receipt_profile_digest` and `conformance_level`. The named profile contains
+`id`, positive integer `version`, and `link_digest_algorithm` (`sha256` or
+`sha384`, with SHA-384 required at Level 3); its other fields describe the
+installed receipt encoding, signing preimage, key requirements and link preimage.
+The RFC proposal specifies the bindings, but does not yet supply interoperable
+receipt signing/link encoding and crypto vectors. There is no default wire
+profile here. The test adapter's JCS/Ed25519 format is explicitly unsafe test
+material, not an additional standard or production profile.
+
+The source receives only installed `context_bytes` and `evaluated_at`. It returns
+`AuthenticatedIngressContext(state_bytes, evidence_bytes)`. The closed state
+contains the exact installed `context`, current `checked_at`, `topology` and
+`session`. Topology contains `epoch` and outermost-first `rings`; each ring has
+`zone_id`, `enforcement_class` (`green`, `cyan`, `blue`, `deep_blue`),
+`enclosure_reach`, `registry_enclosure_reach` and current authorized `oracle_kids`.
+Session contains the actual authenticated `sub`, possession-verified `cnf_jkt`,
+fresh `admission_id` and `expires_at`. These are Library adapter contracts, not
+proposed RFC wire fields. The source must independently authenticate governance,
+current topology/epoch, profile and registry declarations, Oracle roles/status,
+the actual admission and possession of its key. Matching strings or constructing
+the return type establishes none of those facts.
+
+The Library requires one through six distinct rings, nondecreasing enforcement
+class, positive declared and registry enclosure reach for every inner ring,
+and a final ring matching the receiver. Depth comes from that topology. Depth
+zero requires an absent path; positive depth requires exactly that many receipts.
+Each closed receipt must bind its actual issuing Oracle, next inward audience,
+subject, possession key, admission, current epoch, valid times and previous
+complete receipt. An unavailable Oracle never shortens the required ancestry.
+
+The receipt adapter's `verify(receipt_bytes, context_bytes=...,
+authenticated_state_bytes=..., receipt_profile_bytes=..., evaluated_at=...)`
+must authenticate the signature over every other receipt field, current key
+role/revocation and selected profile strength. It returns
+`AuthenticatedIngressReceipt(receipt_bytes, receipt_digest, evidence_bytes)`;
+the exact receipt and profile-defined complete-receipt digest are retained.
+The Library checks every next `prev` against that authenticated digest.
+
+`InstalledProofVerifier(..., ingress_policy=...)` uses this current assessment at
+stage 7. Its sealed `ProofVerificationResult.ingress_verification` retains the
+exact proof payload, current topology/session evidence, receipt evidence and
+earliest proof/session/receipt expiry. Authenticated depth must also match the
+installed proof context; a topology change requires policy reconciliation,
+never an implicit shortening. A bare boolean receipt callback is admitted only
+in the explicitly selected fixture mode; native positive-depth use fails at
+`TP_INGRESS` without the installed policy. Existing request/readiness results
+retain the complete proof result for consuming-service fencing.
+
+Ingress remains a prerequisite. Physical/network containment, all route
+enforcement, durable admission/replay state, current enclosure-risk aggregation,
+degraded resident policy and outward confidential egress shaping remain distinct
+requirements. The source snapshot has sixteen boundary cases; the crypto and
+binding tests here do not execute the heat/egress cases or certify a gateway.

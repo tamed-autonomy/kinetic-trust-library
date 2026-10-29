@@ -14,6 +14,7 @@ from .trust_proof_json import parse_proof_json_objects, _parse_jcs_object
 from .trust_proof_invariants import _invariants_hold, trust_proof_stage7_reason
 from .schema_formats import installed_format_checker
 from .live_root import RootProofVerificationResult
+from .ingress import InstalledIngressVerifier, IngressVerificationResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +54,7 @@ class ProofVerificationResult:
     stage: int
     authenticated_payload_bytes: bytes | None
     root_verification: RootProofVerificationResult | None
+    ingress_verification: IngressVerificationResult | None
 
     def __init__(self, *args, **kwargs):
         raise TypeError("ProofVerificationResult is derived by an installed verifier")
@@ -68,6 +70,7 @@ class InstalledProofVerifier:
     ingress_verifier: Callable[[tuple[object, ...]], bool] | None = None
     extension_handlers: tuple[tuple[str, Callable[[bytes], bool]], ...] = ()
     fixture_software_default: bool = False
+    ingress_policy: InstalledIngressVerifier | None = None
 
     def __post_init__(self):
         if (type(self.schema_bundle) is not InstalledSchemaBundle
@@ -77,6 +80,12 @@ class InstalledProofVerifier:
             raise ValidationError("installed proof verifier policy is invalid")
         _parse_jcs_object(self.trusted_keys_bytes)
         context = _parse_jcs_object(self.expected_context_bytes)
+        if self.ingress_policy is not None:
+            if type(self.ingress_policy) is not InstalledIngressVerifier:
+                raise ValidationError("installed ingress policy is invalid")
+            ingress_context = _parse_jcs_object(self.ingress_policy.context_bytes)
+            if ingress_context["subject"] != context["subject"] or ingress_context["receiving_zone"] != context["zone"]:
+                raise ValidationError("ingress policy differs from proof subject/zone")
         if (type(self.fixture_software_default) is not bool
                 or context.get("subject_kind") not in ("software_agent", "person")
                 and not (self.fixture_software_default and "subject_kind" not in context)):
@@ -133,16 +142,30 @@ class InstalledProofVerifier:
             root_valid = False
         if not root_valid:
             return _result(compact, "TP_INVARIANT", 7, raw, root_evidence)
+        ingress_evidence = None
+        ingress_callback = self.ingress_verifier if self.fixture_software_default else None
+        if self.ingress_policy is not None:
+            try:
+                ingress_evidence = self.ingress_policy.verify(raw, now=now, clock_healthy=clock_healthy)
+                if (type(ingress_evidence) is not IngressVerificationResult
+                        or ingress_evidence.reason != "INGRESS_VERIFIED" or ingress_evidence.payload_bytes != raw
+                        or ingress_evidence.checked_at != now or ingress_evidence.depth != context["ring_depth"]):
+                    return _result(compact, "TP_INGRESS", 7, raw, root_evidence, ingress_evidence)
+            except Exception:
+                return _result(compact, "TP_INGRESS", 7, raw, root_evidence)
+            # All receipt bindings have already passed under the installed
+            # current topology/session policy for these exact payload bytes.
+            ingress_callback = lambda path: True
         reason = trust_proof_stage7_reason(payload, expected_subject=context["subject"], expected_zone=context["zone"],
-            required_ceilings=context["required_ceilings"], ring_depth=context["ring_depth"], ingress_verifier=self.ingress_verifier, expected_subject_kind=context.get("subject_kind", "software_agent"))
+            required_ceilings=context["required_ceilings"], ring_depth=context["ring_depth"], ingress_verifier=ingress_callback, expected_subject_kind=context.get("subject_kind", "software_agent"))
         if reason is not None:
-            return _result(compact, reason, 7, raw, root_evidence)
+            return _result(compact, reason, 7, raw, root_evidence, ingress_evidence)
         gate = payload["ktp"]["gate_state"]
-        return _result(compact, {"clear":"TP_CLEAR", "veto":"TP_VETO", "undetermined":"TP_UNDETERMINED"}[gate], 8, raw, root_evidence)
+        return _result(compact, {"clear":"TP_CLEAR", "veto":"TP_VETO", "undetermined":"TP_UNDETERMINED"}[gate], 8, raw, root_evidence, ingress_evidence)
 
 
-def _result(compact, reason, stage, payload, root_evidence=None):
+def _result(compact, reason, stage, payload, root_evidence=None, ingress_evidence=None):
     result = object.__new__(ProofVerificationResult)
-    for name, value in (("compact",compact), ("reason",reason), ("stage",stage), ("authenticated_payload_bytes",payload), ("root_verification",root_evidence)):
+    for name, value in (("compact",compact), ("reason",reason), ("stage",stage), ("authenticated_payload_bytes",payload), ("root_verification",root_evidence), ("ingress_verification",ingress_evidence)):
         object.__setattr__(result,name,value)
     return result
