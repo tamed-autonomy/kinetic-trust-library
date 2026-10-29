@@ -102,14 +102,23 @@ Grant-time enforcement now composes with Clear under symmetric selection; its
 historical profiles and actual issuance/audit/epoch checks preserve surviving
 bounds. Relational gates remain pending; no ledger write or sanction is claimed.
 
+Historical decision-review checkpoint (2026-10-29): digest-pinned original event
+policies and role intervals preserve actual sampling/trigger/reviewer/SLA terms.
+Current diagnostics combine actual samples across versions. Persisted findings
+and independent open markers survive a new threshold/window; their complete
+then-known basis and explicit forward historical-authority resolution are checked.
+Full decision/commit composition remains pending. A concurrent RFC refresh also
+changed core proposal trees; the production-decision-review plan records the
+new heads and exact follow-up. No refreshed-contract alignment claim is made yet.
+
 Production decision-review monitor checkpoint (2026-10-29): a selected pure and
 installed Source-backed monitor now applies exact stochastic-draw selection,
 separate sampled/outcome-triggered review deadlines and cross-actor decider-wide
 uniform-approval findings. Acknowledgment is not review; late work retains record
 obligations, and durable older backlog cannot disappear with the window. Current
-registry/owner/head/coverage and governing policy are bound. Historical policy
-transitions, Full decision-gate composition and review-ledger commit fencing
-remain pending. Actual randomness, review quality and complete event provenance
+registry/owner/head/coverage and governing policy are bound. The subsequent
+historical checkpoint adds policy/role/finding preservation. Full decision-gate
+composition and review-ledger commit fencing remain pending. Actual randomness, review quality and complete event provenance
 remain Source/audit obligations. No Full claim or action authority is returned.
 See the production-decision-review plan for the exact provisional interpretation.
 

@@ -42,19 +42,22 @@ class DecisionReviewProjection:
     next_change_at: int | None
 
 
-def project_decision_review(profile,events,*,decided_by,evaluated_at,ledger_head_sequence):
+def project_decision_review(profile,events,*,decided_by,evaluated_at,ledger_head_sequence,event_profiles=None):
     """Apply exact draws, independent reviews, trigger clocks and HB-10-003.
 
     The threshold counts all sampled decisions of this decider in the rolling
     window, across actors, not staged certification cases. Uniform approval with
     exact indistinguishable acknowledgment/review times at threshold is a finding.
+    Event profiles preserve historically governing draws/triggers/reviewer/SLA.
+    The current profile governs only the current rolling finding population.
     Missing review and late completion remain separate recording obligations.
     """
     p=profile_terms(profile)
     if (not _name(decided_by) or decided_by==p["review_authority"] or type(events) is not list or len(events)>4096
-            or not _time(evaluated_at) or not _time(ledger_head_sequence)):
+            or not _time(evaluated_at) or not _time(ledger_head_sequence)
+            or event_profiles is not None and type(event_profiles) is not dict):
         raise ValidationError("complete current decider review history required")
-    anchors=set();positions=set();ids=set();sampled=[];required=[];overdue=[];pending=[];late=[];ticks=[]
+    anchors=set();positions=set();ids=set();decision_anchors=set();sampled=[];required=[];overdue=[];pending=[];late=[];ticks=[]
     def position(anchor,sequence):
         if (not is_digest(anchor) or anchor in anchors or not _time(sequence) or not 0<sequence<=ledger_head_sequence or sequence in positions):
             raise ValidationError("production review records require distinct actual anchors and audit positions")
@@ -72,19 +75,23 @@ def project_decision_review(profile,events,*,decided_by,evaluated_at,ledger_head
                 or type(event["outcomes"]) is not list or len(event["outcomes"])>4096 or type(event["reviews"]) is not list or len(event["reviews"])>4096):
             raise ValidationError("actual complete production decision/outcome/review records required")
         ids.add(event["id"]);position(event["anchor"],event["sequence"])
+        decision_anchors.add(event["anchor"])
+        q=p if event_profiles is None else profile_terms(event_profiles.get(event["anchor"]))
+        if (any(q[k]!=p[k] for k in ("zone","ledger_owner","append_protocol")) or q["review_authority"]==decided_by):
+            raise ValidationError("historical review policy differs from actual zone/ledger or independent review role")
         decided=instant(event["decided_at"]);ack=instant(event["acknowledged_at"])
         reviewed=None if event["reviewed_at"] is None else instant(event["reviewed_at"])
         if ack>decided or reviewed is not None and not ack<=reviewed<=decided:
             raise ValidationError("production decision acknowledgment/review chronology differs")
         sample=event["sample"]
         if (type(sample) is not dict or set(sample)!={"anchor","sequence","sampler_id","draw","space","drawn_at"}
-                or sample["sampler_id"]!=p["sampler_id"] or not _time(sample["draw"]) or not _time(sample["space"])
-                or sample["space"]!=p["sampling_rate"]["denominator"] or not 0<=sample["draw"]<sample["space"]):
+                or sample["sampler_id"]!=q["sampler_id"] or not _time(sample["draw"]) or not _time(sample["space"])
+                or sample["space"]!=q["sampling_rate"]["denominator"] or not 0<=sample["draw"]<sample["space"]):
             raise ValidationError("actual first uniform draw in the declared sampling space required")
         position(sample["anchor"],sample["sequence"]);drawn=instant(sample["drawn_at"])
         if sample["sequence"]<=event["sequence"] or drawn<decided:raise ValidationError("sampling must bind the actual production decision")
         needs=[]
-        if sample["draw"]<p["sampling_rate"]["numerator"]:
+        if sample["draw"]<q["sampling_rate"]["numerator"]:
             needs.append((sample["anchor"],sample["sequence"],drawn))
             if decided>=window_start:
                 sampled.append((event["anchor"],event["choice"]=="approve" and reviewed is not None and reviewed==ack))
@@ -96,7 +103,7 @@ def project_decision_review(profile,events,*,decided_by,evaluated_at,ledger_head
             position(outcome["anchor"],outcome["sequence"]);observed=instant(outcome["observed_at"])
             if outcome["sequence"]<=event["sequence"] or observed<decided:raise ValidationError("outcome precedes its actual decision")
             outcome_refs[outcome["anchor"]]=(outcome["sequence"],observed)
-            if outcome["kind"] in p["outcome_triggers"]:needs.append((outcome["anchor"],outcome["sequence"],observed))
+            if outcome["kind"] in q["outcome_triggers"]:needs.append((outcome["anchor"],outcome["sequence"],observed))
         reviews=[]
         for review in event["reviews"]:
             if (type(review) is not dict or set(review)!={"anchor","sequence","decision_anchor","reviewer","kind","completed_at","outcome_refs"}
@@ -108,10 +115,10 @@ def project_decision_review(profile,events,*,decided_by,evaluated_at,ledger_head
             if (review["sequence"]<=event["sequence"] or completed<decided or not set(review["outcome_refs"])<=set(outcome_refs)
                     or any(outcome_refs[a][0]>=review["sequence"] or outcome_refs[a][1]>completed for a in review["outcome_refs"])):
                 raise ValidationError("review cannot cover missing or future outcomes")
-            if review["kind"]=="review" and review["reviewer"]==p["review_authority"] and review["reviewer"]!=event["actor"]:
+            if review["kind"]=="review" and review["reviewer"]==q["review_authority"] and review["reviewer"]!=event["actor"]:
                 reviews.append((review,completed))
         for cause,sequence,occurred in needs:
-            deadline=occurred+p["review_sla_seconds"];item=(event["anchor"],cause,deadline)
+            deadline=occurred+q["review_sla_seconds"];item=(event["anchor"],cause,deadline)
             required.append(item)
             matches=[(review,completed) for review,completed in reviews if completed>=occurred and review["sequence"]>sequence
                      and (cause==sample["anchor"] or cause in review["outcome_refs"])]
@@ -120,6 +127,8 @@ def project_decision_review(profile,events,*,decided_by,evaluated_at,ledger_head
             elif evaluated_at>=deadline:overdue.append(item)
             else:
                 pending.append(item);ticks.append((deadline.numerator+deadline.denominator-1)//deadline.denominator)
+    if event_profiles is not None and set(event_profiles)!=decision_anchors:
+        raise ValidationError("complete exact historical policy mapping required")
     finding=len(sampled)>=p["uniform_approval_threshold"] and all(stamp for _,stamp in sampled)
     return DecisionReviewProjection(not overdue and not finding,tuple(sorted(a for a,_ in sampled)),tuple(sorted(required)),tuple(sorted(overdue)),
         tuple(sorted(pending)),tuple(sorted(late)),finding,tuple(sorted(a for a,_ in sampled)) if finding else (),min(ticks) if ticks else None)

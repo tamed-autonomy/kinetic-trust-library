@@ -89,3 +89,26 @@ class DecisionReviewTests(unittest.TestCase):
         self.assertEqual(project_decision_review(p,[a],decided_by="person:decider",evaluated_at=1000,ledger_head_sequence=100).sampled_decisions,())
         a["sample"]["draw"]=True
         with self.assertRaises(ValidationError):project_decision_review(p,[a],decided_by="person:decider",evaluated_at=1000,ledger_head_sequence=100)
+
+    def test_historical_rate_trigger_and_deadline_are_not_replaced_by_current_policy(self):
+        from copy import deepcopy
+        from kinetic_trust_library.v3.decision_review import project_decision_review
+        current=profile();old=deepcopy(current);old.update(version=2,review_sla_seconds=30,outcome_triggers=["harm","legacy-harm"])
+        old["sampling_rate"]=dict(numerator=2,denominator=2)
+        a=event(draw=1);a["reviews"]=[];a["sample"]["drawn_at"]=980
+        kw=dict(decided_by="person:decider",evaluated_at=1000,ledger_head_sequence=100)
+        r=project_decision_review(current,[a],event_profiles={a["anchor"]:old},**kw)
+        self.assertEqual(r.sampled_decisions,(a["anchor"],));self.assertEqual(r.next_change_at,1010)
+        self.assertTrue(r.review_current)
+        old["sampling_rate"]["numerator"]=1
+        a["outcomes"]=[dict(anchor="sha256:"+"a"*64,sequence=15,kind="legacy-harm",observed_at=960)]
+        r=project_decision_review(current,[a],event_profiles={a["anchor"]:old},**kw)
+        self.assertFalse(r.review_current);self.assertEqual(r.overdue_reviews[0][2],990)
+
+    def test_sampling_policy_change_does_not_split_decider_population(self):
+        from kinetic_trust_library.v3.decision_review import project_decision_review
+        current=profile();old=dict(current,version=2)
+        a=event(same_time=True);b=event(2,same_time=True)
+        r=project_decision_review(current,[a,b],event_profiles={a["anchor"]:old,b["anchor"]:current},
+            decided_by="person:decider",evaluated_at=1000,ledger_head_sequence=100)
+        self.assertTrue(r.rubber_stamp_finding)
