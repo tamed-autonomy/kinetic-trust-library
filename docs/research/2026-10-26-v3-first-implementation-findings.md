@@ -1,5 +1,21 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 multi-gate checkpoint
+
+The native facade composes multiple explicitly installed adjudication profiles.
+Every required gate must pass; missing, void or unfavorable tokens retain the
+gate failure without changing measured geometry, supervision or grant ceilings.
+Authenticated adapter output now explicitly binds the selected profile digest,
+so a same-issuer verdict for another gate cannot substitute. Declaration order
+does not affect the combined expiry. Unknown/duplicate candidates and duplicate
+gate declarations fail configuration validation.
+
+Supplier review found no actionable defect. The full suite passes 937 tests;
+six focused adjudication/readiness tests pass from source and the built wheel,
+including real test-profile signatures, cross-gate substitution rejection and
+earliest required expiry. External adapter domain separation is required; the
+fixture's signed protected profile digest is not an RFC wire addition.
+
 ## 2026-10-29 supervision-rail checkpoint
 
 Implemented L11 own-rail signed increments/releases against the pinned

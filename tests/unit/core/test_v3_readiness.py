@@ -184,11 +184,11 @@ class ReadinessTests(unittest.TestCase):
         gv=InstalledGeometryVerifier(Reproduction(),pv,"sha256")
         av=InstalledRequestAssociationVerifier(Invocation(),pv,Replay(),"sha256")
         native=InstalledNativeEvaluationVerifier(av,dv,gv,1000,1006)
-        def whole(body=None,token=None):
+        def whole(body=None,token=None,tokens=()):
             return native.verify(actual_bytes,association_bytes,ordinary_compact,
                 decision_bytes=rfc8785.dumps(decision),attestation_bytes=rfc8785.dumps(attestation),
                 invocation_evidence=b"fixture-actual-invocation",now=1000,clock_healthy=True,
-                geometry_body_bytes=rfc8785.dumps(geometry if body is None else body),adjudication_token=token)
+                geometry_body_bytes=rfc8785.dumps(geometry if body is None else body),adjudication_token=token,adjudication_tokens=tokens)
         combined=whole()
         self.assertEqual(combined.reason,"NATIVE_PREREQUISITES_VALID")
         self.assertEqual(combined.supervision,"stable")
@@ -221,6 +221,30 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(unchanged.reason,"NATIVE_PREREQUISITES_VALID")
         self.assertEqual(unchanged.supervision,combined.supervision)
         self.assertEqual(unchanged.canonical_geometry_bytes,combined.canonical_geometry_bytes)
+        native=no_norm
+        first=adjudication_fixture(operation,deployment,1000,gate_id="first")
+        second=adjudication_fixture(operation,deployment,1000,gate_id="second")
+        native=replace(no_norm,adjudication_verifiers=(first["verifier"],second["verifier"]))
+        self.assertEqual(whole(tokens=(("first",first["sign"]()),)).reason,"ADJ_GATE_UNSATISFIED")
+        both=(("first",first["sign"]()),("second",second["sign"]()))
+        multiple=whole(tokens=both)
+        self.assertEqual(multiple.reason,"NATIVE_PREREQUISITES_VALID")
+        self.assertEqual(len(multiple.adjudications),2)
+        self.assertEqual(multiple.canonical_geometry_bytes,combined.canonical_geometry_bytes)
+        self.assertEqual(multiple.tightened_constraints_bytes,combined.tightened_constraints_bytes)
+        self.assertEqual(multiple.supervision,combined.supervision)
+        self.assertEqual(whole(tokens=(("first",second["sign"]()),("second",first["sign"]()))).reason,"ADJ_GATE_UNSATISFIED")
+        second["payload"]["favorable"]=False
+        self.assertEqual(whole(tokens=(("first",first["sign"]()),("second",second["sign"]()))).reason,"ADJ_GATE_UNSATISFIED")
+        second["payload"]["favorable"]=True
+        second["payload"]["exp"]=1003
+        self.assertEqual(whole(tokens=(("first",first["sign"]()),("second",second["sign"]()))).expires_at,1003)
+        native=replace(native,adjudication_verifiers=tuple(reversed(native.adjudication_verifiers)))
+        self.assertEqual(whole(tokens=(("first",first["sign"]()),("second",second["sign"]()))).expires_at,1003)
+        with self.assertRaises(ValidationError):whole(tokens=(("first",first["sign"]()),("first",first["sign"]())))
+        with self.assertRaises(ValidationError):whole(tokens=(("unknown",first["sign"]()),))
+        with self.assertRaises(ValidationError):replace(native,adjudication_verifiers=(first["verifier"],first["verifier"]))
+        with self.assertRaises(ValidationError):replace(native,adjudication_verifier=first["verifier"])
         native=no_norm
         from kinetic_trust_library.v3.human_eligibility import InstalledHumanEligibilityVerifier,AuthenticatedHumanContext,combine_human_origin
         class HumanSource:

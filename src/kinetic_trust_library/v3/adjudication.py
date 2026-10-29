@@ -36,6 +36,7 @@ class AuthenticatedAdjudicationPayload:
     evidence_bytes: bytes
     key_id: str
     issuer: str
+    profile_digest: str
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -154,6 +155,7 @@ class InstalledAdjudicationVerifier:
             if (type(authenticated) is not AuthenticatedAdjudicationPayload or type(authenticated.payload_bytes) is not bytes
                     or type(authenticated.evidence_bytes) is not bytes or not authenticated.evidence_bytes
                     or type(authenticated.key_id) is not str or not authenticated.key_id or authenticated.issuer != profile["issuer"]
+                    or authenticated.profile_digest != c.digest(profile, 2)
                     or len(authenticated.payload_bytes) > 65536):
                 raise AdjudicationInvalid()
             token = _parse_jcs_object(authenticated.payload_bytes)

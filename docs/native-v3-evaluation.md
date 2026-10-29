@@ -694,8 +694,24 @@ The source token schema retains its published draft `$id` (under `/v2/`) and
 SHA-256 payload bindings unchanged. Stronger profiles and a final interoperable
 token JOSE profile remain explicit reconciliation work. The test Ed25519/JWS
 profile is unsafe fixture material, not a new wire standard. Unexpected provider
-failures propagate without a successful evaluation. Multiple gates and all 23
-source-vector semantics are not claimed complete.
+failures propagate without a successful evaluation. Complete coverage of all 23
+source-vector semantics is not claimed.
+
+Multiple declared gates use the explicit immutable `adjudication_verifiers`
+tuple and `adjudication_tokens` gate-ID/token pairs. Gate IDs must be unique;
+unknown or duplicate candidates and conflicting singular/plural policy forms
+are rejected. Omitted tokens leave their required gates unsatisfied. Every
+required gate must pass after baseline geometry/readiness checks, and the
+result expires at the earliest required gate evidence expiry. The complete
+tuple is retained as `NativeEvaluationResult.adjudications`; the singular
+`adjudication` field is populated only for the singular policy form.
+
+Token adapters must authenticate the exact declared gate/profile and return
+its `profile_digest` in `AuthenticatedAdjudicationPayload`. An issuer match
+alone is insufficient when that issuer answers multiple gates. The fixture
+binds that digest in its signed protected header; this is an unsafe test
+profile, not a new interoperable wire requirement. Deployments must supply
+their declared domain separation and authority verification.
 
 ### Evaluation-scoped supervision rails
 
@@ -722,4 +738,4 @@ ceilings. Providers must distinguish retained prior restrictions from the rail's
 releasable increment; a previous aggregate supplied as prior remains conservatively
 binding. Signed carrier issuance caps expiry to the rail assessment's earliest
 supporting expiry. No result authorizes execution. Importance/supplied-input and
-multi-gate normative composition remain separate implementation work.
+full mixed-shape normative composition remain separate implementation work.

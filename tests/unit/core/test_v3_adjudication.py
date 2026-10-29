@@ -10,7 +10,7 @@ from kinetic_trust_library.v3.adjudication import (
 HAS_EXTRAS=all(find_spec(name) for name in ("rfc8785","jsonschema","cryptography"))
 
 
-def fixture(operation=None,deployment=None,now=1000):
+def fixture(operation=None,deployment=None,now=1000,gate_id="gate-1"):
     import rfc8785
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from cryptography.exceptions import InvalidSignature
@@ -20,7 +20,7 @@ def fixture(operation=None,deployment=None,now=1000):
         resource="urn:resource:1",parameters={"limit":3},request_id="request-1",replay_domain="urn:replay:1")
     deployment=deployment or {"profile_id":"test-deployment"}
     external={"$id":"urn:test:norm-schema","type":"object","description":"Modeled approved gate criteria; no adequacy claim"}
-    profile=dict(id="urn:test:adjudication",version=1,gate_id="gate-1",gate_required=True,issuer="https://adjudicator.example.com",
+    profile=dict(id="urn:test:adjudication:"+gate_id,version=1,gate_id=gate_id,gate_required=True,issuer="https://adjudicator.example.com",
         zone_id="zone:alpha",external_schema_id=external["$id"],external_schema_digest=c.digest(external,2),token_profile_id="urn:unsafe-test:adjudication-ed25519")
     state=dict(deployment_digest=c.digest(deployment,2),operation_digest=digest_demand_operation(operation,algorithm="sha256"),
         profile_digest=c.digest(profile,2),checked_at=now,actor=operation["actor"],action_digest=c.digest(operation,2),cnf_jkt="test-possession",
@@ -42,13 +42,13 @@ def fixture(operation=None,deployment=None,now=1000):
             if self.invalid:raise AdjudicationInvalid()
             try:
                 header,body,signature=raw.decode().split(".")
-                if c.unb64(header)!=c.canonical(dict(alg="EdDSA",kid="test-key",typ="ktp-adjudication-test-v1")):
+                if c.unb64(header)!=c.canonical(dict(alg="EdDSA",kid="test-key",typ="ktp-adjudication-test-v1",profile_digest=c.digest(profile,2))):
                     raise AdjudicationInvalid()
                 private.public_key().verify(c.unb64(signature),(header+"."+body).encode())
-                return AuthenticatedAdjudicationPayload(c.unb64(body),b"real-test-signature/modeled-current-key-role","test-key",profile["issuer"])
+                return AuthenticatedAdjudicationPayload(c.unb64(body),b"real-test-signature/modeled-current-key-role","test-key",profile["issuer"],c.digest(profile,2))
             except (ValueError,InvalidSignature) as error:raise AdjudicationInvalid() from error
     def sign():
-        message=(c.b64(c.canonical(dict(alg="EdDSA",kid="test-key",typ="ktp-adjudication-test-v1")))+"."+c.b64(c.canonical(payload))).encode()
+        message=(c.b64(c.canonical(dict(alg="EdDSA",kid="test-key",typ="ktp-adjudication-test-v1",profile_digest=c.digest(profile,2))))+"."+c.b64(c.canonical(payload))).encode()
         return message+b"."+c.b64(private.sign(message)).encode()
     source=Source();adapter=Adapter()
     verifier=InstalledAdjudicationVerifier(rfc8785.dumps(deployment),rfc8785.dumps(profile),rfc8785.dumps(external),source,adapter)
