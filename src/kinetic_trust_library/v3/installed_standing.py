@@ -59,7 +59,7 @@ class InstalledStandingVerifier:
         root_context = _parse_jcs_object(roots.context_bytes)
         if (roots.evaluated_at != evaluated_at or roots.algorithm != self.algorithm
                 or root_context.get("deployment_digest") != deployment_digest
-                or root_context.get("subject") != operation["subject"]
+                or root_context.get("subject") != operation["actor"]
                 or root_context.get("subject_profile") != "software"
                 or root_context.get("hop_bound") != profile.get("external_root", {}).get("hop_bound")):
             raise ValidationError("root selection belongs to another standing context")
@@ -73,7 +73,7 @@ class InstalledStandingVerifier:
             generation, ial, trajectory = body["generation"], body["identity_assurance_level"], body["trajectory_length"]
             if (type(generation) is not int or generation < 0 or type(ial) is not int or ial not in (1, 2, 3)
                     or type(trajectory) is not int or trajectory < 0 or trajectory > 2**53 - 1
-                    or body["subject"] != operation["subject"]):
+                    or body["subject"] != operation["actor"]):
                 raise ValidationError("standing identity or trajectory is invalid")
             lineage = "sponsored" if generation < 3 else "independent" if generation < 7 else "guarantor"
             if root_context.get("generation") != generation or root_context.get("lineage") != lineage:

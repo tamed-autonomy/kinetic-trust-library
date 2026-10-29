@@ -1,7 +1,7 @@
 """Native v3 five-factor risk assessment with explicit missing evidence.
 
 This composes provisional RFC PR #164 and #203 primitives. It does not
-authorize an action or resolve the proposed R/E rounding discrepancy.
+authorize an action. The refreshed five-factor proposal requires exact R/E.
 """
 
 from __future__ import annotations

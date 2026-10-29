@@ -1,4 +1,4 @@
-"""Provisional five-factor checks against RFC PR #164, head ae8b4a9b95e1."""
+"""Provisional five-factor checks against RFC PR #164, head 7e4a3c9."""
 
 import json
 import unittest
@@ -22,7 +22,8 @@ class ProposedFiveFactorRisk(unittest.TestCase):
         )
         self.assertEqual(result, Decimal("0.53975"))
         self.assertEqual(result.quantize(Decimal("0.01")), Decimal("0.54"))
-        self.assertNotEqual(result, Decimal(str(kickoff["expect"]["R"])))
+        self.assertEqual(result, Decimal(str(kickoff["expect"]["R"])))
+        self.assertEqual(Decimal(95) * (1-result), Decimal(str(kickoff["expect"]["E_trust"])))
 
     def test_sixth_factor_and_non_unit_weights_are_rejected(self):
         values = dict.fromkeys(

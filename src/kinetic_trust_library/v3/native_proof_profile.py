@@ -1,8 +1,8 @@
-"""Explicit development composition of RFC PR #195/#201/#203 schemas.
+"""Explicit development composition of RFC PR #164/#195/#201/#203 schemas.
 
-The #203 five-factor schema retains a v2 ID upstream. This bundle scopes that
-definition to the native development profile and never replaces the released
-v2 registry or the original diagnostic snapshot. Reconcile IDs at final tag.
+PR #164 now gives the five-factor schema a v3 ID. PR #201's proof snapshot
+still refers to v2, so this composition changes that one reference explicitly.
+The original snapshots and released v2 registry remain byte-preserved.
 """
 from dataclasses import dataclass
 from importlib.resources import files
@@ -18,8 +18,12 @@ def native_schema_bundle() -> InstalledSchemaBundle:
     import rfc8785
     base = files("kinetic_trust_library.v3").joinpath("schemas")
     schemas = tuple(json.loads(base.joinpath(name).read_text("utf-8")) for name in (
-        "trust-proof-composed-v3.json", "risk-factors-composed-v3.json",
+        "trust-proof-composed-v3.json", "risk-factors-native-v3.json",
         "soul-constraint-v2.json", "root-instrument-v3.json"))
+    context = schemas[0]["$defs"]["ktpClaims"]["properties"]["context"]["anyOf"][0]
+    if context["$ref"] != "https://kinetic-trust-protocol.net/specs/schemas/v2/risk-factors.json":
+        raise ValidationError("proof composition source reference changed; reconcile the RFC snapshots")
+    context["$ref"] = schemas[1]["$id"]
     return InstalledSchemaBundle(tuple(rfc8785.dumps(s) for s in schemas), schemas[0]["$id"])
 
 

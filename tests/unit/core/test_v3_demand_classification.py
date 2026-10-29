@@ -47,13 +47,13 @@ class DemandClassificationTests(unittest.TestCase):
         environment_verifier = InstalledEnvironmentVerifier(raw_profile, EnvironmentAdapter(), "sha256")
         verified_environment = environment_verifier.evaluate(b"environment", actual_operation=vectors["operation"], evaluated_at=1030)
         other_environment = environment_verifier.evaluate(b"environment", actual_operation=vectors["operation"], evaluated_at=1031)
-        root_context = rfc8785.dumps(dict(subject=vectors["operation"]["subject"], subject_profile="software",
+        root_context = rfc8785.dumps(dict(subject=vectors["operation"]["actor"], subject_profile="software",
             generation=7, lineage="guarantor", hop_bound=profile["external_root"]["hop_bound"], deployment_digest=_digest(profile,"sha256")))
         roots = select_assessed_roots((), context_bytes=root_context, evaluated_at=1030, algorithm="sha256")
         class StandingAdapter:
             def verify(self, *args, **kwargs):
                 return AuthenticatedStandingEvidence(rfc8785.dumps(dict(
-                    subject=vectors["operation"]["subject"], generation=7, identity_assurance_level=3,
+                    subject=vectors["operation"]["actor"], generation=7, identity_assurance_level=3,
                     trajectory_length=20000, por_contribution=70, peer_score=0,
                     maximum_adversity_friction=.9, crisis_exposure=True, additional_ceilings={})))
         verified_standing = InstalledStandingVerifier(raw_profile, StandingAdapter(), "sha256").evaluate(

@@ -1,8 +1,8 @@
 """Ordered native v3 Core calculation, deliberately without permission.
 
 Authentication of standing, demand and environmental evidence happens at the
-installed provider boundary. The final authorizing result also requires the
-resolved R/E precision rule, proof acceptance, readiness, grants and envelope.
+installed provider boundary. The final authorizing result also requires proof
+acceptance, readiness, grants and envelope.
 """
 
 from __future__ import annotations
@@ -119,8 +119,8 @@ def project_classified_native_core(
 ) -> NativeCoreProjection:
     """Compose installed, invocation-bound demand with native Core arithmetic.
 
-    This remains a projection until standing authentication, final precision,
-    proof acceptance and all remaining authorization prerequisites are composed.
+    This remains a projection until proof acceptance and all remaining
+    authorization prerequisites are composed.
     """
     if type(context) is not NativeCoreContext:
         raise ValidationError("installed native Core context is required")

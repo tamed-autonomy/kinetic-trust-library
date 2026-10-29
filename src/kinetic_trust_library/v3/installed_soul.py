@@ -18,11 +18,18 @@ class AuthenticatedSoulResponse:
     framework: str
     state: str
     evidence_bytes: bytes
+    proof_claim_bytes: bytes | None = None
 
     def __post_init__(self):
         SoulQueryState(self.framework, self.state)
         if type(self.evidence_bytes) is not bytes or (self.state in ("clear", "veto") and not self.evidence_bytes):
             raise ValidationError("authenticated Soul decision must retain complete response evidence")
+        if self.proof_claim_bytes is not None:
+            if type(self.proof_claim_bytes) is not bytes or self.state not in ("clear", "veto"):
+                raise ValidationError("Soul proof claim requires an authenticated decision")
+            claim = _parse_jcs_object(self.proof_claim_bytes)
+            if type(claim.get("soul")) is not int or claim["soul"] != (1 if self.state == "veto" else 0):
+                raise ValidationError("Soul proof claim disagrees with the authenticated response")
 
 
 @dataclass(frozen=True, slots=True, init=False)

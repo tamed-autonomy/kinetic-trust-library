@@ -1,8 +1,7 @@
 """Exact, non-authorizing capacity projection for the native v3 Core path.
 
-The inputs must eventually come from authenticated standing and classified
-demand. This module deliberately makes no permission decision while the RFC's
-R/E intermediate precision and surrounding proof contract are unresolved.
+Inputs on the installed path come from authenticated standing and classified
+demand. This arithmetic module deliberately makes no permission decision.
 """
 
 from __future__ import annotations
@@ -47,8 +46,8 @@ def project_native_capacity(
 
     A missing factor retains unknown measured E. Its separate restrictive risk
     reading yields a conservative decision E without inventing a measurement.
-    The exact arithmetic is an implementation diagnostic pending the RFC's
-    intermediate R/E precision decision.
+    The refreshed five-factor proposal confirms exact decimal R/E without
+    intermediate rounding. Wire serialization is a separate boundary.
     """
     if type(preflight) is not NativeCorePreflight:
         raise ValidationError("native Core preflight is required")

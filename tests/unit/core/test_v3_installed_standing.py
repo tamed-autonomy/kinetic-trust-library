@@ -16,7 +16,7 @@ class InstalledStandingTests(unittest.TestCase):
         profile, operation = vectors["deployment_profile"], vectors["operation"]
         for generation, expected in ((0, 25), (7, 70)):
             lineage = "sponsored" if generation < 3 else "guarantor"
-            body = dict(subject=operation["subject"], generation=generation, identity_assurance_level=3,
+            body = dict(subject=operation["actor"], generation=generation, identity_assurance_level=3,
                         trajectory_length=20000, por_contribution=70, peer_score=0,
                         maximum_adversity_friction=.8, crisis_exposure=False, additional_ceilings={})
             class Adapter:
@@ -27,7 +27,7 @@ class InstalledStandingTests(unittest.TestCase):
                     if self_selection is not roots:
                         raise AssertionError("standing provider received another candidate set")
                     return AuthenticatedStandingEvidence(rfc8785.dumps(body))
-            root_context = rfc8785.dumps(dict(subject=operation["subject"], subject_profile="software",
+            root_context = rfc8785.dumps(dict(subject=operation["actor"], subject_profile="software",
                 generation=generation, lineage=lineage, hop_bound=3, deployment_digest=_digest(profile,"sha256")))
             roots = select_assessed_roots((), context_bytes=root_context, evaluated_at=1030, algorithm="sha256")
             installed = InstalledStandingVerifier(rfc8785.dumps(profile), Adapter(), "sha256")
