@@ -63,6 +63,21 @@ class NativeCoreClaimsSource:
                 or self.core.standing_assessment is not None and self.core.standing_assessment is not self.standing):
             raise ValidationError("Core claim assessments belong to another invocation")
         RootProofBinding(self.standing.roots, metadata["zone"], self.no_credit_reason)
+        if self.core.risk is not None:
+            selected = self.context.enclosure_profile_bytes is not None
+            assessed = self.core.enclosure_assessment is not None
+            adjusted = self.core.risk.enclosure_projection is not None
+            if selected != assessed or adjusted != assessed:
+                raise ValidationError("Core evidence and claims context disagree on enclosure selection")
+        if self.context.enclosure_profile_bytes is not None:
+            enclosure_profile = _parse_jcs_object(self.context.enclosure_profile_bytes)
+            if metadata["zone"] != enclosure_profile["zone_id"]:
+                raise ValidationError("proof zone differs from selected enclosure profile")
+            if self.core.risk is not None:
+                enclosure = self.core.enclosure_assessment
+                if (enclosure is None or enclosure.profile_bytes != self.context.enclosure_profile_bytes
+                        or type(metadata["exp"]) is not int or metadata["exp"] > enclosure.expires_at):
+                    raise ValidationError("proof cannot outlive or omit its enclosure assessment")
 
     def produce(self, *, evaluated_at: int) -> bytes:
         import rfc8785

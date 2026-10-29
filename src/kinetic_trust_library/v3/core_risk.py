@@ -8,6 +8,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .enclosure import EnclosureRiskProjection
 
 from kinetic_trust_library._decimal import DecimalLike
 from kinetic_trust_library.errors import ValidationError
@@ -26,6 +30,7 @@ class NativeRiskAssessment:
     measured_risk: Decimal | None
     decision_risk: Decimal
     undefined_inputs: tuple[UndefinedInputState, ...]
+    enclosure_projection: EnclosureRiskProjection | None
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         raise TypeError("NativeRiskAssessment values are derived by assess_five_factor_risk()")
@@ -33,6 +38,14 @@ class NativeRiskAssessment:
     @property
     def has_complete_measurement(self) -> bool:
         return self.measured_risk is not None
+
+    @property
+    def local_measured_risk(self) -> Decimal | None:
+        return self.measured_risk if self.enclosure_projection is None else self.enclosure_projection.local.measured_risk
+
+    @property
+    def local_decision_risk(self) -> Decimal:
+        return self.decision_risk if self.enclosure_projection is None else self.enclosure_projection.local.decision_risk
 
 
 def assess_five_factor_risk(
@@ -73,6 +86,7 @@ def assess_five_factor_risk(
         ("measured_risk", restrictive_risk if all_observable else None),
         ("decision_risk", restrictive_risk),
         ("undefined_inputs", undefined),
+        ("enclosure_projection", None),
     ):
         object.__setattr__(result, name, value)
     return result

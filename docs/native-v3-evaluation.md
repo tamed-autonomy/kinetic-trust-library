@@ -514,3 +514,55 @@ enforcement, durable admission/replay state, current enclosure-risk aggregation,
 degraded resident policy and outward confidential egress shaping remain distinct
 requirements. The source snapshot has sixteen boundary cases; the crypto and
 binding tests here do not execute the heat/egress cases or certify a gateway.
+
+## Enclosure risk in the native Core
+
+The selected `reference-floor-v1` enclosure profile implements PR #160's
+informative form exactly: `H = max(a × P, G)` and
+`R = L + w × max(0, H - L)`. `L` is the contemporaneous local five-factor
+assessment, `P` the authenticated enclosure risk, `G` the receiving gateway's
+own reading and `w` the declared reach. Across equal enforcement classes `a`
+is exactly one; across a class step it is the selected attenuation parameter.
+This is an explicit supported profile, not a universal normative formula.
+
+The pure `EnclosureInputs`/`apply_enclosure_risk` API preserves the original
+five-factor assessment through `risk.enclosure_projection.local` and exposes
+`local_measured_risk`/`local_decision_risk`. It never adds a sixth weighted
+factor, discounts Base Trust, or applies the domain twice. At depth zero the
+domain is disabled and accepts no Wild enclosure reading. Missing required
+enclosure or gateway readings preserve unknown measured risk and add undefined
+term evidence, with a separate restrictive decision risk of one. Missing local
+measurements also remain unknown. Measured calm never discounts local risk;
+the surcharge can recede as current enclosure heat recedes.
+
+`InstalledEnclosureVerifier(deployment_profile_bytes, profile_bytes, source,
+algorithm)` selects an immutable Library profile with exactly `id`, `version`,
+`formula`, `zone_id`, `depth`, `reach`, `attenuation_per_class_step` and
+`overlap_policy_id`. This is an adapter configuration, not a new RFC wire field.
+The source receives those installed bytes, canonical actual `operation_bytes`
+and `evaluated_at`, never candidate risk scores. It returns
+`AuthenticatedEnclosureEvidence(body_bytes, evidence_bytes)`. The closed body
+binds `deployment_digest`, `operation_digest`, `profile_digest`, current
+`checked_at`, `zone_id`, `depth`, `topology_epoch`, `zone_class`,
+`enclosure_class`, `enclosure_zone`, `registry_reach`,
+`signed_enclosure_risk`, `gateway_risk` and `expires_at`.
+
+The source must authenticate current authorized topology and declared reach,
+actual signed enclosure evidence/current issuer role, independently normalized
+gateway observations, freshness, overlap handling and absence of protected-inner
+telemetry feedback. A null reading declares missing evidence, not calm. An
+unavailable source cannot supply a measurement or silently disable the profile.
+Returned classes must be nondecreasing inward, and inner reach must be positive
+in both profile and registry. The Library checks these bindings and retains
+the full authenticated body/source evidence in a sealed assessment.
+
+Select the same `enclosure_profile_bytes` in `NativeCoreContext`, then pass the
+sealed assessment to `project_classified_native_core(..., enclosure=...)`.
+After clear Soul, the Core requires exact deployment, invocation, time, profile
+and current expiry, applies the domain before capacity, and retains the
+assessment. Supplying an unselected assessment or omitting a selected one fails.
+`NativeCoreClaimsSource` requires symmetric profile/evidence selection, preserves
+the enclosure-adjusted R/E, checks the receiving zone and refuses proof expiry
+beyond enclosure evidence. Removing the profile from a replacement claims
+context cannot remove those requirements. Source/profile and final execution
+fencing must remain current for every resident-agent evaluation, not just ingress.

@@ -14,6 +14,7 @@ from kinetic_trust_library.errors import ValidationError
 from .core_risk import NativeRiskAssessment, assess_five_factor_risk
 from .evidence_state import FactorEvidenceState
 from .soul import SoulGate, SoulGateState
+from .enclosure import EnclosureInputs, apply_enclosure_risk
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -30,6 +31,7 @@ def preflight_core(
     *,
     factors: tuple[FactorEvidenceState, ...],
     weights: dict[str, DecimalLike],
+    enclosure: EnclosureInputs | None = None,
 ) -> NativeCorePreflight:
     """Evaluate Soul first; never compute later risk after veto or unknownness."""
     if type(soul) is not SoulGate:
@@ -38,6 +40,8 @@ def preflight_core(
         assess_five_factor_risk(factors, weights=weights)
         if soul.state is SoulGateState.CLEAR else None
     )
+    if risk is not None and enclosure is not None:
+        risk = apply_enclosure_risk(risk, enclosure)
     result = object.__new__(NativeCorePreflight)
     object.__setattr__(result, "soul", soul)
     object.__setattr__(result, "risk", risk)

@@ -27,6 +27,7 @@ from .demand_operation import digest_demand_operation
 from .installed_standing import NativeStandingAssessment
 from .installed_soul import NativeSoulAssessment
 from .installed_environment import NativeEnvironmentAssessment
+from .enclosure import EnclosureInputs, NativeEnclosureAssessment, _profile as _enclosure_profile
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +36,7 @@ class NativeCoreContext:
     operation_bytes: bytes
     evaluated_at: int
     algorithm: str
+    enclosure_profile_bytes: bytes | None = None
 
     def __post_init__(self):
         if (type(self.deployment_profile_bytes) is not bytes or type(self.operation_bytes) is not bytes
@@ -43,6 +45,10 @@ class NativeCoreContext:
             raise ValidationError("native Core context is invalid")
         _parse_jcs_object(self.deployment_profile_bytes)
         digest_demand_operation(_parse_jcs_object(self.operation_bytes), algorithm=self.algorithm)
+        if self.enclosure_profile_bytes is not None:
+            if type(self.enclosure_profile_bytes) is not bytes:
+                raise ValidationError("enclosure profile must be immutable installed bytes")
+            _enclosure_profile(self.enclosure_profile_bytes)
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -55,6 +61,7 @@ class NativeCoreProjection:
     standing_assessment: NativeStandingAssessment | None
     soul_assessment: NativeSoulAssessment | None
     environment_assessment: NativeEnvironmentAssessment | None
+    enclosure_assessment: NativeEnclosureAssessment | None
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         raise TypeError("NativeCoreProjection values are derived by project_native_core()")
@@ -72,6 +79,7 @@ def project_native_core(
     factors: tuple[FactorEvidenceState, ...],
     weights: dict[str, DecimalLike],
     demand: DecimalLike,
+    enclosure: EnclosureInputs | None = None,
 ) -> NativeCoreProjection:
     """Stop at Soul, validate standing, then calculate risk and capacity.
 
@@ -84,7 +92,7 @@ def project_native_core(
         return _projection(soul, None, None, None)
     if type(standing) is not NativeBaseTrust:
         raise ValidationError("native standing is required before risk")
-    preflight = preflight_core(soul, factors=factors, weights=weights)
+    preflight = preflight_core(soul, factors=factors, weights=weights, enclosure=enclosure)
     capacity = project_native_capacity(preflight, standing=standing, demand=demand)
     return _projection(soul, standing, preflight.risk, capacity)
 
@@ -98,6 +106,7 @@ def _projection(
     standing_assessment: NativeStandingAssessment | None = None,
     soul_assessment: NativeSoulAssessment | None = None,
     environment_assessment: NativeEnvironmentAssessment | None = None,
+    enclosure_assessment: NativeEnclosureAssessment | None = None,
 ) -> NativeCoreProjection:
     result = object.__new__(NativeCoreProjection)
     for name, value in (
@@ -107,6 +116,7 @@ def _projection(
         ("standing_assessment", standing_assessment),
         ("soul_assessment", soul_assessment),
         ("environment_assessment", environment_assessment),
+        ("enclosure_assessment", enclosure_assessment),
     ):
         object.__setattr__(result, name, value)
     return result
@@ -116,6 +126,7 @@ def project_classified_native_core(
     soul: NativeSoulAssessment, *, standing: NativeStandingAssessment,
     environment: NativeEnvironmentAssessment, context: NativeCoreContext,
     demand: NativeClassifiedDemand,
+    enclosure: NativeEnclosureAssessment | None = None,
 ) -> NativeCoreProjection:
     """Compose installed, invocation-bound demand with native Core arithmetic.
 
@@ -153,14 +164,22 @@ def project_classified_native_core(
             or environment.operation_digest != demand.operation_digest
             or environment.evaluated_at != context.evaluated_at):
         raise ValidationError("environment belongs to another Core context")
+    if context.enclosure_profile_bytes is not None:
+        if (type(enclosure) is not NativeEnclosureAssessment or enclosure.profile_bytes != context.enclosure_profile_bytes
+                or enclosure.deployment_digest != deployment_digest or enclosure.operation_digest != operation_digest
+                or enclosure.evaluated_at != context.evaluated_at or enclosure.expires_at <= context.evaluated_at):
+            raise ValidationError("selected enclosure profile requires current bound source evidence")
+    elif enclosure is not None:
+        raise ValidationError("enclosure evidence requires an installed Core profile")
     try:
         weights = {name: factor["weight"] for name, factor in profile["risk_factors"].items()}
     except (KeyError, TypeError, AttributeError) as exc:
         raise ValidationError("Core profile factor weights are unavailable") from exc
     projected = project_native_core(
         soul.gate, standing=standing.base, factors=environment.factors, weights=weights, demand=demand.demand,
+        enclosure=None if enclosure is None else enclosure.inputs,
     )
-    return _projection(soul.gate, projected.standing, projected.risk, projected.capacity, demand, standing, soul, environment)
+    return _projection(soul.gate, projected.standing, projected.risk, projected.capacity, demand, standing, soul, environment, enclosure)
 
 
 __all__ = ["NativeCoreContext", "NativeCoreProjection", "project_native_core", "project_classified_native_core"]

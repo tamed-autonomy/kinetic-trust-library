@@ -80,6 +80,39 @@ class DemandClassificationTests(unittest.TestCase):
             self.assertIs(core.classified_demand, result)
             self.assertIs(core.standing_assessment, verified_standing)
             self.assertIs(core.environment_assessment, verified_environment)
+            from kinetic_trust_library.v3.enclosure import InstalledEnclosureVerifier,AuthenticatedEnclosureEvidence
+            from kinetic_trust_library.v3.demand_operation import digest_demand_operation
+            from dataclasses import replace
+            enclosure_profile=dict(id="urn:fixture:enclosure",version=1,formula="reference-floor-v1",zone_id="zone:alpha",depth=2,
+                reach="0.5",attenuation_per_class_step="0.5",overlap_policy_id="urn:fixture:overlap")
+            enclosure_body=dict(deployment_digest=_digest(profile,"sha256"),operation_digest=digest_demand_operation(vectors["operation"],algorithm="sha256"),
+                profile_digest=_digest(enclosure_profile,"sha256"),checked_at=1030,zone_id="zone:alpha",depth=2,topology_epoch=5,
+                zone_class="blue",enclosure_class="cyan",enclosure_zone="zone:cyan",registry_reach="0.5",signed_enclosure_risk="0.8",gateway_risk="0.3",expires_at=1040)
+            class EnclosureSource:
+                def resolve(self,**kwargs):return AuthenticatedEnclosureEvidence(rfc8785.dumps(enclosure_body),b"modeled-enclosure-current-evidence")
+            enclosure=InstalledEnclosureVerifier(raw_profile,rfc8785.dumps(enclosure_profile),EnclosureSource(),"sha256").evaluate(
+                actual_operation=vectors["operation"],evaluated_at=1030,clock_healthy=True)
+            nested_context=NativeCoreContext(raw_profile,rfc8785.dumps(vectors["operation"]),1030,"sha256",rfc8785.dumps(enclosure_profile))
+            nested=project_classified_native_core(verified_soul,standing=verified_standing,environment=verified_environment,context=nested_context,demand=result,enclosure=enclosure)
+            self.assertEqual(nested.risk.measured_risk,Decimal("0.2"))
+            self.assertEqual(nested.capacity.measured_effective_trust,nested.standing.base_trust*Decimal("0.8"))
+            self.assertIs(nested.enclosure_assessment,enclosure)
+            from kinetic_trust_library.v3.core_claims import NativeCoreClaimsSource
+            metadata=dict(iss="https://oracle.example.com",aud=vectors["operation"]["audience"],jti="enclosure-proof",exp=1038,zone="zone:alpha",advancement_floor=2000)
+            nested_claims=json.loads(NativeCoreClaimsSource(nested,verified_standing,nested_context,rfc8785.dumps(metadata)).produce(evaluated_at=1030))
+            self.assertEqual(nested_claims["ktp"]["r"],0.2)
+            self.assertEqual(nested_claims["ktp"]["e_trust"],56)
+            for changed in (dict(metadata,zone="zone:other"),dict(metadata,exp=1041)):
+                with self.assertRaisesRegex(ValidationError,"enclosure"):
+                    NativeCoreClaimsSource(nested,verified_standing,nested_context,rfc8785.dumps(changed))
+            with self.assertRaisesRegex(ValidationError,"enclosure"):
+                NativeCoreClaimsSource(nested,verified_standing,replace(nested_context,enclosure_profile_bytes=None),
+                    rfc8785.dumps(dict(metadata,exp=1041)))
+            with self.assertRaisesRegex(ValidationError,"enclosure"):
+                project_classified_native_core(verified_soul,standing=verified_standing,environment=verified_environment,context=nested_context,demand=result)
+            with self.assertRaisesRegex(ValidationError,"enclosure"):
+                project_classified_native_core(verified_soul,standing=verified_standing,environment=verified_environment,
+                    context=replace(nested_context,enclosure_profile_bytes=None),demand=result,enclosure=enclosure)
             with self.assertRaisesRegex(ValidationError, "environment belongs"):
                 project_classified_native_core(verified_soul, standing=verified_standing, environment=other_environment, demand=result,
                     context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"))
