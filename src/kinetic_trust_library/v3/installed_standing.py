@@ -7,6 +7,7 @@ boundary derives Core shares and ceilings; it supplies no human standing model.
 """
 from dataclasses import dataclass
 from decimal import Decimal
+from fractions import Fraction
 from kinetic_trust_library._decimal import as_decimal
 from kinetic_trust_library.errors import ValidationError
 from .assessed_root_selection import AssessedRootSelection
@@ -90,7 +91,8 @@ class InstalledStandingVerifier:
                         "trajectory": 50 if trajectory < 1000 else 70 if trajectory < 10000 else 100,
                         "adversity": 100 if crisis else 90 if friction > Decimal("0.7") else 80 if friction > Decimal("0.5") else 60}
             base = calculate_native_base_trust(
-                por_contribution=body["por_contribution"], root_score=0 if roots.selected is None else roots.selected.score,
+                por_contribution=body["por_contribution"], root_score=0 if roots.selected is None else
+                    Fraction(roots.selected.score_numerator,roots.selected.score_denominator),
                 peer_share=profile["peer_share"], peer_score=body["peer_score"], ceilings=ceilings)
         except (KeyError, TypeError) as exc:
             raise ValidationError("standing evidence is incomplete") from exc

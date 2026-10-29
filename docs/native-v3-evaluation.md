@@ -321,3 +321,7 @@ Repeating root-score arithmetic and exact Decimal values that cannot survive
 the JCS number wire remain precision dependencies. The final RFC tag, public
 API cutover, migration and release verification remain outstanding. See the
 [release-readiness audit](plans/2026-10-28-v3-release-readiness.md).
+
+## Exact standing arithmetic
+
+Installed standing passes the selected root's exact ratio into native base composition. `NativeBaseTrust.raw_base` is a `Fraction`; weighting and ceilings precede conversion of `base_trust` to a finite Decimal. The root's display score is diagnostic. A nonterminating effective standing is rejected until a wire precision profile is declared; a repeating raw value that becomes finite after a ceiling is supported.

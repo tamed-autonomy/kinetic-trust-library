@@ -2,6 +2,7 @@
 
 import unittest
 from decimal import Decimal
+from fractions import Fraction
 
 from kinetic_trust_library.errors import ValidationError
 from kinetic_trust_library.v3.base_trust import calculate_native_base_trust
@@ -11,6 +12,26 @@ CEILINGS = {"generation": 100, "ial": 95, "trajectory": 100, "adversity": 100}
 
 
 class NativeV3BaseTrust(unittest.TestCase):
+    def test_exact_ratio_input_size_is_bounded(self):
+        with self.assertRaisesRegex(ValidationError, "ratio size"):
+            calculate_native_base_trust(
+                por_contribution=70, root_score=Fraction(1, 1 << 65536),
+                peer_share=0, peer_score=0, ceilings=CEILINGS,
+            )
+
+    def test_exact_root_ratio_cancels_before_decimal_conversion(self):
+        result=calculate_native_base_trust(por_contribution=70,root_score=Fraction(100,3),peer_share=0,peer_score=0,ceilings=CEILINGS)
+        self.assertEqual(result.raw_base,Fraction(80))
+        self.assertEqual(result.base_trust,Decimal(80))
+
+    def test_repeating_raw_base_can_be_clamped_exactly_but_not_rounded(self):
+        result=calculate_native_base_trust(por_contribution=70,root_score=Fraction(100,7),peer_share=0,peer_score=0,
+            ceilings={**CEILINGS,"deployment":70})
+        self.assertEqual(result.raw_base,Fraction(520,7))
+        self.assertEqual(result.base_trust,Decimal(70))
+        with self.assertRaisesRegex(ValidationError,"precision"):
+            calculate_native_base_trust(por_contribution=70,root_score=Fraction(100,7),peer_share=0,peer_score=0,ceilings=CEILINGS)
+
     def test_full_shares_and_ceiling(self):
         result = calculate_native_base_trust(
             por_contribution=70, root_score=100, peer_share=0,

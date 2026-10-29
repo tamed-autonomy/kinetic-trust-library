@@ -29,7 +29,7 @@ class NativeBaseTrust:
     por_share: Decimal
     root_share: Decimal
     peer_share: Decimal
-    raw_base: Decimal
+    raw_base: Fraction
     base_trust: Decimal
     ceilings: tuple[tuple[str, Decimal], ...]
     binding_ceilings: tuple[str, ...]
@@ -41,7 +41,7 @@ class NativeBaseTrust:
 def calculate_native_base_trust(
     *,
     por_contribution: DecimalLike,
-    root_score: DecimalLike,
+    root_score: DecimalLike | Fraction,
     peer_share: DecimalLike,
     peer_score: DecimalLike,
     ceilings: dict[str, DecimalLike],
@@ -52,7 +52,17 @@ def calculate_native_base_trust(
     source evidence. The no-root cap applies even if a caller omits it.
     """
     por = as_decimal(por_contribution, name="PoR contribution", minimum=0, maximum=70)
-    root = as_decimal(root_score, name="External Root score", minimum=0, maximum=100)
+    root = (
+        root_score if type(root_score) is Fraction else Fraction(
+            as_decimal(root_score, name="External Root score", minimum=0, maximum=100)
+        )
+    )
+    if not 0 <= root <= 100:
+        raise ValidationError("External Root score must be within 0 to 100")
+    # Resource bound for the public exact-ratio input, not a wire precision rule.
+    # Accommodates ratios derived from the bounded source Decimal exponent range.
+    if max(root.numerator.bit_length(), root.denominator.bit_length()) > 65536:
+        raise ValidationError("External Root ratio size exceeds the supported bound")
     peer_weight = as_decimal(peer_share, name="peer share", minimum=0, maximum=20)
     peer = as_decimal(peer_score, name="peer score", minimum=0, maximum=100)
     if peer_weight != 0 and peer_weight < 10:
@@ -78,9 +88,16 @@ def calculate_native_base_trust(
     remainder = (100 - Fraction(peer_weight)) / 100
     por_share = finite_decimal(70 * remainder)
     root_share = finite_decimal(30 * remainder)
-    raw = finite_decimal(Fraction(por) * remainder + Fraction(root) * 30 * remainder / 100
-                         + Fraction(peer) * Fraction(peer_weight) / 100)
-    base = min(raw, *bounded.values())
+    raw = (
+        Fraction(por) * remainder
+        + root * 30 * remainder / 100
+        + Fraction(peer) * Fraction(peer_weight) / 100
+    )
+    exact_base = min(raw, *(Fraction(value) for value in bounded.values()))
+    try:
+        base = finite_decimal(exact_base)
+    except ValueError as error:
+        raise ValidationError("nonterminating standing requires a declared wire precision profile") from error
     binding = tuple(sorted(name for name, value in bounded.items() if value == base))
     result = object.__new__(NativeBaseTrust)
     for name, value in (
