@@ -817,9 +817,31 @@ the latest reconciliation anchor time. The result retains the assessment as
 must install all applicable policies; omission of an optional component from a
 partial fixture is not a complete repair conformance claim.
 
-This checkpoint implements record closure, the re-entry cost and current
-readiness/standing enforcement. Earned lifting by post-record ordinary acts,
-sponsorship restrictions, ambient breach/capacity/criticality and rule-repair
-amendments remain separate work. Neither an assessment nor a passing test
+This path implements record closure, the re-entry cost and current
+readiness/standing enforcement. Sponsorship restrictions, ambient
+breach/capacity/criticality and rule-repair amendments remain separate work.
+Neither an assessment nor a passing test
 proves that a real ceremony, attendance, anchoring or durable breach closure
 occurred; those are provider/Service responsibilities.
+
+Earned ceiling recovery additionally requires a `ceiling_lift` identity/version/
+digest binding in the selected internal repair profile, matching immutable
+`ceiling_lift_profile_bytes` and an installed `ceiling_lift_adapter.project`.
+The profile declares its standing-point unit and ordinary-rail formula; the
+Library does not invent that formula. The current source supplies canonical
+ordinary act records and their anchor, lineage, record time, profile digest,
+current-anchor verification and ordinary admissibility. It owns those facts and
+the ordinary-profile interpretation.
+
+Only admissible, currently verified acts on the same lineage, recorded strictly
+after the reconciliation and no later than the evaluation, enter the projector.
+Earlier or foreign acts earn nothing; duplicate anchors fail validation. The
+empty endpoint must equal the initial re-entry ceiling. Acts are ordered by
+record time and anchor; checked prefixes cannot decrease the ceiling or exceed
+100. These per-evaluation checks do not prove global formula calibration. The
+sealed assessment retains the source records, lift profile and per-breach current
+ceilings. Multiple breaches still impose the minimum applicable current ceiling.
+The resulting ceiling flows through standing, Core, proof claims and native
+request verification; ordinary grants, readiness, vetoes and environmental limits
+still apply. A later residual-harm amendment or passage of time alone is not an
+earned act. No adapter/profile may be silently selected or omitted.

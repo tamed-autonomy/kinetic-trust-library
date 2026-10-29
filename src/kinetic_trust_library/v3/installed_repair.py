@@ -14,6 +14,7 @@ from .trust_proof_json import _parse_jcs_object
 from .root_lifecycle import _time
 from .demand_supplier import _digest
 from .demand_operation import canonical_demand_operation_bytes,digest_demand_operation
+from .earned_repair import EarnedRepairAct,project_earned_ceiling
 
 
 HARD_ENTRIES=frozenset(("act-outside-decision","withdrawal-for-cause","misattestation","seeking-without-attendance"))
@@ -21,7 +22,8 @@ HARD_ENTRIES=frozenset(("act-outside-decision","withdrawal-for-cause","misattest
 
 def _profile(raw):
     profile=_parse_jcs_object(raw)
-    if (set(profile)!={"id","version","formula","route","entry_classes"}
+    if (not {"id","version","formula","route","entry_classes"}<=set(profile)
+            or set(profile)-{"id","version","formula","route","entry_classes","ceiling_lift"}
             or type(profile["id"]) is not str or not profile["id"] or not _time(profile["version"]) or profile["version"]==0
             or profile["formula"]!="fractional-reentry-with-additive-unrepaired-raise-v1"
             or type(profile["route"]) is not str or not profile["route"] or type(profile["entry_classes"]) is not dict
@@ -61,6 +63,8 @@ class RepairAssessment:
     breaches: tuple[tuple[str,ReentryProjection | None], ...]
     authenticated_state_bytes: bytes
     source_evidence_bytes: bytes
+    ceiling_lift_profile_bytes: bytes | None
+    lifted_ceilings: tuple[tuple[str,Decimal], ...]
 
     def __init__(self,*args,**kwargs):raise TypeError("repair assessments require installed verification")
 
@@ -71,12 +75,27 @@ class InstalledRepairVerifier:
     profile_bytes: bytes
     context_source: object
     algorithm: str
+    ceiling_lift_profile_bytes: bytes | None = None
+    ceiling_lift_adapter: object | None = None
 
     def __post_init__(self):
         if (type(self.deployment_profile_bytes) is not bytes or type(self.profile_bytes) is not bytes
                 or self.algorithm not in ("sha256","sha384") or not callable(getattr(self.context_source,"resolve",None))):
             raise ValidationError("invalid installed repair verifier")
-        _parse_jcs_object(self.deployment_profile_bytes);_profile(self.profile_bytes)
+        _parse_jcs_object(self.deployment_profile_bytes);profile=_profile(self.profile_bytes)
+        if "ceiling_lift" in profile:
+            if type(self.ceiling_lift_profile_bytes) is not bytes or not callable(getattr(self.ceiling_lift_adapter,"project",None)):
+                raise ValidationError("declared ceiling lift requires an installed ordinary policy")
+            policy=_parse_jcs_object(self.ceiling_lift_profile_bytes);binding=profile["ceiling_lift"]
+            if (type(binding) is not dict or set(binding)!={"id","version","digest"}
+                    or binding["id"]!=policy.get("id") or binding["version"]!=policy.get("version")
+                    or not _time(policy.get("version")) or policy["version"]==0
+                    or type(policy.get("id")) is not str or not policy["id"] or policy.get("unit")!="ktp-standing-points"
+                    or type(policy.get("formula")) is not str or not policy["formula"]
+                    or binding["digest"]!=_digest(policy,self.algorithm)):
+                raise ValidationError("earned ceiling policy binding differs")
+        elif self.ceiling_lift_profile_bytes is not None or self.ceiling_lift_adapter is not None:
+            raise ValidationError("earned ceiling policy requires explicit declaration")
 
     def evaluate(self,*,actual_operation,evaluated_at,clock_healthy):
         if not _time(evaluated_at) or clock_healthy is not True:raise ValidationError("repair requires a healthy current clock")
@@ -97,10 +116,12 @@ class InstalledRepairVerifier:
                 or any(type(state[name]) is not str or not state[name] for name in ("lineage","zone_id"))
                 or type(state["breaches"]) is not list or len(state["breaches"])>4096):
             raise ValidationError("repair state differs from current actor/invocation/profile/time")
-        projections=[];anchors=set();ceiling=None;after=None
+        projections=[];anchors=set();ceiling=None;after=None;lifted=[]
         for entry in state["breaches"]:
-            if (type(entry) is not dict or set(entry)!={"breach_anchor","entry_class","standing_at_breach","previous_delta",
+            expected={"breach_anchor","entry_class","standing_at_breach","previous_delta",
                     "breached_at","breaching_terminator","required_parties","record_facts"}
+            if "ceiling_lift" in profile:expected.add("post_record_acts")
+            if (type(entry) is not dict or set(entry)!=expected
                     or type(entry["breach_anchor"]) is not str or entry["breach_anchor"] in anchors
                     or entry["entry_class"] not in profile["entry_classes"]):
                 raise ValidationError("invalid or duplicate applicable breach")
@@ -124,7 +145,20 @@ class InstalledRepairVerifier:
             projection=project_reentry(ReconciliationFacts(**converted))
             if projection.record_valid:
                 if projection.anchored_at>evaluated_at:raise ValidationError("future reconciliation anchor")
-                ceiling=projection.ceiling if ceiling is None else min(ceiling,projection.ceiling)
+                current=projection.ceiling
+                if "ceiling_lift" in profile:
+                    import rfc8785
+                    raw_acts=entry["post_record_acts"]
+                    if type(raw_acts) is not list or len(raw_acts)>4096:raise ValidationError("bounded ordinary repair acts required")
+                    acts=[]
+                    for act in raw_acts:
+                        if type(act) is not dict or set(act)!={"anchor","recorded_at","lineage","ordinary_profile_digest","record","current_anchor_verified","ordinary_admissible"}:
+                            raise ValidationError("invalid authenticated ordinary repair act")
+                        acts.append(EarnedRepairAct(**{name:value for name,value in act.items() if name!="record"},record_bytes=rfc8785.dumps(act["record"])))
+                    current=project_earned_ceiling(projection,tuple(acts),lineage=state["lineage"],evaluated_at=evaluated_at,
+                        profile_bytes=self.ceiling_lift_profile_bytes,adapter=self.ceiling_lift_adapter)
+                    lifted.append((entry["breach_anchor"],current))
+                ceiling=current if ceiling is None else min(ceiling,current)
                 after=projection.anchored_at if after is None else max(after,projection.anchored_at)
             projections.append((entry["breach_anchor"],projection))
         eligible=all(value is not None and value.record_valid for _,value in projections)
@@ -133,7 +167,8 @@ class InstalledRepairVerifier:
             standing_ceiling=ceiling if eligible else None,readiness_after=after if eligible else None,deployment_digest=deployment,
             operation_digest=invocation,profile_bytes=self.profile_bytes,evaluated_at=evaluated_at,expires_at=state["expires_at"],
             actor=state["actor"],lineage=state["lineage"],zone_id=state["zone_id"],breaches=tuple(projections),
-            authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes).items():object.__setattr__(result,name,value)
+            authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes,
+            ceiling_lift_profile_bytes=self.ceiling_lift_profile_bytes,lifted_ceilings=tuple(lifted)).items():object.__setattr__(result,name,value)
         return result
 
 

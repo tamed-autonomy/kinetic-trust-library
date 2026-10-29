@@ -1,5 +1,22 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 earned repair recovery checkpoint
+
+Added explicitly pinned ordinary-rail ceiling recovery to the selected repair
+path. Empty input earns nothing; only currently anchored/admissible same-lineage
+acts recorded strictly after reconciliation reach the installed projector.
+Earlier acts are excluded, duplicate anchors rejected and ordered prefixes
+checked for nondecreasing bounded ceilings. No universal lift formula is added.
+The source and projector own current ordinary-act truth and formula calibration.
+Native standing/Core/claims tests cover an initial ceiling of 60 and an earned
+ceiling of 65, producing E_trust 36 and 39 with the same measured risk.
+Supplier review found no actionable defect in the earned-lift delta.
+
+Validation: 952 tests pass in the full suite; twelve focused repair/readiness
+tests pass from the built wheel. Focused checks also reject equal-time/future,
+foreign-lineage and inadmissible acts, missing selected adapters, duplicate
+anchors and projectors that grant an empty-set lift or decrease a prefix.
+
 ## 2026-10-29 repair precondition checkpoint
 
 Implemented anchored-reconciliation prerequisites, exact declared fractional
