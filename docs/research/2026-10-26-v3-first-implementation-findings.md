@@ -1,5 +1,31 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 registered hand-back records
+
+Retained the exact hand-back schema and all 73 source cases at
+`17f37b772eac8b2f84248c1912f3aeb3f5fa26d1`; added selected installed primary-
+recipient record validation. Actual stop/operation/subject/class, original grant
+template, precise issue/reissue instants, class SLA/floor, recourse independence,
+repair, sealed context hash/key/manifest and capacity-aware delivery evidence are
+bound. Invalid records return protocol-error/defect-routing obligations, never
+clearance or claimed persistence. Both parked and delivered records authorize
+no action. Real AES-GCM fixture ciphertext accompanies modeled Source registry,
+manifest, custody and actual receipt facts; no production boundary is claimed.
+
+Draft issue: HB-02-002 specifies requesting-principal/default-endpoint fallback
+for a missing template while calling its resolution site a bootstrap question.
+This checkpoint rejects an absent template; it does not invent the missing repair/
+context/registration path. A later selected refusal profile must make that full
+destination explicit before capability adoption. Draft issue: §4.4 allows an
+agent-facing reason class, but HB-11-004 says no agent-visible denial reason.
+No agent-facing hand-back view is exposed here; preserve this exact ambiguity
+for final adoption rather than choosing a broader disclosure interpretation.
+
+Clearance/lease state, expiry/adversity, hysteresis and native result composition
+remain pending. The retained suite is not a claim that all 73 cases pass. Schema
+SHA-256: `16b35ea7f651d08551b35c5cd978d2b52889438640974fa27d963ce5510a8be4`;
+suite SHA-256: `af307b75d0bc7b65d362a9cc2f4ed1b0a25c4f554d177fde212429357e9c649d`.
+
 ## 2026-10-29 importance and supplied normative demand
 
 Added selected external-schema/authority inventory validation and max-of-whole-

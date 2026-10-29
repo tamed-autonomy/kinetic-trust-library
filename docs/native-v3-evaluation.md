@@ -1379,3 +1379,49 @@ with validation error. Content adequacy, judgment legitimacy, actual signatures
 and calibration remain external responsibilities. Real signed producer/current-use
 fixtures exercise the binding with modeled Source facts; the entire 23-case L11
 suite and production normative-adapter interoperability are not claimed here.
+
+### Registered hand-back records
+
+`InstalledHandBackVerifier` selects the private
+`registered-template-and-sealed-context-v1` adapter profile and validates the
+exact proposed `hand-back.json` schema (SHA-256
+`16b35ea7f651d08551b35c5cd978d2b52889438640974fa27d963ce5510a8be4`).
+Raw messages never directly construct a domain record. The Source authenticates
+the actual stop, subject/class, issue/reissue instants, registered template,
+accountable endpoint, independent recourse, subject repair route and full sealed
+context manifest. Where a lease exists, its subject/class, time and full original
+template digest must agree; registering a newer template cannot replace the
+grant's template. Class acknowledgment ceilings and minimum reissue floors apply.
+RFC3339 fractional seconds are compared exactly, including beyond microseconds.
+
+The primary endpoint is the software subject's own delegator or the person
+subject itself, including on sovereign refusal. System/principal stops require
+an independent contest route, excluding agent, measurers, operator and affiliates.
+Sovereign Soul refusal requires the actual authority/protocol closure; an
+undetermined route names its consulted registry without inventing an authority.
+Actual custody, registration, independence and authority resolution remain Source
+facts, not inferred from a syntactically valid address or reference.
+
+Library checks the actual ciphertext hash, registered endpoint key and redaction
+policy, full context sections and authenticated agent-unreadability fact. It
+never receives the plaintext or decryption key. Source must verify the actual
+encrypted content and key/custody truth. Test fixtures use AES-GCM ciphertext
+with modeled registry/custody/manifest facts; this does not establish a production
+sealing profile or custody boundary. Counterparty-copy redaction remains pending.
+
+Delivery evidence includes the actual attempt's capacity/reachability and receipt.
+Unknown/exhausted capacity, an unreachable channel or absent accepted receipt
+means `parked`. A forged `delivered` assertion is a protocol error. Neither
+parking nor delivery authorizes action. Invalid records return sealed failure
+with protocol-error recording and defect-routing obligations to the installed
+channel defect endpoint; they are never silently converted into another state.
+Operational Source exceptions propagate rather than inventing a recipient or
+clearance. Service owns durable escrow, retry/escalation, actual receipt/ack and
+failure recording; this verifier performs none of those effects.
+
+This is primary-recipient record validation, not the complete hand-back capability.
+Clearance/lease validation, routine expiry versus adverse environment failure,
+adjudicated hysteresis, relational reissue/replay, unmanaged/demotion transitions,
+native result composition and broader source-vector coverage remain pending.
+The current reissue instant binds the actual Source-owned lease record and class
+minimum; it does not yet derive escalation from the complete hysteresis ledger.
