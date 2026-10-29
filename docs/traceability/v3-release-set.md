@@ -102,6 +102,16 @@ Grant-time enforcement now composes with Clear under symmetric selection; its
 historical profiles and actual issuance/audit/epoch checks preserve surviving
 bounds. Relational gates remain pending; no ledger write or sanction is claimed.
 
+Relational reconciliation preparation (2026-10-29): the shared pure anchored-
+record checks now serve actor re-entry without carrying its standing penalties
+into relationship-only reconciliation. Current cause binding, terminator parties,
+acknowledgment, residual declaration, independent non-Oracle verifier and published
+decline route remain required. This is preparatory code, not an installed
+relational reissue gate: persistent stop barriers, grant ordering, accountable
+human decisions and atomic single-use consumption remain pending. A lawful stop
+does not become a breach through this projection. See the relational reissue plan
+for the provisional stop-versus-breach record mapping.
+
 Hand-back duration Clear checkpoint (2026-10-29): selected installed original-
 template verification shares record invariants and pre-registers v2 recourse
 branches, avoiding stop-time edits to the grant's template. Conditional Clear
