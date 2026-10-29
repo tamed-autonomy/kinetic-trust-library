@@ -312,6 +312,7 @@ class ReadinessTests(unittest.TestCase):
         from tests.unit.core.test_v3_installed_ambient import fixture as ambient_fixture
         ambient_verifier,ambient_state,_,ambient_profile,_=ambient_fixture(operation,deployment,1000,"zone:alpha",None)
         ambient_state["current"].update(prior_stock=2,arrivals=[])
+        ambient_state["current"]["prior_stock_by_class"]["act-outside-decision"]=2
         native=replace(no_norm,ambient_verifier=ambient_verifier)
         ambient_state["topology_epoch"]=4
         self.assertEqual(whole().reason,"AMBIENT_TOPOLOGY")
@@ -334,6 +335,7 @@ class ReadinessTests(unittest.TestCase):
         item["evidence_digests"]=sorted([current_ambient.profile_digest,current_ambient.frame_digest])
         self.assertEqual(whole().reason,"NATIVE_PREREQUISITES_VALID")
         ambient_state["current"].update(prior_stock=10,arrivals=[dict(lineage="lineage:"+str(i),counts={"act-outside-decision":1}) for i in range(3)])
+        ambient_state["current"]["prior_stock_by_class"]["act-outside-decision"]=10
         self.assertEqual(whole().reason,"AMBIENT_PRESSURE")
         ambient_state["reproduction_at_idle"]=".5"
         self.assertEqual(whole().reason,"AMBIENT_PROFILE_INVALID")

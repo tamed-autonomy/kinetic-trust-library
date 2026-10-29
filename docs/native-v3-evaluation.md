@@ -998,9 +998,16 @@ or inflated capacity. The result retains `NativeEvaluationResult.ambient` and
 its expiry cannot extend beyond ambient support. Internal `AMBIENT_*` reasons
 give precise diagnoses without adding unsupported geometry wire enums.
 
-This checkpoint uses a pooled reference capacity. The RFC's full per-entry-class
-capacity declarations/composition, recovery tiers and rule-repair amendments
-remain implementation work. The empty-backlog case also needs reconciliation:
+The selected reference now composes pooled and per-entry-class capacity. Class
+throughput partitions globally qualified anchors after the shared repairer
+cooldown; changing classes cannot bypass that interval. Complete class capacity,
+backlog, stock and debt declarations bind the current frame. Pressure takes the
+maximum of the pool and active classes, so healthy pooled throughput cannot hide
+a class shortage or outstanding class debt. Explicitly unknown declarations stay
+unknown. Pooled and class debt are separate views, never additive stock counts.
+This named reference composition is not a universal RFC formula or a claim that
+all 41 source cases pass. Recovery tiers and rule-repair amendments remain
+implementation work. The empty-backlog case also needs reconciliation:
 this reference leaves a positive declaration without qualifying demonstration
 unknown; it does not claim that the RFC universally requires startup denial or
 that an unmeasured declaration is measured throughput. A final approved policy

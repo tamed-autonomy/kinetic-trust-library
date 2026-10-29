@@ -19,16 +19,17 @@ def fixture(operation=None,deployment=None,now=1030,zone="zone-1",parent="zone-0
         operation=json.loads(original.context.operation_bytes);deployment=json.loads(original.context.deployment_profile_bytes)
     normalizer=dict(id="urn:test:ambient-normalizer",version=1,unit="normalized-adversarial-pressure",
         formula="test-only 0.4*max(index-1,bank,0), capped at one")
-    profile=dict(id="urn:test:ambient",version=1,zone_id=zone,formula="utilization-index-with-anchored-retirement-v1",
+    profile=dict(id="urn:test:ambient",version=2,zone_id=zone,formula="pooled-and-class-pressure-with-anchored-retirement-v1",
         criticality_model="idle-reproduction-reference-v1",window_seconds=10,recovery_windows=2,declared_capacity=4,
         criticality=2,single_lineage_share=1,repairer_interval=0,retirement_credit_per_weight=1,
         source_signals=["relational.obligation.breach_count","relational.repair.unresolved_count"],
-        entry_classes={name:dict(hard=True,weight=1) for name in HARD_ENTRIES},
+        entry_classes={name:dict(hard=True,weight=1,declared_capacity=4) for name in HARD_ENTRIES},
         normalizer=dict(id=normalizer["id"],version=1,digest=_digest(normalizer,"sha256")))
     windows=[]
     for n in range(2):
         start=now-20+10*n
-        windows.append(dict(starts_at=start,ends_at=start+10,backlog_positive=True,records=[
+        windows.append(dict(starts_at=start,ends_at=start+10,backlog_positive=True,
+            backlog_by_class={name:name=="act-outside-decision" for name in HARD_ENTRIES},records=[
             dict(anchor="sha256:"+format(2*n+i+1,"064x"),repairer="root:"+str(i),anchored_at=start+i+1,
                 entry_class="act-outside-decision",current_anchor_verified=True,anchor_order=i) for i in range(2)]))
     state=dict(deployment_digest=_digest(deployment,"sha256"),profile_digest=_digest(profile,"sha256"),
@@ -36,6 +37,8 @@ def fixture(operation=None,deployment=None,now=1030,zone="zone-1",parent="zone-0
         zone_id=zone,topology_epoch=5,parent=None if parent is None else dict(zone_id=parent,heard_index=0),
         ledger_head="sha256:"+"a"*64,window_ledger_head="sha256:"+"a"*64,accountable_roots=2,consequential=True,reproduction_at_idle=".1",
         prior_hard_times=[],capacity_windows=windows,current=dict(prior_stock=10,prior_banked_excess=0,retired_excess=0,
+            prior_stock_by_class={name:10 if name=="act-outside-decision" else 0 for name in HARD_ENTRIES},
+            prior_bank_by_class={name:0 for name in HARD_ENTRIES},retired_excess_by_class={name:0 for name in HARD_ENTRIES},
             arrivals=[dict(lineage="lineage:"+str(i),counts={"act-outside-decision":1}) for i in range(3)]))
     calls=[]
     class Source:
@@ -54,6 +57,48 @@ def fixture(operation=None,deployment=None,now=1030,zone="zone-1",parent="zone-0
 
 @unittest.skipUnless(all(find_spec(name) for name in ("rfc8785","jsonschema","cryptography")),"install v3-proofs")
 class InstalledAmbientTests(unittest.TestCase):
+    def test_class_declarations_stock_and_old_debt_cannot_disappear(self):
+        import rfc8785
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        v,state,op,profile,calls=fixture()
+        state["current"]["prior_stock_by_class"]["act-outside-decision"]=9
+        with self.assertRaisesRegex(ValidationError,"stock"):
+            v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
+        state["current"]["prior_stock_by_class"]["act-outside-decision"]=10
+        profile["entry_classes"]["misattestation"]["declared_capacity"]=None
+        v=replace(v,profile_bytes=rfc8785.dumps(profile));state["profile_digest"]=_digest(profile,"sha256")
+        self.assertIsNone(v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True).pressure_floor)
+        v,state,op,profile,calls=fixture()
+        for window in state["capacity_windows"]:
+            window["records"][0]["entry_class"]="misattestation"
+            window["backlog_by_class"]["misattestation"]=True
+        state["current"].update(prior_stock=2,arrivals=[])
+        state["current"]["prior_stock_by_class"].update({"act-outside-decision":1,"misattestation":1})
+        state["current"]["prior_bank_by_class"]["misattestation"]=1
+        carried=v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
+        self.assertEqual(carried.metrics.open_stock,0)
+        self.assertEqual(carried.pressure_floor,Fraction(2,5))
+        self.assertEqual(carried.maximum_banked_excess,1)
+        state["current"]["retired_excess_by_class"]["misattestation"]=1
+        self.assertEqual(v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True).pressure_floor,0)
+
+    def test_class_shortage_cannot_be_masked_by_pooled_throughput(self):
+        import rfc8785
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        v,state,op,profile,calls=fixture()
+        for window in state["capacity_windows"]:
+            window["records"][0]["entry_class"]="misattestation"
+            window["backlog_by_class"]["misattestation"]=True
+        state["current"]["prior_stock_by_class"].update({"act-outside-decision":0,"misattestation":10})
+        state["current"]["arrivals"]=[dict(lineage="lineage:"+str(i),counts={"misattestation" if i<2 else "act-outside-decision":1}) for i in range(3)]
+        value=v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
+        self.assertEqual(value.capacity.effective_capacity,2)
+        self.assertEqual(dict(value.class_capacities)["misattestation"].effective_capacity,1)
+        self.assertEqual(value.pressure_floor,1)
+        profile["entry_classes"]["misattestation"]["declared_capacity"]=0
+        v=replace(v,profile_bytes=rfc8785.dumps(profile));state["profile_digest"]=_digest(profile,"sha256")
+        self.assertTrue(v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True).consequential_hosting_forbidden)
+
     def test_unknown_capacity_or_parent_retains_unobservable_pressure(self):
         import rfc8785
         from kinetic_trust_library.v3.demand_supplier import _digest
@@ -73,6 +118,7 @@ class InstalledAmbientTests(unittest.TestCase):
         self.assertTrue(v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True).consequential_hosting_forbidden)
         state["parent"]["heard_index"]=0
         state["current"].update(prior_stock=2,arrivals=[])
+        state["current"]["prior_stock_by_class"]["act-outside-decision"]=2
         empty=v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
         self.assertFalse(empty.consequential_hosting_forbidden)
         self.assertEqual(empty.pressure_floor,0)

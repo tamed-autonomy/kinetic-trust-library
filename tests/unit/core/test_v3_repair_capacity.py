@@ -11,6 +11,18 @@ def record(number,at,repairer="root:repairer",hard=True,verified=True):
 
 
 class RepairCapacityTests(unittest.TestCase):
+    def test_class_capacity_uses_global_repairer_interval(self):
+        from kinetic_trust_library.v3.repair_capacity import project_capacity_by_class
+        window=RepairCapacityWindow(0,1,True,(record(1,".1"),record(2,".2")))
+        pooled=project_repair_capacity(declared_capacity=4,windows=(window,),repairer_interval=1)
+        classes=dict(project_capacity_by_class(pooled,declared_by_class={"first":4,"second":4},
+            classes_by_window=({window.records[0].anchor:"first",window.records[1].anchor:"second"},),
+            backlog_by_window=({"first":True,"second":True},)))
+        self.assertEqual(classes["first"].effective_capacity,1)
+        self.assertEqual(classes["second"].effective_capacity,0)
+        with self.assertRaises(ValidationError):project_capacity_by_class(pooled,declared_by_class={"first":4,"second":4},
+            classes_by_window=({},),backlog_by_window=({"first":True,"second":True},))
+
     def test_same_instant_records_require_authenticated_order(self):
         soft=record(1,".4",hard=False)
         hard=record(2,".4")

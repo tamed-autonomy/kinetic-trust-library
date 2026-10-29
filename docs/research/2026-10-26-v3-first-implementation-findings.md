@@ -1,5 +1,19 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 per-class ambient capacity checkpoint
+
+The installed reference now binds complete per-class declarations, backlog,
+stock and debt. Class capacity partitions globally qualified anchors after the
+shared repairer cooldown. Pressure uses the pooled view and active class views;
+a slower class or retained class debt cannot be hidden by aggregate throughput.
+Unknown declarations remain unknown, and pooled/class views are not summed as
+duplicate stock. Weighted class stock must reconcile with the pooled inventory.
+
+Supplier review found no actionable defect. All 974 tests pass; built-package
+verification covers the installed ambient, capacity and readiness paths. This
+implements a named reference composition, not all 41 repair vectors. Sustained
+recovery tiers, rule amendments and empty-backlog policy clarification remain.
+
 ## 2026-10-29 installed ambient repair checkpoint
 
 Connected pooled ambient reference accounting to authenticated current evidence,
