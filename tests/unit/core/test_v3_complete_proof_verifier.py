@@ -28,6 +28,7 @@ class CompleteProofVerifierTests(unittest.TestCase):
                     expected_context_bytes=rfc8785.dumps(context),
                     installed_algorithms=("ES256", "EdDSA") if context["crypto_profile"] == "fixture-es256-ed25519" else ("ES256",),
                     root_verifier=lambda payload, now: True,
+                    fixture_software_default=True,
                 )
                 result = verifier.verify(case["jws"], now=context["now"], clock_healthy=context["clock_healthy"])
                 self.assertEqual(result.reason, case["expected"]["reason"])

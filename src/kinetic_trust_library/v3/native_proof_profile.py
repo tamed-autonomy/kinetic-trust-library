@@ -32,6 +32,8 @@ class RootProofBinding:
     def __post_init__(self):
         if type(self.selection) is not AssessedRootSelection or type(self.expected_zone) is not str or not self.expected_zone:
             raise ValidationError("installed proof root binding is invalid")
+        if _parse_jcs_object(self.selection.context_bytes).get("subject_profile") not in ("software", "person"):
+            raise ValidationError("root source subject class must be independently declared")
         if self.selection.selected is None:
             reasons = set()
             for candidate in self.selection.candidates:
@@ -49,21 +51,26 @@ class RootProofBinding:
         payload = _parse_jcs_object(payload_bytes)
         source = _parse_jcs_object(self.selection.context_bytes)
         ktp = payload["ktp"]
+        person = source.get("subject_profile") == "person"
         if (type(now) is not int or now != self.selection.evaluated_at
                 or payload["sub"] != source.get("subject") or ktp["zone"] != self.expected_zone
-                or ktp.get("subject_kind") != "software_agent"):
+                or ktp.get("subject_kind") != ("person" if person else "software_agent")):
             return False
         if any(name in source and ktp.get(name) != source[name] for name in ("generation", "lineage")):
             return False
         selected = self.selection.selected
         if selected is not None:
             expected = _parse_jcs_object(selected.projection_bytes)
+            if person and (expected["kind"] != "external_attestation" or expected["root_person"] != payload["sub"]):
+                return False
             return (ktp["root_instrument"] == expected and payload["exp"] <= expected["end_time"]
                     and (expected["kind"] != "sponsorship_bond" or ktp.get("sponsor") == expected["sponsor_id"]))
         expected = {"kind":"none", "status":"none", "reason":self.no_credit_reason}
         actual = ktp["root_instrument"]
         if {k:v for k,v in actual.items() if k != "diagnostic_ref"} != expected:
             return False
+        if person:
+            return True
         ceilings = {item["ceiling"]: _number(item["value"]) for item in ktp["applicable_ceilings"]}
         cap = ceilings.get("external_root_missing")
         base = _number(ktp.get("e_base")) if ktp.get("e_base") is not None else None

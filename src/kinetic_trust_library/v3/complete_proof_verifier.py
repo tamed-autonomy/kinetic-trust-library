@@ -64,6 +64,7 @@ class InstalledProofVerifier:
     root_verifier: Callable[[bytes, int], bool]
     ingress_verifier: Callable[[tuple[object, ...]], bool] | None = None
     extension_handlers: tuple[tuple[str, Callable[[bytes], bool]], ...] = ()
+    fixture_software_default: bool = False
 
     def __post_init__(self):
         if (type(self.schema_bundle) is not InstalledSchemaBundle
@@ -72,7 +73,11 @@ class InstalledProofVerifier:
                 or type(self.extension_handlers) is not tuple):
             raise ValidationError("installed proof verifier policy is invalid")
         _parse_jcs_object(self.trusted_keys_bytes)
-        _parse_jcs_object(self.expected_context_bytes)
+        context = _parse_jcs_object(self.expected_context_bytes)
+        if (type(self.fixture_software_default) is not bool
+                or context.get("subject_kind") not in ("software_agent", "person")
+                and not (self.fixture_software_default and "subject_kind" not in context)):
+            raise ValidationError("installed subject kind must be independently declared")
         names = []
         for entry in self.extension_handlers:
             if type(entry) is not tuple or len(entry) != 2 or type(entry[0]) is not str or not callable(entry[1]):
@@ -113,14 +118,14 @@ class InstalledProofVerifier:
                     return _result(compact, "TP_EXTENSION_CRITICAL", 6, raw)
         try:
             invariant = _invariants_hold(payload, expected_subject=context["subject"], expected_zone=context["zone"],
-                                         required_ceilings=context["required_ceilings"])
+                                         required_ceilings=context["required_ceilings"], expected_subject_kind=context.get("subject_kind", "software_agent"))
             root_valid = invariant and self.root_verifier(raw, now) is True
         except Exception:
             root_valid = False
         if not root_valid:
             return _result(compact, "TP_INVARIANT", 7, raw)
         reason = trust_proof_stage7_reason(payload, expected_subject=context["subject"], expected_zone=context["zone"],
-            required_ceilings=context["required_ceilings"], ring_depth=context["ring_depth"], ingress_verifier=self.ingress_verifier)
+            required_ceilings=context["required_ceilings"], ring_depth=context["ring_depth"], ingress_verifier=self.ingress_verifier, expected_subject_kind=context.get("subject_kind", "software_agent"))
         if reason is not None:
             return _result(compact, reason, 7, raw)
         gate = payload["ktp"]["gate_state"]

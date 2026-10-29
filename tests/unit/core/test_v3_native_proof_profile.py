@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from importlib.util import find_spec
 from dataclasses import replace
+from kinetic_trust_library.errors import ValidationError
 from kinetic_trust_library.v3.complete_proof_verifier import InstalledProofVerifier
 from kinetic_trust_library.v3.assessed_root_selection import select_assessed_roots
 from kinetic_trust_library.v3.native_proof_profile import native_schema_bundle, RootProofBinding
@@ -22,12 +23,14 @@ class NativeProofProfileTests(unittest.TestCase):
         payload["ktp"]["subject_kind"] = "software_agent"
         payload["ktp"]["root_instrument"] = {"kind":"none","status":"none","reason":"missing"}
         payload["ktp"]["applicable_ceilings"].append({"ceiling":"external_root_missing","value":70})
-        context = vectors["context"]
-        roots = select_assessed_roots((), context_bytes=rfc8785.dumps({"subject":context["subject"]}),
+        context = {**vectors["context"], "subject_kind":"software_agent"}
+        roots = select_assessed_roots((), context_bytes=rfc8785.dumps({"subject":context["subject"], "subject_profile":"software"}),
             evaluated_at=context["now"], algorithm="sha256")
         verifier = InstalledProofVerifier(native_schema_bundle(),
             rfc8785.dumps({k["kid"]: k for k in vectors["keys"]}), rfc8785.dumps(context),
             ("ES256","EdDSA"), RootProofBinding(roots, context["zone"]))
+        with self.assertRaises(ValidationError):
+            replace(verifier, expected_context_bytes=rfc8785.dumps(vectors["context"]))
         def signed():
             enc = lambda b: base64.urlsafe_b64encode(b).rstrip(b"=")
             header = {"alg":"EdDSA","kid":"TEST-ed25519","typ":"ktp-trust-proof+jwt"}
@@ -71,6 +74,32 @@ class NativeProofProfileTests(unittest.TestCase):
         self.assertEqual(bond_verifier.verify(signed(), now=context["now"], clock_healthy=True).reason, "TP_CLEAR")
         payload["ktp"]["sponsor"] = "agent:guarantor:7gen:other:other"
         self.assertEqual(bond_verifier.verify(signed(), now=context["now"], clock_healthy=True).reason, "TP_INVARIANT")
+        person = "person:acct:zone:1234"
+        instrument = json.loads(json.dumps(root_vectors["instruments"]["attestation"]))
+        instrument["body"].update(subject=person, root_person=person)
+        root_context = rfc8785.dumps(dict(subject=person, subject_profile="person", hop_bound=4))
+        assessed = InstalledRootVerifier(Adapter(), "sha256").evaluate(
+            b"authenticated person instrument fixture", context_bytes=root_context, evaluated_at=context["now"])
+        selected = select_assessed_roots((assessed,), context_bytes=root_context, evaluated_at=context["now"], algorithm="sha256")
+        person_context = {**context, "subject":person, "subject_kind":"person", "required_ceilings":{"receiving_zone":85}}
+        person_verifier = replace(verifier, root_verifier=RootProofBinding(selected, context["zone"]), expected_context_bytes=rfc8785.dumps(person_context))
+        payload["sub"] = person
+        for field in ("generation","lineage","advancement_floor","sponsor"):
+            payload["ktp"].pop(field, None)
+        payload["ktp"].update(subject_kind="person", root_instrument=json.loads(assessed.projection_bytes),
+            applicable_ceilings=[{"ceiling":"receiving_zone","value":85}])
+        self.assertEqual(person_verifier.verify(signed(), now=context["now"], clock_healthy=True).reason, "TP_CLEAR")
+        payload["ktp"]["generation"] = 7
+        self.assertEqual(person_verifier.verify(signed(), now=context["now"], clock_healthy=True).reason, "TP_SCHEMA")
+        payload["ktp"].pop("generation")
+        cross_kind = replace(person_verifier, expected_context_bytes=rfc8785.dumps({**person_context, "subject_kind":"software_agent"}))
+        self.assertEqual(cross_kind.verify(signed(), now=context["now"], clock_healthy=True).reason, "TP_INVARIANT")
+        payload["ktp"]["root_instrument"]["root_person"] = "person:acct:zone:other"
+        self.assertEqual(person_verifier.verify(signed(), now=context["now"], clock_healthy=True).reason, "TP_INVARIANT")
+        empty = select_assessed_roots((), context_bytes=root_context, evaluated_at=context["now"], algorithm="sha256")
+        no_credit_person = replace(person_verifier, root_verifier=RootProofBinding(empty, context["zone"]))
+        payload["ktp"]["root_instrument"] = {"kind":"none","status":"none","reason":"missing"}
+        self.assertEqual(no_credit_person.verify(signed(), now=context["now"], clock_healthy=True).reason, "TP_CLEAR")
 
 
 if __name__ == "__main__": unittest.main()

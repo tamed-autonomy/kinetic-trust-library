@@ -28,6 +28,7 @@ def _number(value: object) -> Decimal | None:
 def _invariants_hold(
     claims: Mapping[str, object], *, expected_subject: str,
     expected_zone: str, required_ceilings: Mapping[str, object],
+    expected_subject_kind: str = "software_agent",
 ) -> bool:
     ktp = claims["ktp"]
     if not isinstance(ktp, Mapping):
@@ -35,23 +36,34 @@ def _invariants_hold(
     subject = claims["sub"]
     if type(subject) is not str or subject != expected_subject:
         return False
-    validate_agent_uri(subject)
-    parts = subject.split(":")
-    lineage = ktp["lineage"]
-    generation = ktp["generation"]
-    if type(generation) is not int or generation < 0 or lineage != parts[1]:
+    person = expected_subject_kind == "person"
+    if expected_subject_kind not in ("software_agent", "person"):
         return False
-    if lineage == "sponsored":
-        if generation > 2:
+    if ktp.get("subject_kind", "software_agent") != expected_subject_kind:
+        return False
+    if person:
+        if not subject.startswith("person:") or not subject[len("person:"):] or any(c.isspace() for c in subject):
             return False
-    elif lineage == "independent":
-        if not 3 <= generation <= 6 or parts[2] != f"{generation}gen":
-            return False
-    elif lineage == "guarantor":
-        if generation < 7 or parts[2] != f"{generation}gen":
+        if any(name in ktp for name in ("generation", "lineage", "sponsor", "advancement_floor")):
             return False
     else:
-        return False
+        validate_agent_uri(subject)
+        parts = subject.split(":")
+        lineage = ktp["lineage"]
+        generation = ktp["generation"]
+        if type(generation) is not int or generation < 0 or lineage != parts[1]:
+            return False
+        if lineage == "sponsored":
+            if generation > 2:
+                return False
+        elif lineage == "independent":
+            if not 3 <= generation <= 6 or parts[2] != f"{generation}gen":
+                return False
+        elif lineage == "guarantor":
+            if generation < 7 or parts[2] != f"{generation}gen":
+                return False
+        else:
+            return False
     if ktp["zone"] != expected_zone:
         return False
     ceilings = ktp["applicable_ceilings"]
@@ -66,9 +78,13 @@ def _invariants_hold(
         if type(name) is not str or value is None or name in declared:
             return False
         declared[name] = value
-    generation_limit = Decimal(25 + 10 * generation) if generation <= 6 else Decimal(100)
-    if declared.get("generation") != generation_limit:
-        return False
+    if person:
+        if set(declared) & {"generation", "mass", "lineage"}:
+            return False
+    else:
+        generation_limit = Decimal(25 + 10 * generation) if generation <= 6 else Decimal(100)
+        if declared.get("generation") != generation_limit:
+            return False
     for name, value in required_ceilings.items():
         if type(name) is not str or declared.get(name) != _number(value):
             return False
@@ -85,6 +101,9 @@ def _invariants_hold(
     root = ktp["root_instrument"]
     if not isinstance(root, Mapping):
         return False
+    if person and (root.get("kind") == "sponsorship_bond" or
+                   (root.get("kind") == "external_attestation" and root.get("root_person") != subject)):
+        return False
     if root.get("status") in ("current", "non_renewable"):
         end_time = root.get("end_time")
         if type(end_time) is not int or claims["exp"] > end_time:
@@ -100,12 +119,14 @@ def trust_proof_stage7_reason(
     required_ceilings: Mapping[str, object],
     ring_depth: int,
     ingress_verifier: Callable[[tuple[object, ...]], bool] | None,
+    expected_subject_kind: str = "software_agent",
 ) -> str | None:
     """Return first stage-7 failure; ``None`` is not proof acceptance."""
     try:
         if not _invariants_hold(
             claims, expected_subject=expected_subject,
             expected_zone=expected_zone, required_ceilings=required_ceilings,
+            expected_subject_kind=expected_subject_kind,
         ):
             return "TP_INVARIANT"
     except (KeyError, TypeError, ValueError, ValidationError):
