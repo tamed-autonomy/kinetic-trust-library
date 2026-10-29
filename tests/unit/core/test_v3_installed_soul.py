@@ -21,12 +21,12 @@ class InstalledSoulTests(unittest.TestCase):
         self.assertEqual(result.gate.state, "veto")
         self.assertEqual(result.gate.undefined_inputs[0].input, "two")
         self.assertEqual(result.responses[0].evidence_bytes, b"signed veto")
-        core = project_classified_native_core(result, standing=object(), factors=object(), demand=object(),
+        core = project_classified_native_core(result, standing=object(), environment=object(), demand=object(),
             context=NativeCoreContext(profile, rfc8785.dumps(operation), 10, "sha256"))
         self.assertIsNone(core.capacity)
         self.assertIs(core.soul_assessment, result)
         with self.assertRaisesRegex(ValidationError, "Soul assessment belongs"):
-            project_classified_native_core(result, standing=object(), factors=object(), demand=object(),
+            project_classified_native_core(result, standing=object(), environment=object(), demand=object(),
                 context=NativeCoreContext(profile, rfc8785.dumps(operation), 11, "sha256"))
         class EmptyClear:
             def query(self, **kwargs):

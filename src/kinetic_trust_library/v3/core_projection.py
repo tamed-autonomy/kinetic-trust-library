@@ -26,6 +26,7 @@ from .demand_supplier import _digest
 from .demand_operation import digest_demand_operation
 from .installed_standing import NativeStandingAssessment
 from .installed_soul import NativeSoulAssessment
+from .installed_environment import NativeEnvironmentAssessment
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +54,7 @@ class NativeCoreProjection:
     classified_demand: NativeClassifiedDemand | None
     standing_assessment: NativeStandingAssessment | None
     soul_assessment: NativeSoulAssessment | None
+    environment_assessment: NativeEnvironmentAssessment | None
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         raise TypeError("NativeCoreProjection values are derived by project_native_core()")
@@ -95,6 +97,7 @@ def _projection(
     classified_demand: NativeClassifiedDemand | None = None,
     standing_assessment: NativeStandingAssessment | None = None,
     soul_assessment: NativeSoulAssessment | None = None,
+    environment_assessment: NativeEnvironmentAssessment | None = None,
 ) -> NativeCoreProjection:
     result = object.__new__(NativeCoreProjection)
     for name, value in (
@@ -103,6 +106,7 @@ def _projection(
         ("classified_demand", classified_demand),
         ("standing_assessment", standing_assessment),
         ("soul_assessment", soul_assessment),
+        ("environment_assessment", environment_assessment),
     ):
         object.__setattr__(result, name, value)
     return result
@@ -110,7 +114,7 @@ def _projection(
 
 def project_classified_native_core(
     soul: NativeSoulAssessment, *, standing: NativeStandingAssessment,
-    factors: tuple[FactorEvidenceState, ...], context: NativeCoreContext,
+    environment: NativeEnvironmentAssessment, context: NativeCoreContext,
     demand: NativeClassifiedDemand,
 ) -> NativeCoreProjection:
     """Compose installed, invocation-bound demand with native Core arithmetic.
@@ -143,14 +147,20 @@ def project_classified_native_core(
             or standing.operation_digest != demand.operation_digest
             or standing.evaluated_at != context.evaluated_at):
         raise ValidationError("standing belongs to another Core context")
+    if type(environment) is not NativeEnvironmentAssessment:
+        raise ValidationError("installed environment assessment is required")
+    if (environment.deployment_digest != demand.deployment_digest
+            or environment.operation_digest != demand.operation_digest
+            or environment.evaluated_at != context.evaluated_at):
+        raise ValidationError("environment belongs to another Core context")
     try:
         weights = {name: factor["weight"] for name, factor in profile["risk_factors"].items()}
     except (KeyError, TypeError, AttributeError) as exc:
         raise ValidationError("Core profile factor weights are unavailable") from exc
     projected = project_native_core(
-        soul.gate, standing=standing.base, factors=factors, weights=weights, demand=demand.demand,
+        soul.gate, standing=standing.base, factors=environment.factors, weights=weights, demand=demand.demand,
     )
-    return _projection(soul.gate, projected.standing, projected.risk, projected.capacity, demand, standing, soul)
+    return _projection(soul.gate, projected.standing, projected.risk, projected.capacity, demand, standing, soul, environment)
 
 
 __all__ = ["NativeCoreContext", "NativeCoreProjection", "project_native_core", "project_classified_native_core"]

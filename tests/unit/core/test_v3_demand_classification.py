@@ -13,6 +13,7 @@ from kinetic_trust_library.v3.installed_standing import InstalledStandingVerifie
 from kinetic_trust_library.v3.assessed_root_selection import select_assessed_roots
 from kinetic_trust_library.v3.demand_supplier import _digest
 from kinetic_trust_library.v3.installed_soul import InstalledSoulVerifier, AuthenticatedSoulResponse
+from kinetic_trust_library.v3.installed_environment import InstalledEnvironmentVerifier, AuthenticatedEnvironmentEvidence
 from tests.unit.core.test_v3_installed_demand_verifier import FixtureAdapter, VECTORS
 
 
@@ -38,6 +39,14 @@ class DemandClassificationTests(unittest.TestCase):
         verified_soul = InstalledSoulVerifier(raw_profile, SoulAdapter(), "sha256").evaluate(
             actual_operation=vectors["operation"], evaluated_at=1030)
         profile = vectors["deployment_profile"]
+        class EnvironmentAdapter:
+            def verify(self, *args, **kwargs):
+                return AuthenticatedEnvironmentEvidence(rfc8785.dumps({"factors": {
+                    name: {"signals": dict.fromkeys(config["signals"], 0), "measured_stress": 0}
+                    for name, config in profile["risk_factors"].items()}}))
+        environment_verifier = InstalledEnvironmentVerifier(raw_profile, EnvironmentAdapter(), "sha256")
+        verified_environment = environment_verifier.evaluate(b"environment", actual_operation=vectors["operation"], evaluated_at=1030)
+        other_environment = environment_verifier.evaluate(b"environment", actual_operation=vectors["operation"], evaluated_at=1031)
         root_context = rfc8785.dumps(dict(subject=vectors["operation"]["subject"], subject_profile="software",
             generation=7, lineage="guarantor", hop_bound=profile["external_root"]["hop_bound"], deployment_digest=_digest(profile,"sha256")))
         roots = select_assessed_roots((), context_bytes=root_context, evaluated_at=1030, algorithm="sha256")
@@ -60,21 +69,25 @@ class DemandClassificationTests(unittest.TestCase):
             self.assertEqual(result.operation_digest, assessment.operation_digest)
             self.assertEqual(result.conservative, case_id != "valid-value")
             core = project_classified_native_core(
-                verified_soul, standing=verified_standing, factors=factors(),
+                verified_soul, standing=verified_standing, environment=verified_environment,
                 context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"), demand=result,
             )
             self.assertEqual(core.capacity.demand, expected)
             self.assertIs(core.classified_demand, result)
             self.assertIs(core.standing_assessment, verified_standing)
+            self.assertIs(core.environment_assessment, verified_environment)
+            with self.assertRaisesRegex(ValidationError, "environment belongs"):
+                project_classified_native_core(verified_soul, standing=verified_standing, environment=other_environment, demand=result,
+                    context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"))
             with self.assertRaisesRegex(ValidationError, "standing belongs"):
-                project_classified_native_core(verified_soul, standing=other_standing, factors=factors(), demand=result,
+                project_classified_native_core(verified_soul, standing=other_standing, environment=verified_environment, demand=result,
                     context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"))
             with self.assertRaises(ValidationError):
-                project_classified_native_core(verified_soul, standing=standing(), factors=factors(), demand=result,
+                project_classified_native_core(verified_soul, standing=standing(), environment=verified_environment, demand=result,
                     context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"))
             with self.assertRaises(ValidationError):
                 project_classified_native_core(
-                    verified_soul, standing=verified_standing, factors=factors(), demand=result,
+                    verified_soul, standing=verified_standing, environment=verified_environment, demand=result,
                     context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1031, "sha256"),
                 )
             with self.assertRaises(ValidationError):
