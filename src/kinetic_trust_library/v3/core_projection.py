@@ -28,6 +28,7 @@ from .installed_standing import NativeStandingAssessment
 from .installed_soul import NativeSoulAssessment
 from .installed_environment import NativeEnvironmentAssessment
 from .enclosure import EnclosureInputs, NativeEnclosureAssessment, _profile as _enclosure_profile
+from .boundary import BoundaryAssessment
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +63,7 @@ class NativeCoreProjection:
     soul_assessment: NativeSoulAssessment | None
     environment_assessment: NativeEnvironmentAssessment | None
     enclosure_assessment: NativeEnclosureAssessment | None
+    boundary_assessment: BoundaryAssessment | None
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         raise TypeError("NativeCoreProjection values are derived by project_native_core()")
@@ -107,6 +109,7 @@ def _projection(
     soul_assessment: NativeSoulAssessment | None = None,
     environment_assessment: NativeEnvironmentAssessment | None = None,
     enclosure_assessment: NativeEnclosureAssessment | None = None,
+    boundary_assessment: BoundaryAssessment | None = None,
 ) -> NativeCoreProjection:
     result = object.__new__(NativeCoreProjection)
     for name, value in (
@@ -117,6 +120,7 @@ def _projection(
         ("soul_assessment", soul_assessment),
         ("environment_assessment", environment_assessment),
         ("enclosure_assessment", enclosure_assessment),
+        ("boundary_assessment", boundary_assessment),
     ):
         object.__setattr__(result, name, value)
     return result
@@ -127,6 +131,7 @@ def project_classified_native_core(
     environment: NativeEnvironmentAssessment, context: NativeCoreContext,
     demand: NativeClassifiedDemand,
     enclosure: NativeEnclosureAssessment | None = None,
+    boundary: BoundaryAssessment | None = None,
 ) -> NativeCoreProjection:
     """Compose installed, invocation-bound demand with native Core arithmetic.
 
@@ -135,17 +140,27 @@ def project_classified_native_core(
     """
     if type(context) is not NativeCoreContext:
         raise ValidationError("installed native Core context is required")
-    if type(soul) is not NativeSoulAssessment:
-        raise ValidationError("installed Soul assessment is required")
     profile = _parse_jcs_object(context.deployment_profile_bytes)
     deployment_digest = _digest(profile, context.algorithm)
     operation_digest = digest_demand_operation(_parse_jcs_object(context.operation_bytes), algorithm=context.algorithm)
+    if "boundary" in profile:
+        if (type(boundary) is not BoundaryAssessment or boundary.deployment_digest!=deployment_digest
+                or boundary.operation_digest!=operation_digest or boundary.evaluated_at!=context.evaluated_at
+                or boundary.expires_at<=context.evaluated_at):
+            raise ValidationError("declared boundary requires current bound assessment")
+        if not boundary.allowed:raise ValidationError("native Core boundary denied: "+boundary.reason)
+        if context.enclosure_profile_bytes is not None and _parse_jcs_object(context.enclosure_profile_bytes)["depth"]>0:
+            if boundary.enclosing_deployment_profile_bytes is None:
+                raise ValidationError("nested boundary requires enclosing resources")
+    elif boundary is not None:raise ValidationError("boundary evidence requires a declared boundary")
+    if type(soul) is not NativeSoulAssessment:
+        raise ValidationError("installed Soul assessment is required")
     if (soul.deployment_digest != deployment_digest or soul.operation_digest != operation_digest
             or soul.evaluated_at != context.evaluated_at
             or soul.required_frameworks != tuple(profile.get("soul_veto", {}).get("frameworks", ()))):
         raise ValidationError("Soul assessment belongs to another Core context")
     if soul.gate.state is not SoulGateState.CLEAR:
-        return _projection(soul.gate, None, None, None, soul_assessment=soul)
+        return _projection(soul.gate, None, None, None, soul_assessment=soul,boundary_assessment=boundary)
     if type(demand) is not NativeClassifiedDemand:
         raise ValidationError("installed classified demand is required")
     if type(standing) is not NativeStandingAssessment:
@@ -171,6 +186,11 @@ def project_classified_native_core(
             raise ValidationError("selected enclosure profile requires current bound source evidence")
     elif enclosure is not None:
         raise ValidationError("enclosure evidence requires an installed Core profile")
+    if boundary is not None and enclosure is not None:
+        body=_parse_jcs_object(enclosure.authenticated_body_bytes)
+        if (boundary.zone_id!=body["zone_id"] or boundary.enclosure_zone!=body["enclosure_zone"]
+                or boundary.topology_epoch!=body["topology_epoch"]):
+            raise ValidationError("boundary differs from current enclosure topology")
     try:
         weights = {name: factor["weight"] for name, factor in profile["risk_factors"].items()}
     except (KeyError, TypeError, AttributeError) as exc:
@@ -179,7 +199,7 @@ def project_classified_native_core(
         soul.gate, standing=standing.base, factors=environment.factors, weights=weights, demand=demand.demand,
         enclosure=None if enclosure is None else enclosure.inputs,
     )
-    return _projection(soul.gate, projected.standing, projected.risk, projected.capacity, demand, standing, soul, environment, enclosure)
+    return _projection(soul.gate, projected.standing, projected.risk, projected.capacity, demand, standing, soul, environment, enclosure,boundary)
 
 
 __all__ = ["NativeCoreContext", "NativeCoreProjection", "project_native_core", "project_classified_native_core"]

@@ -1,5 +1,24 @@
 # Provisional v3 implementation findings
 
+## 2026-10-29 boundary checkpoint
+
+Composed the required five-cell boundary declaration from RFC proposal
+`7cbcac84395dd8bcf84f8819ac63c28e36dbca44`. Retained its five source vectors at
+`spec/proposals/zone-boundary-v1.json`, SHA-256
+`3cc0029f108d743d52484d227135fcc670887c1a0d7f423ad994299a2197e146`.
+Installed current-source verification covers resource, actor-class and authority
+limits, affected-party review routes and enclosing-resource containment. Core,
+claims and request facade consume the sealed result; proof/result expiry cannot
+outlive it. Supplier review found and verified a nested-receiver correction:
+parent declaration is required at positive depth, and parent/epoch match the
+authenticated ingress topology. Source authority and actual route delivery
+remain external. No complete deployment conformance claim follows from older
+partial arithmetic fixtures.
+
+Validation: 942 tests pass in the full suite. Seven focused boundary/readiness
+tests pass from the built wheel, including Core-to-claims production and a
+real-signature native request/readiness fixture with modeled boundary authority.
+
 ## 2026-10-29 multi-gate checkpoint
 
 The native facade composes multiple explicitly installed adjudication profiles.

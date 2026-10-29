@@ -739,3 +739,38 @@ releasable increment; a previous aggregate supplied as prior remains conservativ
 binding. Signed carrier issuance caps expiry to the rail assessment's earliest
 supporting expiry. No result authorizes execution. Importance/supplied-input and
 full mixed-shape normative composition remain separate implementation work.
+
+### Declared zone boundaries
+
+The composite native deployment schema requires the boundary proposal's exact
+five-cell declaration: resources, entitled subject classes, affected outside
+classes and review routes, jurisdictions, and authority limits. A profile with
+no boundary cannot make a complete v3 conformance claim. Historical partial
+component fixtures remain useful arithmetic tests; they do not establish that
+claim or exercise a production deployment declaration.
+
+`InstalledBoundaryVerifier` accepts only installed source-authenticated current
+facts bound to the deployment and actual operation. The source authenticates
+the executing actor's class, resource, affected parties, current zone/epoch,
+literal resolution of every declared resource/pattern, and whether the act is
+within the declared jurisdiction/authority limits. The Library does not infer
+legal authority from prose or interpret an undeclared glob. An enclosing
+deployment declaration additionally bounds the complete resolved inner resource
+set. Missing or ambiguous affected-party review routes fail verification.
+
+The sealed assessment records denials and every applicable declared review
+route. Recording/serving those routes durably remains a Service responsibility.
+`project_classified_native_core` requires current allowed boundary evidence when
+the deployment declares a boundary, before Soul/standing/risk processing. It
+raises with the boundary reason on denial; callers retain the assessment for
+the denial record. Claims retain the assessment and cannot change its zone,
+omit its declaration or outlive its support.
+
+The native request facade requires the same installed boundary policy for a
+declared deployment. After authenticating the actual request, it checks the
+boundary before geometry/readiness, retains it as `NativeEvaluationResult.boundary`,
+and caps successful result expiry. Positive-depth receivers require an enclosing
+boundary and matching retained ingress parent/epoch. Passing the boundary
+merely allows ordinary evaluation to continue; it grants no standing or execution
+authority by itself. The authenticated source record is an internal adapter
+projection, not a universal RFC transport format.

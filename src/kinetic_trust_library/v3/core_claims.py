@@ -55,6 +55,14 @@ class NativeCoreClaimsSource:
             raise ValidationError("proof audience differs from the actual operation")
         deployment = _digest(profile, self.context.algorithm)
         invocation = digest_demand_operation(operation, algorithm=self.context.algorithm)
+        boundary=self.core.boundary_assessment
+        if ("boundary" in profile)!=(boundary is not None):
+            raise ValidationError("Core claims disagree on boundary selection")
+        if boundary is not None:
+            if (not boundary.allowed or boundary.deployment_digest!=deployment or boundary.operation_digest!=invocation
+                    or boundary.evaluated_at!=self.context.evaluated_at or boundary.zone_id!=metadata["zone"]
+                    or type(metadata["exp"]) is not int or metadata["exp"]>boundary.expires_at):
+                raise ValidationError("Core proof cannot omit, contradict or outlive its boundary")
         soul = self.core.soul_assessment
         if (soul is None or soul.deployment_digest != deployment or soul.operation_digest != invocation
                 or soul.evaluated_at != self.context.evaluated_at

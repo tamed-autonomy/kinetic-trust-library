@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kinetic-trust-protocol.net/specs/schemas/v3/deployment-profile.json",
-  "title": "KTP Deployment Profile — Unreleased v3",
-  "description": "The unreleased v3 declaration surface for a KTP deployment (specifications/deployment-profile.md). This version replaces inactivity-based standing decay with a required binding to a scoped readiness profile while preserving historical resilience. The published v2 schema is archived separately as deployment-profile-legacy-v2.json. This schema constrains shape; identifier-level validity (signal IDs exist, alias-set membership, synthetic-signal normalization coverage) is validated against catalog/ by scripts/check-declarations.py — the catalogue stays the single source of those lists. The checker also enforces weight and threshold finiteness, the five Risk Factor weights' unit sum, envelope-threshold ordering, standing-policy binding shape, and Oracle membership uniqueness and quorum bounds; schema validation alone is insufficient for those semantic checks or current authorization.",
+  "title": "KTP Deployment Profile \u2014 Unreleased v3",
+  "description": "The unreleased v3 declaration surface for a KTP deployment (specifications/deployment-profile.md). This version replaces inactivity-based standing decay with a required binding to a scoped readiness profile while preserving historical resilience. The published v2 schema is archived separately as deployment-profile-legacy-v2.json. This schema constrains shape; identifier-level validity (signal IDs exist, alias-set membership, synthetic-signal normalization coverage) is validated against catalog/ by scripts/check-declarations.py \u2014 the catalogue stays the single source of those lists. The checker also enforces weight and threshold finiteness, the five Risk Factor weights' unit sum, envelope-threshold ordering, standing-policy binding shape, and Oracle membership uniqueness and quorum bounds; schema validation alone is insufficient for those semantic checks or current authorization.",
   "type": "object",
   "required": [
     "profile_id",
@@ -11,7 +11,8 @@
     "soul_veto",
     "peer_share",
     "external_root",
-    "standing_policy"
+    "standing_policy",
+    "boundary"
   ],
   "additionalProperties": false,
   "properties": {
@@ -19,7 +20,7 @@
       "type": "string",
       "minLength": 1,
       "pattern": "^[a-z0-9][a-z0-9._-]*$",
-      "description": "Stable identifier for this deployment profile. Records reference the profile as <profile_id>@<version> — the normalization-profile identifier carried by [KTP-AUDIT] 3.2 sensor_health (per #72)."
+      "description": "Stable identifier for this deployment profile. Records reference the profile as <profile_id>@<version> \u2014 the normalization-profile identifier carried by [KTP-AUDIT] 3.2 sensor_health (per #72)."
     },
     "version": {
       "type": "integer",
@@ -421,6 +422,78 @@
         "m_allow": {
           "type": "number",
           "exclusiveMinimum": 0
+        }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "required": [
+        "resources",
+        "entitled_subjects",
+        "affected_outside",
+        "jurisdictions",
+        "authority_limits"
+      ],
+      "additionalProperties": false,
+      "description": "The zone's declared boundary (ktp-zones, Zone Boundary): what is inside, who is entitled, who outside is affected and the review route each is owed, the jurisdictions, and the limits of the zone's authority. A zone that declares no boundary makes no conformance claim.",
+      "properties": {
+        "resources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "The resources the zone's authority covers, by identifier or by a pattern the deployment resolves literally. A Zone Gateway MUST deny an act on a resource the declaration does not cover."
+        },
+        "entitled_subjects": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "The classes of subject entitled to hold standing in the zone. A Zone Gateway MUST deny standing to a subject the declaration does not entitle."
+        },
+        "affected_outside": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "class",
+              "review_route"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "class": {
+                "type": "string",
+                "minLength": 1
+              },
+              "review_route": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "description": "The classes of party outside the zone that acts within it may affect, each with the review route it is owed. A denial that affects a party of a declared class MUST record that route."
+        },
+        "jurisdictions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "The jurisdictions the zone operates under."
+        },
+        "authority_limits": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "What the zone may not do. A zone MUST NOT act beyond the authority its declaration limits."
         }
       }
     }

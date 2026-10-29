@@ -66,6 +66,8 @@ class ReadinessTests(unittest.TestCase):
         human_fixture_data=human_fixture(operation)
         deployment["human_policy"]=dict(mode="operation-eligibility-v1",profile_id=human_fixture_data["profile"]["profile_id"],
             version=2,digest=digest(human_fixture_data["profile"]))
+        deployment["boundary"]=dict(resources=[operation["resource"]],entitled_subjects=["guarantor"],
+            affected_outside=[dict(**{"class":"customer"},review_route="urn:review:customer")],jurisdictions=["test"],authority_limits=["test approved scope"])
         request=dict(request_id=operation["request_id"],subject=subject,operation_id=operation["operation"],scope=scope,
             deployment_profile_digest=digest(deployment),readiness_profile_digest=digest(profile))
         challenge=dict(challenge_id="challenge-1",nonce=base64.urlsafe_b64encode(bytes(range(32))).rstrip(b"=").decode(),issued_at=900)
@@ -183,7 +185,16 @@ class ReadinessTests(unittest.TestCase):
                 return AuthenticatedGeometryReproduction(rfc8785.dumps(geometry),actual_bytes,ordinary_compact,True)
         gv=InstalledGeometryVerifier(Reproduction(),pv,"sha256")
         av=InstalledRequestAssociationVerifier(Invocation(),pv,Replay(),"sha256")
-        native=InstalledNativeEvaluationVerifier(av,dv,gv,1000,1006)
+        from kinetic_trust_library.v3.boundary import InstalledBoundaryVerifier,AuthenticatedBoundaryContext
+        from kinetic_trust_library.v3.demand_operation import digest_demand_operation
+        boundary_state=dict(deployment_digest=digest(deployment),operation_digest=digest_demand_operation(operation,algorithm="sha256"),
+            enclosing_deployment_digest=None,checked_at=1000,expires_at=1008,zone_id="zone:alpha",enclosure_zone=None,topology_epoch=5,
+            subject=operation["actor"],subject_class="guarantor",resource=operation["resource"],affected_outside_classes=["customer"],
+            authority_within_limits=True,resolved_resources={operation["resource"]:[operation["resource"]]},enclosing_resolved_resources=None)
+        class BoundarySource:
+            def resolve(self,**kwargs):return AuthenticatedBoundaryContext(rfc8785.dumps(boundary_state),b"modeled-current-boundary")
+        bv=InstalledBoundaryVerifier(rfc8785.dumps(deployment),BoundarySource(),"sha256")
+        native=InstalledNativeEvaluationVerifier(av,dv,gv,1000,1006,boundary_verifier=bv)
         def whole(body=None,token=None,tokens=()):
             return native.verify(actual_bytes,association_bytes,ordinary_compact,
                 decision_bytes=rfc8785.dumps(decision),attestation_bytes=rfc8785.dumps(attestation),
@@ -193,8 +204,22 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(combined.reason,"NATIVE_PREREQUISITES_VALID")
         self.assertEqual(combined.supervision,"stable")
         self.assertEqual(combined.expires_at,1006)
+        boundary_state["subject_class"]="outsider"
+        denied_boundary=whole()
+        self.assertEqual(denied_boundary.reason,"BOUNDARY_SUBJECT")
+        self.assertIsNone(denied_boundary.canonical_geometry_bytes)
+        self.assertIsNone(denied_boundary.readiness)
+        self.assertEqual(denied_boundary.boundary.review_routes,(("customer","urn:review:customer"),))
+        boundary_state["subject_class"]="guarantor"
+        boundary_state["expires_at"]=1002
+        self.assertEqual(whole().expires_at,1002)
+        boundary_state["expires_at"]=1008
         self.assertEqual(combined.readiness.proof_verification.root_verification.checked_at,1000)
         from dataclasses import replace
+        nested_pv=replace(pv,expected_context_bytes=rfc8785.dumps({**json.loads(pv.expected_context_bytes),"ring_depth":1}))
+        with self.assertRaisesRegex(ValidationError,"enclosing"):
+            replace(native,association_verifier=replace(av,proof_verifier=nested_pv),
+                readiness_verifier=replace(dv,proof_verifier=nested_pv),local_geometry_verifier=replace(gv,proof_verifier=nested_pv))
         from tests.unit.core.test_v3_adjudication import fixture as adjudication_fixture
         adjudication=adjudication_fixture(operation,deployment,1000)
         no_norm=native
@@ -317,7 +342,7 @@ class ReadinessTests(unittest.TestCase):
             def sign(self,message,**kwargs):return private.sign(message)
         carrier=InstalledGeometryCarrierIssuer(GeometrySource(),GeometrySigner(),cv,"EdDSA",carrier_key["kid"]).issue(now=1000,clock_healthy=True)
         protected_av=InstalledRequestAssociationVerifier(Invocation(),pv,Replay(),"sha256",True,AssociationGeometryCarrier(carrier.compact,cv))
-        protected=InstalledNativeEvaluationVerifier(protected_av,dv)
+        protected=InstalledNativeEvaluationVerifier(protected_av,dv,boundary_verifier=bv)
         protected_result=protected.verify(actual_bytes,association_bytes,ordinary_compact,decision_bytes=rfc8785.dumps(decision),
             attestation_bytes=rfc8785.dumps(attestation),invocation_evidence=b"fixture-actual-invocation",now=1000,clock_healthy=True)
         self.assertEqual(protected_result.reason,"NATIVE_PREREQUISITES_VALID")

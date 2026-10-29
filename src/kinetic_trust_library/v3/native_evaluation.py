@@ -14,6 +14,7 @@ from .trust_proof_json import _parse_jcs_object
 from kinetic_trust_library.proofs._jwt import _decode_segment
 from .root_lifecycle import _time
 from .adjudication import InstalledAdjudicationVerifier, AdjudicationAssessment
+from .boundary import InstalledBoundaryVerifier, BoundaryAssessment
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -28,6 +29,7 @@ class NativeEvaluationResult:
     expires_at: int | None
     adjudication: AdjudicationAssessment | None
     adjudications: tuple[AdjudicationAssessment, ...]
+    boundary: BoundaryAssessment | None
 
     def __init__(self,*args,**kwargs):
         raise TypeError("native evaluation results are derived by an installed verifier")
@@ -42,6 +44,7 @@ class InstalledNativeEvaluationVerifier:
     local_profile_expires_at: int | None = None
     adjudication_verifier: InstalledAdjudicationVerifier | None = None
     adjudication_verifiers: tuple[InstalledAdjudicationVerifier, ...] = ()
+    boundary_verifier: InstalledBoundaryVerifier | None = None
 
     def __post_init__(self):
         if (type(self.association_verifier) is not InstalledRequestAssociationVerifier
@@ -69,6 +72,15 @@ class InstalledNativeEvaluationVerifier:
                 raise ValidationError("adjudication policy differs from native deployment/receiving zone")
             ids.append(_parse_jcs_object(policy.profile_bytes)["gate_id"])
         if len(set(ids))!=len(ids):raise ValidationError("duplicate declared adjudication gate")
+        deployment=self.readiness_verifier.readiness_verifier.deployment_profile_bytes
+        if "boundary" in _parse_jcs_object(deployment):
+            if (type(self.boundary_verifier) is not InstalledBoundaryVerifier
+                    or self.boundary_verifier.deployment_profile_bytes!=deployment):
+                raise ValidationError("declared boundary requires the same installed deployment policy")
+            proof_context=_parse_jcs_object(self.association_verifier.proof_verifier.expected_context_bytes)
+            if proof_context["ring_depth"]>0 and self.boundary_verifier.enclosing_deployment_profile_bytes is None:
+                raise ValidationError("nested receiving boundary requires enclosing resources")
+        elif self.boundary_verifier is not None:raise ValidationError("boundary policy requires a declared boundary")
 
     def verify(self, request_bytes: bytes, association_bytes: bytes, compact_proof: str, *,
                decision_bytes: bytes, attestation_bytes: bytes, invocation_evidence: bytes,
@@ -93,15 +105,31 @@ class InstalledNativeEvaluationVerifier:
         readiness=None
         adjudication=None
         adjudications=()
+        boundary=None
         def result(reason,supervision="silent_veto",expiry=None):
             value=object.__new__(NativeEvaluationResult)
             for name,member in (("reason",reason),("checked_at",now),("supervision",supervision),
                 ("tightened_constraints_bytes",constraints),("canonical_geometry_bytes",raw),
                 ("association",association),("readiness",readiness),("expires_at",expiry),("adjudication",adjudication),
-                ("adjudications",adjudications)):
+                ("adjudications",adjudications),("boundary",boundary)):
                 object.__setattr__(value,name,member)
             return value
         if association.reason!="RB_BOUND":return result(association.reason)
+        actual=_parse_jcs_object(association.canonical_request_bytes)
+        if self.boundary_verifier is not None:
+            operation={name:value for name,value in actual.items() if name not in ("version","demand","classification_profile")}
+            boundary=self.boundary_verifier.evaluate(actual_operation=operation,evaluated_at=now,clock_healthy=clock_healthy)
+            if boundary.zone_id!=self.readiness_verifier.readiness_verifier.receiving_zone:return result("BOUNDARY_ZONE")
+            ingress=association.proof_verification.ingress_verification
+            if ingress is not None:
+                topology=_parse_jcs_object(ingress.authenticated_state_bytes)["topology"]
+                rings=topology["rings"]
+                parent=None if len(rings)==1 else rings[-2]["zone_id"]
+                if (boundary.topology_epoch!=topology["epoch"] or boundary.zone_id!=rings[-1]["zone_id"]
+                        or boundary.enclosure_zone!=parent):return result("BOUNDARY_TOPOLOGY")
+            elif _parse_jcs_object(self.association_verifier.proof_verifier.expected_context_bytes)["ring_depth"]>0:
+                return result("BOUNDARY_TOPOLOGY")
+            if not boundary.allowed:return result(boundary.reason)
         if self.association_verifier.crosses_trust_boundary:
             binding=association.carrier_binding
             if binding is None or binding.verified_at!=now or geometry_body_bytes is not None:
@@ -153,6 +181,7 @@ class InstalledNativeEvaluationVerifier:
         if not readiness.valid:return result(readiness.reason)
         claims=_parse_jcs_object(readiness.proof_verification.authenticated_payload_bytes)
         expiry=min(expiry,readiness.expires_at,claims["exp"])
+        if boundary is not None:expiry=min(expiry,boundary.expires_at)
         if now>=expiry:return result("NATIVE_EVALUATION_EXPIRED")
         policies=self.adjudication_verifiers if self.adjudication_verifier is None else (self.adjudication_verifier,)
         if policies:
