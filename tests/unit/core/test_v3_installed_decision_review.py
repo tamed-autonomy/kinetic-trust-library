@@ -2,23 +2,24 @@ from importlib.util import find_spec
 import unittest
 
 
-def fixture():
+def fixture(operation=None,deployment=None,zone="zone-a"):
     import rfc8785
     from tests.unit.core.test_v3_decision_review import profile,event
     from kinetic_trust_library.v3.installed_decision_review import InstalledDecisionReviewVerifier,AuthenticatedDecisionReviewContext
     from kinetic_trust_library.v3.demand_supplier import _digest
     from kinetic_trust_library.v3.demand_operation import digest_demand_operation
     from tests.unit.core.test_v3_reissue import fixture as base
-    _,_,_,op,now,_=base();p=profile();dp=dict(id="deployment:review")
-    e=event()
+    _,_,_,op,now,_=base(operation,deployment,zone=zone);p=profile();p["zone"]=zone
+    dp=dict(id="deployment:review") if deployment is None else deployment
+    e=event(actor=op["actor"])
     s=dict(deployment_digest=_digest(dp,"sha256"),profile_digest=_digest(p,"sha256"),operation_digest=digest_demand_operation(op,algorithm="sha256"),
         decided_by="person:decider",zone=p["zone"],checked_at=now,expires_at=now+8,ledger_owner=p["ledger_owner"],append_protocol=p["append_protocol"],
         coverage_start=900,coverage_end=now,ledger_head=dict(anchor="sha256:"+"f"*64,sequence=100),history=[e],
-        governing_profiles={e["anchor"]:_digest(p,"sha256")},open_obligations=[],findings=[],open_findings=[],
+        governing_profiles={e["anchor"]:_digest(p,"sha256")},open_obligations=[],findings=[],open_findings=[],state_revision=17,
         profile_registry={_digest(p,"sha256"):p},registries={})
     s["registries"][s["profile_digest"]]=dict(
         sampler=dict(id=p["sampler_id"],owner="org:auditor",protocol="audited-uniform-draw-v1",space=2,registered_at=800,withdrawn_at=None,
-                     anchor="sha256:"+"d"*64,independent_of=["person:decider","agent:a"]),
+                     anchor="sha256:"+"d"*64,independent_of=["person:decider",op["actor"]]),
         reviewer=dict(id=p["review_authority"],registered_at=800,withdrawn_at=None,anchor="sha256:"+"e"*64))
     class Source:
         def resolve(self,**kw):return AuthenticatedDecisionReviewContext(rfc8785.dumps(s),b"modeled complete production/first-draw/outcome/review ledger and durable open backlog")

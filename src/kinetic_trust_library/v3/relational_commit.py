@@ -14,6 +14,7 @@ from .demand_supplier import _digest
 from .demand_operation import canonical_demand_operation_bytes,digest_demand_operation
 from .execution_observation import _name,_digest as is_digest
 from .root_lifecycle import _time
+from .installed_decision_review import _review_data
 
 _PROTOCOL="compare-nonce-epoch-fences-with-effect-v1"
 _FENCES=frozenset(("grant","nonce","human_decision","template","native_evidence","adverse_stop","authority"))
@@ -30,8 +31,9 @@ def _profile(p):
     return p
 
 
-def _valid_frame(s,now):
-    if (type(s) is not dict or set(s)!=_STATE or any(not is_digest(s[k]) for k in ("deployment_digest","profile_digest","operation_digest"))
+def _valid_frame(s,now,*,review_required=False):
+    if (type(s) is not dict or set(s)!=(_STATE|({"review_state"} if review_required else set()))
+            or any(not is_digest(s[k]) for k in ("deployment_digest","profile_digest","operation_digest"))
             or not _name(s["subject"]) or not _name(s["zone"]) or not _time(s["checked_at"]) or s["checked_at"]!=now
             or not _time(s["expires_at"]) or s["expires_at"]<=now or not _time(s["current_grant_epoch"]) or not _time(s["topology_epoch"])):return False
     a=s["authority"];n=s["nonce"];head=s["ledger_head"]
@@ -44,13 +46,19 @@ def _valid_frame(s,now):
             or any(not _time(n[k]) for k in ("grant_epoch","registered_at","revision")) or n["registered_at"]>now
             or any(n[k] is not None and (not _time(n[k]) or not n["registered_at"]<=n[k]<=now) for k in ("consumed_at","revoked_at"))
             or type(head) is not dict or set(head)!={"anchor","sequence"} or not is_digest(head["anchor"]) or not _time(head["sequence"])
-            or type(s["fences"]) is not list or len(s["fences"])!=len(_FENCES)):return False
+            or type(s["fences"]) is not list or len(s["fences"])!=len(_FENCES)+(1 if review_required else 0)):return False
+    if review_required:
+        r=s["review_state"]
+        if (type(r) is not dict or set(r)!={"review_profile_digest","decided_by","ledger_head","revision","covered_through","history_digest","backlog_digest","findings_digest","registry_digest"}
+                or any(not is_digest(r[k]) for k in ("review_profile_digest","history_digest","backlog_digest","findings_digest","registry_digest"))
+                or not _name(r["decided_by"]) or not _time(r["revision"]) or not _time(r["covered_through"]) or r["covered_through"]!=now or type(r["ledger_head"]) is not dict
+                or set(r["ledger_head"])!={"anchor","sequence"} or not is_digest(r["ledger_head"]["anchor"]) or not _time(r["ledger_head"]["sequence"])):return False
     names=set()
     for f in s["fences"]:
         if (type(f) is not dict or set(f)!={"name","anchor","revision"} or not _name(f["name"]) or f["name"] in names
                 or not is_digest(f["anchor"]) or not _time(f["revision"])):return False
         names.add(f["name"])
-    return names==_FENCES
+    return names==(_FENCES|({"production_review"} if review_required else set()))
 
 
 @dataclass(frozen=True,slots=True)
@@ -99,7 +107,8 @@ def check_relational_commit(assessment,authenticated_frame_bytes,*,actual_operat
         return result("RELATIONAL_COMMIT_NOT_CURRENT")
     try:s=_parse_jcs_object(authenticated_frame_bytes)
     except (ValidationError,ProofFormatError):return result("RELATIONAL_COMMIT_FRAME_INVALID")
-    if not _valid_frame(s,committed_at):return result("RELATIONAL_COMMIT_FRAME_INVALID")
+    review_required=assessment.decision.production_review is not None
+    if not _valid_frame(s,committed_at,review_required=review_required):return result("RELATIONAL_COMMIT_FRAME_INVALID")
     b=_parse_jcs_object(assessment.contract_bytes)
     op_bytes=canonical_demand_operation_bytes(actual_operation);op=_parse_jcs_object(op_bytes)
     if op_bytes!=assessment.operation_bytes or digest_demand_operation(op,algorithm="sha256")!=b["operation_digest"]:
@@ -107,6 +116,7 @@ def check_relational_commit(assessment,authenticated_frame_bytes,*,actual_operat
     if (any(s[k]!=b[k] for k in ("deployment_digest","profile_digest","operation_digest","subject","zone","current_grant_epoch","topology_epoch","ledger_head"))
             or s["authority"]!=b["authority_state"] or s["nonce"]!=b["nonce_state"]
             or sorted(s["fences"],key=lambda f:f["name"])!=b["fences"]
+            or review_required and _review_data(s["review_state"])!=_review_data(b["review_state"])
             or s["authority"]["withdrawn_at"] is not None or s["nonce"]["consumed_at"] is not None or s["nonce"]["revoked_at"] is not None):
         return result("RELATIONAL_COMMIT_STATE_CHANGED")
     return result("RELATIONAL_COMMIT_CONDITIONS_MATCH")
@@ -148,12 +158,18 @@ class InstalledRelationalCommitVerifier:
         if (type(source) is not AuthenticatedRelationalCommitContext or type(source.state_bytes) is not bytes or len(source.state_bytes)>262144
                 or type(source.evidence_bytes) is not bytes or not source.evidence_bytes):raise ValidationError("actual registered authority/nonce/fence Source required")
         s=_parse_jcs_object(source.state_bytes)
-        if not _valid_frame(s,evaluated_at):return result("RELATIONAL_COMMIT_FRAME_INVALID")
+        review=decision.production_review
+        if not _valid_frame(s,evaluated_at,review_required=review is not None):return result("RELATIONAL_COMMIT_FRAME_INVALID")
         lease=_parse_jcs_object(lease_bytes);op=_parse_jcs_object(decision.operation_bytes);rs=decision.reissue
         a=s["authority"];n=s["nonce"]
         expected_anchors=dict(grant=_parse_jcs_object(rs.authenticated_state_bytes)["grant"]["record_anchor"],nonce=n["record_anchor"],
             human_decision=decision.decision_anchor,template=lease["template_digest"],native_evidence=evidence_digest,
             adverse_stop=rs.ledger_head_anchor,authority=a["registry_anchor"])
+        if review is not None:
+            expected_anchors["production_review"]=review.frame_digest
+            if (s["review_state"]!=_parse_jcs_object(review.frame_bytes)
+                    or next(f["revision"] for f in s["fences"] if f["name"]=="production_review")!=review.state_revision):
+                return result("RELATIONAL_COMMIT_REVIEW_BINDING")
         if (s["deployment_digest"]!=decision.adjudication.deployment_digest or s["profile_digest"]!=_digest(p,"sha256")
                 or s["operation_digest"]!=digest_demand_operation(op,algorithm="sha256") or s["subject"]!=op["actor"] or s["zone"]!=p["zone"]
                 or s["current_grant_epoch"]!=rs.current_grant_epoch or s["topology_epoch"]!=_parse_jcs_object(decision.adjudication.authenticated_state_bytes)["topology_epoch"]
@@ -172,6 +188,7 @@ class InstalledRelationalCommitVerifier:
             authority_state=a,nonce_state=n,nonce=n["nonce"],lease_digest=rs.lease_digest,template_digest=lease["template_digest"],
             human_decision_anchor=decision.decision_anchor,native_evidence_digest=evidence_digest,repair_ref=decision.repair_ref,
             fences=sorted(s["fences"],key=lambda f:f["name"]),checked_at=evaluated_at,expires_at=expiry)
+        if review is not None:body["review_state"]=s["review_state"]
         return result("RELATIONAL_COMMIT_CONDITIONAL",body,expiry)
 
 

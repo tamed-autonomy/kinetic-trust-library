@@ -2,9 +2,9 @@
 
 Sources: hand-back `17f37b772eac8b2f84248c1912f3aeb3f5fa26d1` §10.10 and
 retained source case HB-10-003. This is a selected provisional monitor, not a
-Full hand-back claim or a new RFC wire. The current endogenous decision gate
-continues to reject Full-exogenous selection until the complete composition is
-implemented and verified.
+Full hand-back claim or a new RFC wire. The subsequent dual-schedule-gating
+checkpoint composes this monitor with the endogenous decision gate and protected
+commit view. It still does not establish overall Full conformance.
 
 ## Implemented reference policy
 
@@ -50,18 +50,18 @@ or rolling-population change, bounded by Source expiry.
 The initial adapter rejected historical policy transitions. The historical
 checkpoint below now authenticates each event's governing body and role registry;
 it does not reprice an old draw/SLA/trigger under current rules or omit historical
-decisions and their open obligations. Full decision-gate and commit-fence
-composition remain next work.
+decisions and their open obligations. The subsequent dual-schedule-gating plan
+documents the implemented decision-gate and commit-fence composition.
 
 ## Required continuation
 
 1. Completed by the historical checkpoint below: preserve governing sampling/SLA/trigger policies without changing
    actual draws or erasing older outstanding obligations.
-2. Compose the monitor symmetrically into a selected accountable decision policy;
+2. Completed by the dual-schedule checkpoint: compose the monitor symmetrically into a selected accountable decision policy;
    bind its actual decider/current ledger and preserve the endogenous gate.
-3. Carry review-ledger/backlog revisions through conditional relational Clear and
+3. Completed by the dual-schedule checkpoint: carry review-ledger/backlog revisions through conditional relational Clear and
    the protected commit contract, with shortest validity and failure routing.
-4. Exercise HB-10-003 through actual signed native composition, including finding,
+4. Completed for the selected family by the dual-schedule checkpoint: exercise HB-10-003 through actual signed native composition, including finding,
    overdue review, policy transition and commit-time invalidation cases.
 5. Continue the broader hand-back/RFC capability work. This monitor alone never
    reports `gate_satisfied`, `conditional_clear` or action permission.

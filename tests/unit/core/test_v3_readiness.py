@@ -306,6 +306,47 @@ class ReadinessTests(unittest.TestCase):
         wrong_route=wrong_route_cf["verifier"].evaluate(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True,
             relational_token_bytes=wrong_commit["f"]["f"]["sign"]())
         self.assertEqual(wrong_route.reason,"CLEARANCE_RELATIONAL_REPAIR_BINDING")
+        full_cf=clearance_fixture(native,combined,operation,deployment)
+        full_commit,_=install_relational(full_cf,operation,deployment,production_review=True)
+        from tests.unit.core.test_v3_relational_commit import install_commit_review
+        review_state=full_commit["review_state"]
+        review_state["history"][0]["reviewed_at"]=review_state["history"][0]["acknowledged_at"]
+        install_commit_review(full_commit,review_state)
+        def full_clear():return full_cf["verifier"].evaluate(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True,
+            relational_token_bytes=full_commit["f"]["f"]["sign"]())
+        full=full_clear();self.assertTrue(full.conditional_clear);self.assertFalse(full.action_permitted)
+        self.assertTrue(full.relational_commit.decision.production_review.review_current)
+        self.assertEqual(full.supervision,combined.supervision)
+        from copy import deepcopy
+        saved_review=deepcopy(review_state)
+        from tests.unit.core.test_v3_decision_review import event as production_event
+        second=production_event(2,same_time=True,actor=operation["actor"])
+        second.update(sequence=101,decided_at=999,acknowledged_at=998,reviewed_at=998)
+        second["sample"].update(sequence=102,drawn_at=999);second["reviews"][0].update(sequence=103,completed_at=1000)
+        review_state["history"].append(second);review_state["governing_profiles"][second["anchor"]]=review_state["profile_digest"]
+        review_state["ledger_head"].update(anchor="sha256:"+"9"*64,sequence=110);review_state["state_revision"]+=1
+        rubber_stamp=full_clear();self.assertFalse(rubber_stamp.conditional_clear)
+        self.assertEqual(rubber_stamp.reason,"DECISION_REVIEW_RUBBER_STAMP_FINDING")
+        self.assertTrue(rubber_stamp.hand_back_required)
+        review_state.clear();review_state.update(deepcopy(saved_review))
+        prior=review_state["history"][0];prior["reviews"]=[]
+        review_state["open_obligations"]=[prior["sample"]["anchor"]]
+        overdue=full_clear();self.assertFalse(overdue.conditional_clear)
+        self.assertEqual(overdue.reason,"DECISION_REVIEW_OVERDUE");self.assertTrue(overdue.hand_back_required)
+        prior["sample"]["drawn_at"]=992
+        install_commit_review(full_commit,review_state)
+        bounded=full_clear();self.assertTrue(bounded.conditional_clear)
+        self.assertEqual(bounded.expires_at,1002);self.assertEqual(bounded.relational_commit.expires_at,1002)
+        old_policy=deepcopy(review_state["profile_registry"][review_state["profile_digest"]])
+        old_policy.update(version=2,review_sla_seconds=30);old_policy["sampling_rate"]=dict(numerator=2,denominator=2)
+        old_policy_digest=digest(old_policy)
+        review_state["profile_registry"][old_policy_digest]=old_policy
+        review_state["registries"][old_policy_digest]=deepcopy(review_state["registries"][review_state["profile_digest"]])
+        prior["sample"]["draw"]=1;review_state["governing_profiles"][prior["anchor"]]=old_policy_digest
+        review_state["state_revision"]+=1;install_commit_review(full_commit,review_state)
+        historical=full_clear();self.assertTrue(historical.conditional_clear)
+        self.assertEqual(historical.relational_commit.decision.production_review.projection.pending_reviews[0][2],1022)
+        self.assertEqual(historical.expires_at,1005)
         boundary_state["subject_class"]="outsider"
         denied_boundary=whole()
         self.assertEqual(denied_boundary.reason,"BOUNDARY_SUBJECT")

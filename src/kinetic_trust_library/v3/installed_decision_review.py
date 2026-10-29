@@ -17,6 +17,23 @@ from .root_lifecycle import _time
 from .hand_back_hysteresis import _at
 
 
+def _review_frame(s):
+    """Protected data view; observation-time coverage metadata is not a revision."""
+    return dict(review_profile_digest=s["profile_digest"],decided_by=s["decided_by"],ledger_head=s["ledger_head"],revision=s["state_revision"],covered_through=s["checked_at"],
+        history_digest=_digest({"history":s["history"]},"sha256"),
+        backlog_digest=_digest({"open_obligations":s["open_obligations"],"open_findings":s["open_findings"]},"sha256"),
+        findings_digest=_digest({"findings":s["findings"]},"sha256"),
+        registry_digest=_digest({k:s[k] for k in ("profile_registry","registries","governing_profiles")},"sha256"))
+
+
+def _review_data(frame):
+    return {k:v for k,v in frame.items() if k!="covered_through"}
+
+
+def _review_frame_digest(frame):
+    return _digest(_review_data(frame),"sha256")
+
+
 def _validate_roles(p,roles,events,parties,now,*,current):
     if type(roles) is not dict or set(roles)!={"sampler","reviewer"}:
         raise ValidationError("actual historical sampler and review role registry required")
@@ -115,6 +132,9 @@ class DecisionReviewAssessment:
     active_findings: tuple
     closed_findings: tuple
     finding_record_required: bool
+    state_revision: int
+    frame_bytes: bytes
+    frame_digest: str
 
     def __init__(self,*args,**kwargs):raise TypeError("review monitor requires installed actual production inventory/registries/backlog")
 
@@ -143,11 +163,11 @@ class InstalledDecisionReviewVerifier:
             raise ValidationError("complete authenticated production review Source required")
         s=_parse_jcs_object(source.state_bytes)
         if (set(s)!={"deployment_digest","profile_digest","operation_digest","decided_by","zone","checked_at","expires_at","ledger_owner",
-                "append_protocol","coverage_start","coverage_end","ledger_head","history","governing_profiles","open_obligations","profile_registry","registries","findings","open_findings"}
+                "append_protocol","coverage_start","coverage_end","ledger_head","history","governing_profiles","open_obligations","profile_registry","registries","findings","open_findings","state_revision"}
                 or s["deployment_digest"]!=deployment or s["profile_digest"]!=policy
                 or s["operation_digest"]!=digest_demand_operation(op,algorithm="sha256") or s["decided_by"]!=decided_by or s["zone"]!=p["zone"]
                 or s["ledger_owner"]!=p["ledger_owner"] or s["append_protocol"]!=p["append_protocol"]
-                or not _time(s["checked_at"]) or s["checked_at"]!=evaluated_at or not _time(s["expires_at"]) or s["expires_at"]<=evaluated_at
+                or not _time(s["checked_at"]) or s["checked_at"]!=evaluated_at or not _time(s["expires_at"]) or s["expires_at"]<=evaluated_at or not _time(s["state_revision"])
                 or _at(s["coverage_start"])>max(0,evaluated_at-p["window_seconds"]) or _at(s["coverage_end"])!=evaluated_at):
             raise ValidationError("production review Source differs from current scope/profile/complete coverage")
         head=s["ledger_head"]
@@ -187,12 +207,15 @@ class InstalledDecisionReviewVerifier:
         expiry=s["expires_at"]
         if projection.next_change_at is not None:expiry=min(expiry,projection.next_change_at)
         result=object.__new__(DecisionReviewAssessment)
+        import rfc8785
+        frame=_review_frame(s)
         for key,value in dict(review_current=not projection.overdue_reviews and not new_finding and not active_findings,action_permitted=False,
                 reason="DECISION_REVIEW_UNRESOLVED_FINDING" if active_findings else "DECISION_REVIEW_RUBBER_STAMP_FINDING" if new_finding else "DECISION_REVIEW_OVERDUE" if projection.overdue_reviews else "DECISION_REVIEW_RESOLVED_FINDING" if resolved_pattern else "DECISION_REVIEW_CURRENT",
                 decided_by=decided_by,projection=projection,ledger_head_anchor=head["anchor"],ledger_head_sequence=head["sequence"],
                 profile_bytes=self.profile_bytes,operation_bytes=op_bytes,evaluated_at=evaluated_at,expires_at=expiry,
                 authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes,
-                active_findings=active_findings,closed_findings=closed_findings,finding_record_required=new_finding).items():object.__setattr__(result,key,value)
+                active_findings=active_findings,closed_findings=closed_findings,finding_record_required=new_finding,
+                state_revision=s["state_revision"],frame_bytes=rfc8785.dumps(frame),frame_digest=_review_frame_digest(frame)).items():object.__setattr__(result,key,value)
         return result
 
 

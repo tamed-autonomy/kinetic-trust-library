@@ -58,8 +58,51 @@ def evaluate(f,token=True):
         evidence_digest=f["s"]["evidence_digest"],actual_operation=f["op"],evaluated_at=f["now"],clock_healthy=True)
 
 
+def install_review(f):
+    import json,rfc8785
+    from dataclasses import replace
+    from kinetic_trust_library.v3.demand_supplier import _digest
+    from tests.unit.core.test_v3_installed_decision_review import fixture as review_fixture
+    from tests.unit.core.test_v3_decision_review import event
+    v,s,_,_=review_fixture(f["op"],json.loads(f["v"].adjudication_verifier.deployment_profile_bytes),f["p"]["zone"])
+    current=event(4,draw=1,actor=f["op"]["actor"]);d=f["s"]["decision"]
+    current.update(anchor=d["anchor"],sequence=60,decided_by=d["decided_by"],decided_at=d["signed_at"],
+                   acknowledged_at=d["acknowledged_at"],reviewed_at=d["reviewed_at"],choice=d["choice"])
+    current["sample"].update(sequence=61,drawn_at=d["signed_at"]);current["reviews"]=[]
+    s["history"].append(current);s["governing_profiles"][current["anchor"]]=s["profile_digest"]
+    f["p"].update(formula="accountable-adjudication-dual-schedule-v1",evidence_level="full-exogenous",production_review_profile_digest=s["profile_digest"])
+    digest=_digest(f["p"],"sha256");f["s"]["profile_digest"]=f["s"]["run"]["profile_digest"]=digest
+    f["v"]=replace(f["v"],profile_bytes=rfc8785.dumps(f["p"]),review_verifier=v)
+    return v,s
+
+
 @unittest.skipUnless(HAS_EXTRAS,"install v3-proofs")
 class RelationalDecisionTests(unittest.TestCase):
+    def test_dual_schedule_gate_preserves_endogenous_refusal_and_current_production_review(self):
+        f=fixture();_,review=install_review(f)
+        r=evaluate(f);self.assertTrue(r.gate_satisfied);self.assertTrue(r.production_review.review_current)
+        f["s"]["run"]["cases"]=[];self.assertFalse(evaluate(f).gate_satisfied)
+
+    def test_overdue_exogenous_review_blocks_real_signed_favorable_decision(self):
+        f=fixture();_,s=install_review(f);old=s["history"][0]
+        old["reviews"]=[];s["open_obligations"]=[old["sample"]["anchor"]]
+        r=evaluate(f);self.assertFalse(r.gate_satisfied);self.assertEqual(r.reason,"DECISION_REVIEW_OVERDUE")
+
+    def test_production_inventory_must_include_this_actual_signed_human_decision(self):
+        f=fixture();_,s=install_review(f);s["history"].pop();s["governing_profiles"].pop(f["s"]["decision"]["anchor"])
+        self.assertEqual(evaluate(f).reason,"RELATIONAL_PRODUCTION_DECISION_BINDING")
+
+    def test_dual_schedule_selection_is_symmetric_and_clips_expiry(self):
+        from dataclasses import replace
+        from kinetic_trust_library.errors import ValidationError
+        f=fixture();_,s=install_review(f);s["expires_at"]=1002
+        self.assertEqual(evaluate(f).expires_at,1002)
+        with self.assertRaises(ValidationError):replace(f["v"],review_verifier=None)
+        import rfc8785
+        standard=fixture()
+        with self.assertRaises(ValidationError):replace(standard["v"],review_verifier=f["v"].review_verifier)
+        mismatch=replace(f["v"].review_verifier,deployment_profile_bytes=rfc8785.dumps(dict(id="deployment:other")))
+        with self.assertRaises(ValidationError):replace(f["v"],review_verifier=mismatch)
     def test_real_signed_decision_and_prior_refusal_run_satisfy_gate_without_authority(self):
         r=evaluate(fixture())
         self.assertTrue(r.gate_satisfied);self.assertEqual(r.decided_by,"person:decider")

@@ -38,8 +38,60 @@ def evaluate(c):
         actual_operation=f["op"],evaluated_at=f["now"],clock_healthy=True)
 
 
+def install_commit_review(c,review_state):
+    """Model an independently authenticated protected authority view."""
+    import rfc8785
+    from dataclasses import replace
+    from kinetic_trust_library.v3.demand_supplier import _digest
+    from kinetic_trust_library.v3.installed_decision_review import _review_frame,_review_frame_digest
+    c["p"]["decision_profile_digest"]=_digest(c["f"]["p"],"sha256")
+    c["s"]["profile_digest"]=_digest(c["p"],"sha256")
+    c["v"]=replace(c["v"],decision_verifier=c["f"]["v"],profile_bytes=rfc8785.dumps(c["p"]))
+    view=_review_frame(review_state);c["s"]["review_state"]=view
+    c["s"]["fences"]=[f for f in c["s"]["fences"] if f["name"]!="production_review"]
+    c["s"]["fences"].append(dict(name="production_review",anchor=_review_frame_digest(view),revision=view["revision"]))
+
+
 @unittest.skipUnless(HAS_EXTRAS,"install v3-proofs")
 class RelationalCommitTests(unittest.TestCase):
+    def test_full_decision_requires_its_actual_protected_review_view_and_fence(self):
+        from tests.unit.core.test_v3_relational_decision import install_review
+        c=fixture();_,state=install_review(c["f"]);install_commit_review(c,state)
+        r=evaluate(c);self.assertTrue(r.conditional_commit)
+        c["s"].pop("review_state");self.assertFalse(evaluate(c).conditional_commit)
+        c["s"]["fences"]=[f for f in c["s"]["fences"] if f["name"]!="production_review"]
+        self.assertFalse(evaluate(c).conditional_commit)
+
+    def test_authority_review_view_must_match_the_independently_verified_monitor(self):
+        from tests.unit.core.test_v3_relational_decision import install_review
+        c=fixture();_,state=install_review(c["f"]);install_commit_review(c,state)
+        c["s"]["review_state"]["revision"]+=1
+        self.assertEqual(evaluate(c).reason,"RELATIONAL_COMMIT_REVIEW_BINDING")
+
+    def test_changed_review_data_or_revision_after_evaluation_blocks_commit(self):
+        import rfc8785
+        from tests.unit.core.test_v3_relational_decision import install_review
+        from kinetic_trust_library.v3.relational_commit import check_relational_commit
+        for change in (lambda s:s["review_state"].update(revision=18),lambda s:s["review_state"]["ledger_head"].update(sequence=101),
+                       lambda s:s["review_state"].update(backlog_digest="sha256:"+"0"*64),
+                       lambda s:s["review_state"].update(findings_digest="sha256:"+"0"*64),
+                       lambda s:s["review_state"].update(registry_digest="sha256:"+"0"*64)):
+            c=fixture();_,state=install_review(c["f"]);install_commit_review(c,state)
+            r=evaluate(c);change(c["s"]);c["s"]["checked_at"]=1001;c["s"]["review_state"]["covered_through"]=1001
+            with self.subTest(change=change):
+                self.assertFalse(check_relational_commit(r,rfc8785.dumps(c["s"]),actual_operation=c["f"]["op"],committed_at=1001,clock_healthy=True).conditions_match)
+
+    def test_commit_requires_current_review_coverage_without_rejecting_unchanged_data(self):
+        import rfc8785
+        from tests.unit.core.test_v3_relational_decision import install_review
+        from kinetic_trust_library.v3.relational_commit import check_relational_commit
+        c=fixture();_,state=install_review(c["f"]);install_commit_review(c,state)
+        r=evaluate(c);c["s"]["checked_at"]=1001
+        check=lambda:check_relational_commit(r,rfc8785.dumps(c["s"]),actual_operation=c["f"]["op"],committed_at=1001,clock_healthy=True)
+        self.assertFalse(check().conditions_match)
+        c["s"]["review_state"]["covered_through"]=1001
+        self.assertTrue(check().conditions_match);self.assertFalse(check().action_permitted)
+
     def test_contract_preserves_exact_authority_nonce_current_fences_and_shortest_expiry(self):
         import json
         c=fixture();r=evaluate(c)

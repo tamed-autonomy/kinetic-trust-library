@@ -59,7 +59,7 @@ def install_reissue(cf,operation,deployment,now=1000):
     return rv,rs,refresh
 
 
-def install_relational(cf,operation,deployment,repair_ref_override=None):
+def install_relational(cf,operation,deployment,repair_ref_override=None,production_review=False):
     import json,rfc8785
     from dataclasses import replace
     from kinetic_trust_library.v3.demand_supplier import _digest
@@ -80,7 +80,14 @@ def install_relational(cf,operation,deployment,repair_ref_override=None):
     f["s"]["evidence_digest"]=f["s"]["decision"]["evidence_digest"]=s["native_geometry_digest"]
     f["f"]["state"]["evidence_digest"]=f["f"]["payload"]["evidence_digest"]=s["native_geometry_digest"]
     f["refresh"]()
+    review_state=None
+    if production_review:
+        from tests.unit.core.test_v3_relational_decision import install_review
+        _,review_state=install_review(f)
     c=commit_fixture(f)
+    if review_state is not None:
+        from tests.unit.core.test_v3_relational_commit import install_commit_review
+        install_commit_review(c,review_state);c["review_state"]=review_state
     rp=json.loads(old.profile_bytes)
     rp.update(relational_reissue="relationship-record-v1",relational_profile_digest=_digest(json.loads(f["v"].relational_verifier.profile_bytes),"sha256"))
     history["profile_digest"]=_digest(rp,"sha256")

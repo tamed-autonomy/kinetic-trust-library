@@ -17,13 +17,18 @@ from .demand_operation import canonical_demand_operation_bytes,digest_demand_ope
 from .execution_observation import _name,_digest as is_digest
 from .root_lifecycle import _time
 from .execution_observation import ExecutionScope,ExecutionDecision,ExecutionObservation,classify_execution_observation
+from .installed_decision_review import InstalledDecisionReviewVerifier
+from .hand_back_hysteresis import _at
 
 
 def _profile(p):
-    if (set(p)!={"id","version","zone","formula","adjudication_profile_digest","relational_profile_digest",
-                  "evidence_level","refusal_cases","max_run_age_seconds"}
+    full=p.get("evidence_level")=="full-exogenous"
+    if (set(p)!=({"id","version","zone","formula","adjudication_profile_digest","relational_profile_digest",
+                  "evidence_level","refusal_cases","max_run_age_seconds"}|({"production_review_profile_digest"} if full else set()))
             or not _name(p["id"]) or not _name(p["zone"]) or not _time(p["version"]) or p["version"]==0
-            or p["formula"]!="accountable-adjudication-endogenous-v1" or p["evidence_level"]!="standard-endogenous"
+            or p["formula"]!=("accountable-adjudication-dual-schedule-v1" if full else "accountable-adjudication-endogenous-v1")
+            or p["evidence_level"] not in ("standard-endogenous","full-exogenous")
+            or full and not is_digest(p["production_review_profile_digest"])
             or not is_digest(p["adjudication_profile_digest"]) or not is_digest(p["relational_profile_digest"])
             or not _time(p["max_run_age_seconds"]) or p["max_run_age_seconds"]==0
             or type(p["refusal_cases"]) is not list or not 0<len(p["refusal_cases"])<=256):
@@ -63,6 +68,7 @@ class RelationalDecisionAssessment:
     expires_at: int | None
     authenticated_state_bytes: bytes | None
     source_evidence_bytes: bytes | None
+    production_review: object
 
     def __init__(self,*args,**kwargs):raise TypeError("relational decision gates require installed signed/current accountable evidence")
 
@@ -128,6 +134,7 @@ class InstalledRelationalDecisionVerifier:
     adjudication_verifier: InstalledAdjudicationVerifier
     profile_bytes: bytes
     context_source: object
+    review_verifier: InstalledDecisionReviewVerifier | None = None
 
     def __post_init__(self):
         if (type(self.relational_verifier) is not InstalledRelationalReissueVerifier
@@ -135,6 +142,12 @@ class InstalledRelationalDecisionVerifier:
                 or not callable(getattr(self.context_source,"resolve",None))):raise ValidationError("invalid installed relational decision verifier")
         rv=self.relational_verifier;av=self.adjudication_verifier;hv=rv.hysteresis_verifier
         p=_profile(_parse_jcs_object(self.profile_bytes));ap=_parse_jcs_object(av.profile_bytes)
+        review=self.review_verifier
+        if ((p["evidence_level"]=="full-exogenous")!=(review is not None) or review is not None and (
+                type(review) is not InstalledDecisionReviewVerifier or review.deployment_profile_bytes!=av.deployment_profile_bytes
+                or _parse_jcs_object(review.profile_bytes)["zone"]!=p["zone"]
+                or p["production_review_profile_digest"]!=_digest(_parse_jcs_object(review.profile_bytes),"sha256"))):
+            raise ValidationError("dual-schedule decision and exact installed production review selection must be symmetric")
         if (hv.algorithm!="sha256" or hv.deployment_profile_bytes!=av.deployment_profile_bytes
                 or p["zone"]!=ap["zone_id"] or p["zone"]!=_parse_jcs_object(rv.profile_bytes)["zone"] or ap["gate_required"] is not True
                 or p["adjudication_profile_digest"]!=_digest(ap,"sha256")
@@ -148,7 +161,7 @@ class InstalledRelationalDecisionVerifier:
         p=_profile(_parse_jcs_object(self.profile_bytes));rv=self.relational_verifier;av=self.adjudication_verifier
         op_bytes=canonical_demand_operation_bytes(actual_operation);op=_parse_jcs_object(op_bytes)
         reissue=rv.evaluate(lease_bytes,actual_operation=op,evaluated_at=evaluated_at,clock_healthy=clock_healthy)
-        adjudication=None;source=None;decider=None;decision_anchor=None;run_anchor=None
+        adjudication=None;source=None;decider=None;decision_anchor=None;run_anchor=None;production_review=None
         def result(reason,expiry=None):
             r=object.__new__(RelationalDecisionAssessment)
             for key,value in dict(gate_required=True,gate_satisfied=reason=="RELATIONAL_DECISION_SATISFIED",action_permitted=False,reason=reason,
@@ -156,7 +169,8 @@ class InstalledRelationalDecisionVerifier:
                     reissue=reissue,adjudication=adjudication,decision_anchor=decision_anchor,refusal_run_anchor=run_anchor,
                     profile_bytes=self.profile_bytes,operation_bytes=op_bytes,evaluated_at=evaluated_at,expires_at=expiry,
                     authenticated_state_bytes=source.state_bytes if source is not None else None,
-                    source_evidence_bytes=source.evidence_bytes if source is not None else None).items():object.__setattr__(r,key,value)
+                    source_evidence_bytes=source.evidence_bytes if source is not None else None,
+                    production_review=production_review).items():object.__setattr__(r,key,value)
             return r
         if not reissue.eligible:return result(reissue.reason)
         adjudication=av.evaluate(token_bytes,actual_operation=op,evaluated_at=evaluated_at,clock_healthy=clock_healthy)
@@ -199,6 +213,16 @@ class InstalledRelationalDecisionVerifier:
         if not _refusal_run(s["run"],p,d,principal,op["actor"],evaluated_at):return result("RELATIONAL_REFUSAL_RUN_REQUIRED")
         run_anchor=s["run"]["anchor"]
         expiry=min(reissue.expires_at,adjudication.expires_at,s["expires_at"],principal["valid_until"],s["run"]["completed_at"]+p["max_run_age_seconds"])
+        if self.review_verifier is not None:
+            production_review=self.review_verifier.evaluate(decided_by=decider,actual_operation=op,evaluated_at=evaluated_at,clock_healthy=clock_healthy)
+            rs=_parse_jcs_object(production_review.authenticated_state_bytes)
+            current=next((e for e in rs["history"] if e["anchor"]==decision_anchor),None)
+            if (current is None or current["actor"]!=op["actor"] or current["decided_by"]!=decider or current["choice"]!=d["choice"]
+                    or current["review_kind"]!=d["review_kind"] or _at(current["decided_at"])!=d["signed_at"]
+                    or _at(current["acknowledged_at"])!=d["acknowledged_at"] or current["reviewed_at"] is None
+                    or _at(current["reviewed_at"])!=d["reviewed_at"]):return result("RELATIONAL_PRODUCTION_DECISION_BINDING")
+            if not production_review.review_current:return result(production_review.reason)
+            expiry=min(expiry,production_review.expires_at)
         return result("RELATIONAL_DECISION_SATISFIED",expiry)
 
 
