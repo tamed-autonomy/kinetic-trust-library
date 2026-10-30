@@ -43,7 +43,8 @@ still needs requirement-by-requirement implementation and validation.
 | Request association, geometry and carrier | `request_association`, `geometry_verifier`, `native_geometry`, `geometry_carrier`, `geometry_issuance`, `carrier_association`; complete signed-path tests | Durable replay, production source profiles, actual operation reconstruction and final execution fencing remain Service/provider work. |
 | Readiness and combined prerequisites | `installed_readiness`, `readiness_decision`, `native_evaluation`; current epoch/challenge/artifact/signature and facade tests | Level 3 ordinary-proof support is explicitly rejected. This result is not a complete release-set authorizer. |
 | Trajectory and migration | `trajectory`, `_trajectory_reference`, `_jws_keys`; real classical signature/head/predecessor/migration tests | Consensus, commitment/registry durability and migration activation remain external. Final official five-factor fixture reconciliation is pending. |
-| Human eligibility | `human_eligibility`, restriction-only human-origin join; exact scope/current-map/delegation tests | Neither direct-human capacity/execution nor proposed person signed-act standing is supplied. |
+| Human eligibility | `human_eligibility`, restriction-only human-origin join; exact scope/current-map/delegation tests | Direct-human capacity/execution remains separate; the provisional person signed-act standing route does not supply it. |
+| Person signed-act standing | `person_standing`, `installed_person_standing`; exact retained source arithmetic, signed stress-act and current Root/institution/scope tests | Selected zero-peer/single-current-Root profile only, with explicit provisional trajectory policy. Person proof production, authenticated federation agreement composition, multi-instrument ranking and human operational capacity remain. |
 | Privacy evidence and erasure accounting | `privacy_evidence`, `privacy_issuance`, `privacy_erasure`; real crypto plus modeled current-source tests | Actual lawful disclosure/retention, inventory discovery, custody/destruction, restoration and storage fencing remain external. |
 | Nested ingress, enclosure risk and selected egress | `ingress`, `enclosure`, `egress`; complete proof, exact floor/capacity, new signed egress and source-binding tests | Receipt crypto/link encoding needs an interoperable named profile. Other enclosure/egress profiles and deployed containment/disclosure are not proven. |
 
@@ -379,6 +380,16 @@ hysteresis event is created. Authenticated absence of a current grant also
 allows routine refresh with current management/admission and valid relation
 facts, without a fabricated template or lease. See
 `docs/plans/2026-10-29-proof-expiry.md` for source completeness boundaries.
+
+Person standing checkpoint (2026-10-29): exact published person examples now
+exercise a separate signed-act-only arithmetic path and directional import.
+An installed local profile binds complete corrected signed acts, contribution
+policy, explicit provisional trajectory ceiling, current zone risk and the
+actual institution behind the person's current Root. Multiple current Root
+instruments are explicitly unsupported; software Root ranking cannot select
+among person institutional standings. This is standing evidence only, never
+human capacity, execution, eligibility or a general score. See
+`docs/plans/2026-10-29-person-standing.md` for source and remaining scope.
 
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
