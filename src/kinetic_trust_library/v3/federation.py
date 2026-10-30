@@ -89,25 +89,7 @@ class InstalledFederationVerifier:
         profile=profile_terms(_parse_jcs_object(self.profile_bytes));policy=_digest(profile,self.algorithm)
         deployment=_digest(_parse_jcs_object(self.deployment_profile_bytes),self.algorithm)
         invocation=digest_demand_operation(operation,algorithm=self.algorithm)
-        source=self.context_source.resolve(deployment_profile_bytes=self.deployment_profile_bytes,profile_bytes=self.profile_bytes,
-            operation_bytes=operation_bytes,evaluated_at=evaluated_at)
-        if (type(source) is not AuthenticatedFederationContext or type(source.state_bytes) is not bytes or len(source.state_bytes)>262144
-                or type(source.evidence_bytes) is not bytes or not source.evidence_bytes):
-            raise ValidationError("federation source must authenticate complete current admission evidence")
-        state=_parse_jcs_object(source.state_bytes)
-        if (set(state)!={"deployment_digest","profile_digest","operation_digest","checked_at","expires_at","admission_id","ingress_at",
-                "subject","subject_profile","from_zone","to_zone","enforcement_class","action_class","substrate_profile",
-                "receiver_accepting","required_sovereignty","lowered_factors","agreement","attestation"}
-                or state["deployment_digest"]!=deployment or state["profile_digest"]!=policy or state["operation_digest"]!=invocation
-                or not _time(state["checked_at"]) or state["checked_at"]!=evaluated_at
-                or not _time(state["expires_at"]) or state["expires_at"]<=evaluated_at or state["subject"]!=operation["actor"]
-                or any(not name(state[key]) for key in ("subject_profile","from_zone","to_zone","enforcement_class","action_class","substrate_profile"))
-                or state["from_zone"]==state["to_zone"] or state["to_zone"]!=profile["receiving_zone"]
-                or type(state["receiver_accepting"]) is not bool
-                or not (state["admission_id"] is None and state["ingress_at"] is None
-                    or name(state["admission_id"]) and _time(state["ingress_at"]) and state["ingress_at"]<=evaluated_at)):
-            raise ValidationError("federation state differs from current invocation/profile/admission scope")
-        identifiers(state["required_sovereignty"])
+        source,state=resolve_current_federation_state(self,profile,operation_bytes,evaluated_at)
         values=dict(admitted=False,reason="FEDERATION_IMPORT_UNAVAILABLE",factor=None,exportable_base=None,void_clauses=(),expires_at=state["expires_at"])
         try:self._project(state,profile,values,evaluated_at,self.algorithm)
         except ValidationError:values.update(admitted=False,reason="FEDERATION_EVIDENCE_INVALID",exportable_base=None)
@@ -196,3 +178,31 @@ class InstalledFederationVerifier:
 
 
 __all__=("AuthenticatedFederationContext","FederationAssessment","InstalledFederationVerifier")
+
+
+def resolve_current_federation_state(verifier,profile,operation_bytes,evaluated_at):
+    """Shared authenticated scope; profile-specific admission remains separate."""
+    operation=_parse_jcs_object(operation_bytes)
+    deployment=_digest(_parse_jcs_object(verifier.deployment_profile_bytes),verifier.algorithm)
+    policy=_digest(profile,verifier.algorithm)
+    invocation=digest_demand_operation(operation,algorithm=verifier.algorithm)
+    source=verifier.context_source.resolve(deployment_profile_bytes=verifier.deployment_profile_bytes,profile_bytes=verifier.profile_bytes,
+        operation_bytes=operation_bytes,evaluated_at=evaluated_at)
+    if (type(source) is not AuthenticatedFederationContext or type(source.state_bytes) is not bytes or len(source.state_bytes)>262144
+            or type(source.evidence_bytes) is not bytes or not source.evidence_bytes):
+        raise ValidationError("federation source must authenticate complete current admission evidence")
+    state=_parse_jcs_object(source.state_bytes)
+    if (set(state)!={"deployment_digest","profile_digest","operation_digest","checked_at","expires_at","admission_id","ingress_at",
+            "subject","subject_profile","from_zone","to_zone","enforcement_class","action_class","substrate_profile",
+            "receiver_accepting","required_sovereignty","lowered_factors","agreement","attestation"}
+            or state["deployment_digest"]!=deployment or state["profile_digest"]!=policy or state["operation_digest"]!=invocation
+            or not _time(state["checked_at"]) or state["checked_at"]!=evaluated_at
+            or not _time(state["expires_at"]) or state["expires_at"]<=evaluated_at or state["subject"]!=operation["actor"]
+            or any(not name(state[key]) for key in ("subject_profile","from_zone","to_zone","enforcement_class","action_class","substrate_profile"))
+            or state["from_zone"]==state["to_zone"] or state["to_zone"]!=profile["receiving_zone"]
+            or type(state["receiver_accepting"]) is not bool
+            or not (state["admission_id"] is None and state["ingress_at"] is None
+                or name(state["admission_id"]) and _time(state["ingress_at"]) and state["ingress_at"]<=evaluated_at)):
+        raise ValidationError("federation state differs from current invocation/profile/admission scope")
+    identifiers(state["required_sovereignty"])
+    return source,state

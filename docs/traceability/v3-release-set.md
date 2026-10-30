@@ -391,6 +391,14 @@ among person institutional standings. This is standing evidence only, never
 human capacity, execution, eligibility or a general score. See
 `docs/plans/2026-10-29-person-standing.md` for source and remaining scope.
 
+Person federation checkpoint (2026-10-29): a distinct installed import-only
+profile now validates current signed-act-only person terms and reuses complete
+bilateral agreement/version/direction/signature/witness/sovereignty validation.
+The receiver's class/lowering-bounded factor and explicit zone ceiling apply
+once, with no software defaults. Missing direction/acceptance supplies no import;
+zero factor can retain admission. No local/imported accumulation, human capacity
+or execution is supplied. See `docs/plans/2026-10-29-person-federation.md`.
+
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
 contract recorded as such. External ownership must be justified by actual I/O,
