@@ -61,14 +61,14 @@ class InstalledHumanCapacityVerifier:
                 or self.algorithm not in ("sha256","sha384") or not callable(getattr(self.context_source,"resolve",None))):
             raise ValidationError("invalid installed human capacity verifier")
         dp=_parse_jcs_object(self.deployment_profile_bytes);p=_parse_jcs_object(self.profile_bytes)
-        if (set(p)!={"id","version","zone","formula","measurement_profile_digest","unit","max_age_seconds","review_authorities","envelope_thresholds"}
+        if (set(p)!={"id","version","zone","formula","deployment_digest","measurement_profile_digest","unit","max_age_seconds","review_authorities","envelope_thresholds"}
                 or any(not _name(p[k]) for k in ("id","zone")) or not _time(p["version"]) or p["version"]==0
                 or p["formula"]!="reviewed-operation-human-capacity-v1" or not is_digest(p["measurement_profile_digest"])
                 or not p["measurement_profile_digest"].startswith(self.algorithm+":")
                 or p["unit"]!="urn:ktp:unit:action-risk-points" or not _time(p["max_age_seconds"]) or p["max_age_seconds"]==0
                 or type(p["review_authorities"]) is not list or not p["review_authorities"]
                 or any(not _name(a) for a in p["review_authorities"]) or len(set(p["review_authorities"]))!=len(p["review_authorities"])
-                or dp.get("human_capacity_policy")!={"id":p["id"],"version":p["version"],"digest":_digest(p,self.algorithm)}):
+                or p["deployment_digest"]!=_digest(dp,self.algorithm)):
             raise ValidationError("human capacity requires exact installed reviewed policy and comparable scale")
         thresholds(p)
 

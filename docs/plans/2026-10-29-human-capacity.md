@@ -20,8 +20,8 @@ sovereignty/grants and protected effect fencing. No invented human score or
 default software route is allowed. Verify boundaries and installed packaging,
 review, run regression and push; continue remaining independent work.
 
-Implemented as a separate installed measurement prerequisite. Its deployment
-binds the exact policy digest; the policy names measurement-profile digest,
+Implemented as a separate installed measurement prerequisite. Its separately
+installed policy binds the exact deployment digest and names measurement-profile digest,
 accepted independent review authorities, common unit, maximum age and envelope
 thresholds. Current authenticated approval must predate measurement. Original
 review and measurement anchors are distinct, and all request/person/zone/digest
@@ -40,3 +40,9 @@ RFC wire fields. The Library does not calibrate or approve a real measurement
 model. Review adequacy, real human identity, genuine measurements, signatures,
 and complete current revocations remain explicitly authenticated Source facts.
 No native human proof or complete human executor is claimed by this checkpoint.
+
+2026-10-30 deployment reconciliation: the RFC deployment schema is closed and
+does not define `human_capacity_policy`. The private installed profile now binds
+the deployment digest; it does not add a field to that normative wire. Tests
+validate a complete native deployment against the bundled schema, use it in the
+capacity path, and reject a changed deployment under the previous profile.

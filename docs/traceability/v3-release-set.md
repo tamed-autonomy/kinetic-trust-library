@@ -433,6 +433,12 @@ variants now respect current management validity, including adverse results.
 See `docs/plans/2026-10-30-readiness-stop-resolution.md` for exact supported
 failures, unavailable-state and production preparation boundaries.
 
+Human-capacity deployment reconciliation (2026-10-30): its private installed
+profile binds the exact deployment digest without adding an undeclared field
+to the closed normative deployment wire. A complete schema-valid native
+deployment now exercises the capacity path, and profile/deployment mismatch
+rejects. See the updated human-capacity plan.
+
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
 contract recorded as such. External ownership must be justified by actual I/O,
