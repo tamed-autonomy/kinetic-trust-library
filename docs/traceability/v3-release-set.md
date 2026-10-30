@@ -294,6 +294,15 @@ the historical v2 requirement/evidence map as historical documentation.
 
 ## Completion gate
 
+Management checkpoint (2026-10-29): pure and installed classification histories
+preserve admissions, immediate demotions and original final hand-backs, with
+retained-checkpoint anti-rewrite validation. Uniform unmanaged denial, declared
+wire silence and articulate admission responses are implemented. Demoted wire
+silence requires exact installed current delivery/acknowledgment validation.
+See `docs/plans/2026-10-29-management-history.md` for first-observation,
+archival-bound, operational timing and actual ingress identity limits. Full
+managed-action clearance/commit composition remains required separately.
+
 Authority-stop checkpoint (2026-10-29): installed pending/refusal monitor binds
 actual mint request/response history and validated sealed hand-back; silence
 past the declared SLA creates authority-attributed record/routing obligations
