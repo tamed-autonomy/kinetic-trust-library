@@ -19,7 +19,7 @@ class BlockLegacy(importlib.abc.MetaPathFinder):
                 "kinetic_trust_library.models","kinetic_trust_library.proofs","kinetic_trust_library.core")):
             raise ImportError("native v3 attempted legacy runtime import: "+fullname)
 sys.meta_path.insert(0,BlockLegacy())
-for name in ("kinetic_trust_library.v3","kinetic_trust_library.v3.person_claims",
+for name in ("kinetic_trust_library.v3","kinetic_trust_library.v3.api","kinetic_trust_library.v3.person_claims",
         "kinetic_trust_library.v3.software_stop_resolution","kinetic_trust_library.v3.software_issuance",
         "kinetic_trust_library.v3.native_issuance"):
     importlib.import_module(name)

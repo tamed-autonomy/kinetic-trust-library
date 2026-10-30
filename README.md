@@ -89,6 +89,12 @@ representing this summary as certification evidence.
 > immutable v3 tag exists and these projects separately review and adopt it,
 > they remain pinned to KTP v2.1.0.
 
+The candidate implementation is available separately through
+`kinetic_trust_library.v3.api`. See the [native API and migration guide](docs/native-v3-usage.md)
+and [provisional release inventory](docs/traceability/v3-release-set.md) for
+supported installed-policy paths, verified checkpoints and unresolved source
+decisions. This does not change the released root API or normative pin.
+
 ## Specification scope
 
 | Official material | Library claim |

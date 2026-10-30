@@ -618,3 +618,13 @@ unrelated restriction attribution, never divides by zero and post-validates the
 exact derived wire reason. Real signed integration covers measured excess,
 equality, known/unknown zero and substituted reason rejection. Current schema
 ordering rejects earlier-gate records that improperly retain a capacity pair.
+
+## 2026-10-30 candidate API and clean-break adoption guide
+
+`kinetic_trust_library.v3.api` now exposes the reviewed installed native/software/
+person entry points, current Root resolver, typed return-path resolvers and common
+errors without choosing defaults or processing legacy wire. The migration guide
+names required source ownership, exact selected support, current-use semantics
+and final root/version/pin adoption steps. The current released root still loads
+legacy models; native module independence is separately verified under the
+future minimal-root isolation test. No root version or normative pin is changed.
