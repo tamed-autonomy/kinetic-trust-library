@@ -201,6 +201,39 @@ class InstalledClearanceVerifier:
             return result(non_clearance.reason,non_clearance.kind,min(s["expires_at"],non_clearance.expires_at))
         if source.hand_back_bytes is not None:raise ValidationError("clearance Source returned orphan current hand-back bytes")
         np=_parse_jcs_object(self.non_clearance_verifier.profile_bytes)
+        def expired_proof_result():
+            nonlocal proof_expiry
+            pv=native_result.association.proof_verification
+            if (self.proof_expiry_verifier is None or native_result.association.reason!="RB_PROOF"
+                    or pv is None or pv.stage!=5 or pv.reason!="TP_TIME"):
+                return None
+            request=_parse_jcs_object(native_result.association.canonical_request_bytes)
+            actual={k:v for k,v in request.items() if k not in ("version","demand","classification_profile")}
+            if canonical_demand_operation_bytes(actual)!=op_bytes:
+                return result("CLEARANCE_NATIVE_BINDING",hand_back_required=True)
+            proof_expiry=self.proof_expiry_verifier.evaluate(native_result.association.compact_proof,
+                actual_operation=op,evaluated_at=evaluated_at,clock_healthy=clock_healthy)
+            if not proof_expiry.expired:return None
+            expiry=min(s["expires_at"],management.expires_at)
+            if lease is not None and lease.expires_at is not None:expiry=min(expiry,lease.expires_at)
+            return result("CLEARANCE_PROOF_EXPIRED","Expired",expiry)
+        if s["lease"] is None and self.proof_expiry_verifier is not None:
+            # Absence is an authenticated current registry fact, not a lease
+            # with invented dates or revocation flags. Contradictory retained
+            # intent and malformed relation facts cannot enter routine refresh.
+            if (s["intent"] is not None or not _name(s["principal"])
+                    or s["consequence_class"] not in ("Logistics","Coordination","Relational")
+                    or type(s["mutates_relation"]) is not bool
+                    or s["mutates_relation"] and s["consequence_class"]!="Relational"
+                    or not _time(s["current_grant_epoch"])
+                    or s["template_digest"] is not None and not is_digest(s["template_digest"])):
+                return result("CLEARANCE_LEASE_INVALID",hand_back_required=True)
+            admission=_parse_jcs_object(management.authenticated_state_bytes)["history"][-1]
+            if s["management_admission_anchor"]!=admission["anchor"]:
+                return result("CLEARANCE_MANAGEMENT_GRANT_BINDING",hand_back_required=True)
+            expired=expired_proof_result()
+            if expired is not None:return expired
+            return result("CLEARANCE_LEASE_INVALID",hand_back_required=True)
         try:
             lease=project_lease(s["lease"],s["intent"],actual_actor=op["actor"],actual_operation_digest=invocation,
                 actual_consequence_class=s["consequence_class"],mutates_relation=s["mutates_relation"],principal=s["principal"],
@@ -217,19 +250,8 @@ class InstalledClearanceVerifier:
             if non_clearance.valid:return result(non_clearance.reason,"Expired",min(s["expires_at"],non_clearance.expires_at))
             return result("CLEARANCE_EXPIRY_UNVERIFIED",hand_back_required=True)
         if not lease.active:return result(lease.reason,hand_back_required=True)
-        pv=native_result.association.proof_verification
-        if (self.proof_expiry_verifier is not None and native_result.association.reason=="RB_PROOF"
-                and pv is not None and pv.stage==5 and pv.reason=="TP_TIME"):
-            request=_parse_jcs_object(native_result.association.canonical_request_bytes)
-            actual={k:v for k,v in request.items() if k not in ("version","demand","classification_profile")}
-            if canonical_demand_operation_bytes(actual)!=op_bytes:
-                return result("CLEARANCE_NATIVE_BINDING",hand_back_required=True)
-            proof_expiry=self.proof_expiry_verifier.evaluate(native_result.association.compact_proof,
-                actual_operation=op,evaluated_at=evaluated_at,clock_healthy=clock_healthy)
-            if proof_expiry.expired:
-                expiry=min(s["expires_at"],management.expires_at)
-                if lease.expires_at is not None:expiry=min(expiry,lease.expires_at)
-                return result("CLEARANCE_PROOF_EXPIRED","Expired",expiry)
+        expired=expired_proof_result()
+        if expired is not None:return expired
         if lease.single_use_required and self.relational_commit_verifier is None:
             return result("CLEARANCE_RELATIONAL_UNSUPPORTED",hand_back_required=True)
         if (native_result.reason!="NATIVE_PREREQUISITES_VALID" or native_result.supervision not in LEVELS[:-1]

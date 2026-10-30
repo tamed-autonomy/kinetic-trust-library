@@ -375,8 +375,10 @@ scope/lifetime classifier supplies refresh metadata without historical Root
 evaluation. Selected current management and active-lease composition yields
 `Expired` with a distinct proof-refresh path; existing stops, revoked/changed
 grants and lease expiry retain precedence. No permission, renewal, hand-back or
-hysteresis event is created. See `docs/plans/2026-10-29-proof-expiry.md` for the
-remaining no-current-grant classification boundary.
+hysteresis event is created. Authenticated absence of a current grant also
+allows routine refresh with current management/admission and valid relation
+facts, without a fabricated template or lease. See
+`docs/plans/2026-10-29-proof-expiry.md` for source completeness boundaries.
 
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved

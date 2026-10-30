@@ -270,6 +270,31 @@ class ReadinessTests(unittest.TestCase):
         expiry_cf["state"]["current_grant_epoch"]+=1
         self.assertEqual(expiry_clearance().reason,"LEASE_EPOCH_CHANGED")
         expiry_cf["state"]["current_grant_epoch"]-=1
+        saved_lease=expiry_cf["state"]["lease"];saved_intent=expiry_cf["state"]["intent"]
+        expiry_cf["state"].update(lease=None,intent=None)
+        no_grant=expiry_clearance()
+        self.assertEqual(no_grant.kind,"Expired");self.assertEqual(no_grant.reissue_path,"proof:refresh")
+        self.assertIsNone(no_grant.lease);self.assertFalse(no_grant.hand_back_required)
+        self.assertFalse(no_grant.action_permitted)
+        saved_template_digest=expiry_cf["state"]["template_digest"]
+        expiry_cf["state"]["template_digest"]=None
+        self.assertEqual(expiry_clearance().kind,"Expired")
+        expiry_cf["state"]["template_digest"]=saved_template_digest
+        expiry_cf["state"]["mutates_relation"]=True
+        self.assertEqual(expiry_clearance().reason,"CLEARANCE_LEASE_INVALID")
+        expiry_cf["state"]["mutates_relation"]=False
+        expiry_cf["state"]["management_admission_anchor"]="audit:wrong-admission"
+        self.assertEqual(expiry_clearance().reason,"CLEARANCE_MANAGEMENT_GRANT_BINDING")
+        expiry_cf["state"]["management_admission_anchor"]="audit:admission"
+        expiry_cf["state"]["intent"]=saved_intent
+        self.assertEqual(expiry_clearance().reason,"CLEARANCE_LEASE_INVALID")
+        expiry_cf["state"].update(lease=saved_lease,intent=saved_intent)
+        saved_lease["expires_at"]=1008
+        lease_expired=expiry_clearance()
+        self.assertEqual(lease_expired.kind,"Expired")
+        self.assertEqual(lease_expired.reissue_path,"admission:reissue")
+        self.assertIsNone(lease_expired.proof_expiry)
+        saved_lease["expires_at"]=1108
         expiry_cf["state"]["adverse_stop"]={"kind":"Revoked"}
         self.assertEqual(expiry_clearance().reason,"CLEARANCE_HAND_BACK_REQUIRED")
         self.assertIsNone(expiry_clearance().proof_expiry)

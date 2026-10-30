@@ -16,10 +16,14 @@ lease expiry take precedence. An active grant remains unchanged when proof
 expiry produces `Expired`; no new hand-back or hysteresis event is fabricated.
 The resulting assessment retains the original signature and expiry metadata.
 
-The present composed path requires an independently valid current lease. A
-managed identity without a grant still needs a separate absence-of-grant
-classification; it is not promoted to clearance by this adapter. Service owns
-actual management/stop/lease truth, authenticated time and atomic effect fences.
+The composed path also accepts authenticated absence of a current grant when
+current management/admission and relation facts are valid, no retained intent
+contradicts that absence, and no current adverse stop exists. A template need
+not be invented to refresh a proof. Missing or malformed credentials still
+cannot claim expiry; absence never produces clearance or a replacement grant.
+Service owns actual management/stop/lease truth, authenticated time and atomic
+effect fences. A registry must not erase a known revoked grant by reporting
+absence; the authenticated source contract requires complete current state.
 
 Tests use real signed ordinary proofs, reject bad signatures, subject mismatch,
 malformed lifetime and unhealthy clocks, and exercise managed expiry with actual
