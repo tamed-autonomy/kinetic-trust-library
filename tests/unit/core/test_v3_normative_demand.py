@@ -121,7 +121,7 @@ class NormativeDemandTests(unittest.TestCase):
         self.assertEqual(demand.demand,24)
         context=replace(original.context,normative_demand_profile_bytes=v.profile_bytes)
         def core(ctx):return project_classified_native_core(original.core.soul_assessment,standing=original.standing,
-            environment=original.core.environment_assessment,context=ctx,demand=demand,enclosure=original.core.enclosure_assessment)
+            environment=original.core.environment_assessment,context=ctx,demand=demand,enclosure=original.core.enclosure_assessment,boundary=original.core.boundary_assessment)
         with self.assertRaises(ValidationError):core(original.context)
         projected=core(context)
         self.assertEqual(projected.capacity.base_trust,original.core.capacity.base_trust)

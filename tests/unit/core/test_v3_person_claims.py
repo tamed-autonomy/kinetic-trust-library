@@ -12,9 +12,14 @@ def fixture(declared_boundary=False):
     from kinetic_trust_library.v3.installed_soul import InstalledSoulVerifier,AuthenticatedSoulResponse
     from kinetic_trust_library.v3.installed_environment import InstalledEnvironmentVerifier,AuthenticatedEnvironmentEvidence
     dp=json.loads((Path(__file__).parents[3]/"spec/proposals/demand-supplier-v1.json").read_text())["deployment_profile"]
+    from tests.unit.core._v3_declaration_fixture import declare_bmc_labels
+    declare_bmc_labels(dp)
     dp["peer_share"]=0;dp["external_root"]["hop_bound"]=4
-    if declared_boundary:dp["boundary"]=dict(resources=["resource:a"],entitled_subjects=["person"],affected_outside=[],jurisdictions=["test"],authority_limits=["approved scope"])
+    dp["boundary"]=dict(resources=["resource:a"],entitled_subjects=["person"],affected_outside=[],jurisdictions=["test"],authority_limits=["approved scope"])
     f=standing_fixture(dp);raw=f["v"].deployment_profile_bytes
+    if not declared_boundary:
+        from tests.unit.core._v3_declaration_fixture import fixture_boundary
+        f['boundary']=fixture_boundary(dp,f['op'],f['now'],zone='zone:blue',subject_class='person')
     class Soul:
         state="clear"
         def query(self,*,required_frameworks,**kwargs):return tuple(AuthenticatedSoulResponse(framework,self.state,b"modeled authenticated Soul response",
@@ -23,7 +28,7 @@ def fixture(declared_boundary=False):
         absent=False;stress=.25
         def verify(self,*args,**kwargs):return AuthenticatedEnvironmentEvidence(rfc8785.dumps({"factors":{
             name:dict(signals={} if self.absent else dict.fromkeys(config["signals"],0),measured_stress=self.stress)
-            for name,config in dp["risk_factors"].items()}}))
+            for name,config in dp["risk_factors"].items()}}),("body.hardware.bmc_reachable",))
     sa=Soul();ea=Environment();sv=InstalledSoulVerifier(raw,sa,"sha256");ev=InstalledEnvironmentVerifier(raw,ea,"sha256")
     standing=f["v"].evaluate(roots=f["roots"],actual_operation=f["op"],evaluated_at=f["now"],clock_healthy=True)
     metadata=dict(iss="https://oracle.example.com",aud=f["op"]["audience"],jti="person:proof:a",exp=f["now"]+2,zone="zone:blue")

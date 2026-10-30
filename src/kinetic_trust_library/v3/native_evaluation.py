@@ -95,7 +95,9 @@ class InstalledNativeEvaluationVerifier:
             ids.append(_parse_jcs_object(policy.profile_bytes)["gate_id"])
         if len(set(ids))!=len(ids):raise ValidationError("duplicate declared adjudication gate")
         deployment=self.readiness_verifier.readiness_verifier.deployment_profile_bytes
+        from .deployment_declaration import validate_deployment_declaration
         validate_native_capabilities(_parse_jcs_object(deployment),execution_profile=self.execution_profile)
+        validate_deployment_declaration(deployment)
         normative=self.normative_demand_verifier
         if (normative is not None)!=(self.normative_classifier_profile_bytes is not None):
             raise ValidationError("native normative demand requires its selected classifier profile")

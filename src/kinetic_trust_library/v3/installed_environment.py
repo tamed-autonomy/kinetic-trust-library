@@ -20,11 +20,13 @@ from .root_lifecycle import _time
 @dataclass(frozen=True, slots=True)
 class AuthenticatedEnvironmentEvidence:
     body_bytes: bytes
+    label_set_dependencies: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True, init=False)
 class NativeEnvironmentAssessment:
     factors: tuple[FactorEvidenceState, ...]
+    label_set_dependencies: tuple[str, ...]
     original_evidence: bytes
     authenticated_body_bytes: bytes
     deployment_digest: str
@@ -48,6 +50,8 @@ class InstalledEnvironmentVerifier:
                 or not callable(getattr(self.adapter, "verify", None))):
             raise ValidationError("installed environment verifier is invalid")
         profile = _parse_jcs_object(self.deployment_profile_bytes)
+        from .deployment_declaration import validate_environment_declaration
+        validate_environment_declaration(profile)
         if self.ambient_verifier is not None and (type(self.ambient_verifier) is not InstalledAmbientRepairVerifier
                 or self.ambient_verifier.deployment_profile_bytes!=self.deployment_profile_bytes or self.ambient_verifier.algorithm!=self.algorithm):
             raise ValidationError("ambient and environment policies must share the deployment and digest algorithm")
@@ -70,6 +74,14 @@ class InstalledEnvironmentVerifier:
                                             operation_bytes=operation_bytes, evaluated_at=evaluated_at)
         if type(authenticated) is not AuthenticatedEnvironmentEvidence or type(authenticated.body_bytes) is not bytes:
             raise ValidationError("environment adapter returned invalid evidence")
+        from .deployment_declaration import required_label_signals
+        dependencies=authenticated.label_set_dependencies
+        aggregated={signal for factor in profile['risk_factors'].values() for signal in factor['signals']}
+        if (type(dependencies) is not tuple or any(type(s) is not str for s in dependencies)
+                or len(set(dependencies))!=len(dependencies) or not set(dependencies)<=aggregated
+                or not set(dependencies)<=set(profile.get('label_sets',{}))
+                or not required_label_signals(profile)<=set(dependencies)):
+            raise ValidationError('authenticated category dependencies require installed signal label sets')
         body = _parse_jcs_object(authenticated.body_bytes)
         supplied = body.get("factors")
         if set(body) != {"factors"} or type(supplied) is not dict or not set(supplied) <= set(_FACTORS):
@@ -105,7 +117,7 @@ class InstalledEnvironmentVerifier:
                     value=max(factor.value,ambient.pressure_floor)
                     factors[index]=_factor_state(factor.factor,"observable",value,value,factor.undefined_inputs)
         result = object.__new__(NativeEnvironmentAssessment)
-        for name, value in (("factors", tuple(factors)), ("original_evidence", evidence),
+        for name, value in (("factors", tuple(factors)), ("label_set_dependencies",dependencies), ("original_evidence", evidence),
                             ("authenticated_body_bytes", authenticated.body_bytes),
                             ("deployment_digest", _digest(profile, self.algorithm)),
                             ("operation_digest", digest_demand_operation(operation, algorithm=self.algorithm)),

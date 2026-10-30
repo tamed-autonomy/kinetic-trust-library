@@ -34,6 +34,9 @@ def fixture():
     vectors=json.loads((root/"spec/proposals/demand-supplier-v1.json").read_text())
     profile,operation=vectors["deployment_profile"],vectors["operation"]
     operation=dict(operation,actor="agent:guarantor:7gen:optimized:a1b2c3d4")
+    from tests.unit.core._v3_declaration_fixture import declare_bmc_labels
+    from tests.unit.core._v3_declaration_fixture import complete_core_declaration,fixture_boundary
+    complete_core_declaration(profile,operation)
     raw=rfc8785.dumps(profile)
     roots=select_assessed_roots((),context_bytes=rfc8785.dumps(dict(subject=operation["actor"],subject_profile="software",generation=7,
         lineage="guarantor",hop_bound=profile["external_root"]["hop_bound"],deployment_digest=_digest(profile,"sha256"))),evaluated_at=1030,algorithm="sha256")
@@ -41,7 +44,7 @@ def fixture():
         def query(self,*,required_frameworks,**kwargs):return tuple(AuthenticatedSoulResponse(f,"clear",b"modeled-clear") for f in required_frameworks)
     class Environment:
         def verify(self,*args,**kwargs):return AuthenticatedEnvironmentEvidence(rfc8785.dumps({"factors":{
-            name:dict(signals=dict.fromkeys(config["signals"],0),measured_stress=.4) for name,config in profile["risk_factors"].items()}}))
+            name:dict(signals=dict.fromkeys(config["signals"],0),measured_stress=.4) for name,config in profile["risk_factors"].items()}}),("body.hardware.bmc_reachable",))
     class Standing:
         def verify(self,*args,**kwargs):return AuthenticatedStandingEvidence(rfc8785.dumps(dict(subject=operation["actor"],generation=7,
             identity_assurance_level=3,trajectory_length=20000,por_contribution=70,peer_score=0,maximum_adversity_friction=.9,crisis_exposure=True,additional_ceilings={})))
@@ -64,7 +67,8 @@ def fixture():
         def resolve(self,**kwargs):return AuthenticatedEnclosureEvidence(rfc8785.dumps(enc_body),b"modeled-current-outer-topology")
     enclosure=InstalledEnclosureVerifier(raw,rfc8785.dumps(enc_profile),Enclosure(),"sha256").evaluate(actual_operation=operation,evaluated_at=1030,clock_healthy=True)
     context=NativeCoreContext(raw,rfc8785.dumps(operation),1030,"sha256",rfc8785.dumps(enc_profile))
-    core=project_classified_native_core(soul,standing=standing,environment=environment,context=context,demand=demand,enclosure=enclosure)
+    core=project_classified_native_core(soul,standing=standing,environment=environment,context=context,demand=demand,enclosure=enclosure,
+        boundary=fixture_boundary(profile,operation,1030,zone="zone-1",parent_zone="zone-0"))
     inner_ingress,outer_ingress=ingress_fixture(2,evaluated_at=1030),ingress_fixture(1,evaluated_at=1030)
     metadata=dict(iss="https://outer.example.com",aud=operation["audience"],jti="fresh-egress",exp=1037,zone="zone-1",advancement_floor=0,ingress_path=outer_ingress["receipts"])
     outward=NativeCoreClaimsSource(core,standing,context,rfc8785.dumps(metadata))
@@ -125,7 +129,7 @@ class EgressTests(unittest.TestCase):
         f=fixture();outward=f["outward"];core=outward.core
         context=replace(outward.context,enclosure_profile_bytes=None)
         flat=project_classified_native_core(core.soul_assessment,standing=core.standing_assessment,environment=core.environment_assessment,
-            context=context,demand=core.classified_demand)
+            context=context,demand=core.classified_demand,boundary=core.boundary_assessment)
         flat_source=replace(outward,core=flat,context=context)
         self.assertEqual(flat_source.produce(evaluated_at=1030),outward.produce(evaluated_at=1030))
         with self.assertRaisesRegex(ValidationError,"enclosure"):

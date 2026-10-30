@@ -133,7 +133,7 @@ class InstalledRepairTests(unittest.TestCase):
         self.assertEqual(dict(standing.base.ceilings)["repair_reentry"],60)
         context=replace(original.context,repair_profile_bytes=v.profile_bytes)
         core=project_classified_native_core(original.core.soul_assessment,standing=standing,environment=original.core.environment_assessment,
-            context=context,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment)
+            context=context,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment,boundary=original.core.boundary_assessment)
         claims=NativeCoreClaimsSource(core,standing,context,original.assertion_metadata_bytes)
         self.assertEqual(json.loads(claims.produce(evaluated_at=1030))["ktp"]["e_trust"],36)
         from kinetic_trust_library.v3.demand_supplier import _digest
@@ -149,7 +149,7 @@ class InstalledRepairTests(unittest.TestCase):
         self.assertEqual(lifted_standing.base.base_trust,65)
         lifted_context=replace(context,repair_profile_bytes=v.profile_bytes)
         lifted_core=project_classified_native_core(original.core.soul_assessment,standing=lifted_standing,environment=original.core.environment_assessment,
-            context=lifted_context,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment)
+            context=lifted_context,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment,boundary=original.core.boundary_assessment)
         lifted_claims=NativeCoreClaimsSource(lifted_core,lifted_standing,lifted_context,original.assertion_metadata_bytes)
         self.assertEqual(json.loads(lifted_claims.produce(evaluated_at=1030))["ktp"]["e_trust"],39)
         with self.assertRaisesRegex(ValidationError,"repair"):

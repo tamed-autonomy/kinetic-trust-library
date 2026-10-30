@@ -24,6 +24,11 @@ The accompanying readiness and trajectory schemas retain their original source
 bytes. Native trajectory validation explicitly composes the five-factor v3 Risk
 Factors reference; it does not modify the archived source schema or fixtures.
 
+The provisional native deployment validator bundles the original Context Signals
+catalog JSON from nmcitra/ktp-rfc commit
+4ea1b6774dbe823659d305a4e5be4fa1af0e69ba under Apache-2.0.
+Per-file source hashes accompany the package; this snapshot is not a release.
+
 ---
 
 Kinetic Trust Protocol (KTP)

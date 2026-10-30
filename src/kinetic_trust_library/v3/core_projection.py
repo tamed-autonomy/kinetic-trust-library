@@ -55,6 +55,8 @@ class NativeCoreContext:
                 or self.algorithm not in ("sha256", "sha384")):
             raise ValidationError("native Core context is invalid")
         validate_native_capabilities(_parse_jcs_object(self.deployment_profile_bytes),execution_profile=self.execution_profile)
+        from .deployment_declaration import validate_deployment_declaration
+        validate_deployment_declaration(self.deployment_profile_bytes)
         digest_demand_operation(_parse_jcs_object(self.operation_bytes), algorithm=self.algorithm)
         if self.enclosure_profile_bytes is not None:
             if type(self.enclosure_profile_bytes) is not bytes:

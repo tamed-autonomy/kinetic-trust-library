@@ -102,3 +102,31 @@ person-proof prose reconciliation and stronger named crypto/receipt profiles
 remain exact source decisions. Optional emergency/Oracle-mesh/downstream-effect
 profiles are explicitly unsupported by the ordinary native path. Local fixtures
 and passing tests do not turn those limits into implemented deployment behavior.
+
+Complete native evaluation installs only a declaration accepted by
+`validate_deployment_declaration` from `v3.api`. This uses the bundled closed
+schema and exact provisional catalog, checks the five weights without tolerance
+or rescaling, required boundary/readiness binding, numeric controls, catalog
+membership, aliases, normalization and known category dependencies. It performs
+no network schema/catalog retrieval and does not approve a policy installation.
+
+Environmental component validation checks the environmental declaration even
+outside that complete graph. Its Source returns `AuthenticatedEnvironmentEvidence`
+with `body_bytes` and a mandatory immutable `label_set_dependencies` tuple of
+aggregated signal IDs. This is authenticated measurement metadata: the complete
+actual category, denominator-predicate and bin dependencies of the measurements,
+not a conformance flag. Every listed dependency requires installed labels; known
+pinned enum/boolean, entropy and reviewed predicate dependencies cannot be omitted.
+The Source must add all remaining actual dependencies, including derived numeric
+classifiers. The SDK does not infer them from signal names or pretend the pinned
+catalog encodes them all. The exact additional labels, measurement envelopes,
+normalization execution and aggregation truth remain authenticated Source duties.
+The Library-derived `catalog/label-requirements.json` is explicitly separate from
+the unmodified source catalog and records its scope and the 15-vs-17 entropy
+inventory discrepancy. Historical component fixtures are amended only inside tests.
+
+`NativeCoreContext` and `NativePersonClaimsSource` apply the same complete
+installation declaration check before proof production. A declaration alone
+still cannot replace the separately authenticated, current boundary assessment.
+The sealed environment assessment retains the exact checked dependency tuple
+for subsequent audit composition.

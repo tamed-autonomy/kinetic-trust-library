@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/nmcitra/ktp-rfc",
+  "commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
+  "status": "unreleased draft snapshot",
+  "sha256": {
+    "index.json": "fc7d5d08d870d6ff45231f871f858f4d8f95240a1e5b43b43b06c22554102736",
+    "world.json": "3604705de9a8af97a3001ad38ca3047a3c0d4bd838863b40f96ba2e3e9dab6e2",
+    "information.json": "40575732b38b7e28f2f2b36849fbaf1dae603bfa40b19d56772692e2596ab925",
+    "time.json": "3f1af85df393cfba9e775d1e7c057e925c5f2f7c720c4cd2e05f50e6acab6b84",
+    "soul.json": "c08c0247a3670dd65b423e3dafc9cf3f4e6b258db0d05d17b45a135f2735b6dd",
+    "relational.json": "4e65ba4a894b67ddeca7e1672ca1f55f680a84e5ecbece077c6b570d2c6cfd5c",
+    "body.json": "ba2a9bebcdf5e2d276714605384594594c8e58a1e9913efd164f294d4b88ae9d",
+    "meta.json": "98eafb50ab50c2bfdec0ff63acde2f4e25287c91e872db04d4a34180cd6eb403"
+  }
+}

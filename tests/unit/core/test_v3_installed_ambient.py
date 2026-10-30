@@ -228,12 +228,12 @@ class InstalledAmbientTests(unittest.TestCase):
         f=core_fixture();original=f["outward"]
         v,state,op,profile,calls=fixture(json.loads(original.context.operation_bytes),json.loads(original.context.deployment_profile_bytes))
         class Environment:
-            def verify(self,*args,**kwargs):return AuthenticatedEnvironmentEvidence(original.core.environment_assessment.authenticated_body_bytes)
+            def verify(self,*args,**kwargs):return AuthenticatedEnvironmentEvidence(original.core.environment_assessment.authenticated_body_bytes,("body.hardware.bmc_reachable",))
         env=InstalledEnvironmentVerifier(original.context.deployment_profile_bytes,Environment(),"sha256",ambient_verifier=v).evaluate(
             b"modeled-base-environment",actual_operation=op,evaluated_at=1030)
         context=replace(original.context,ambient_profile_bytes=v.profile_bytes)
         core=project_classified_native_core(original.core.soul_assessment,standing=original.standing,environment=env,
-            context=context,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment)
+            context=context,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment,boundary=original.core.boundary_assessment)
         self.assertEqual(core.risk.measured_risk,Fraction(62,125))
         self.assertEqual(core.capacity.measured_effective_trust,Fraction(882,25))
         claims=NativeCoreClaimsSource(core,original.standing,context,original.assertion_metadata_bytes)
@@ -264,7 +264,7 @@ class InstalledAmbientTests(unittest.TestCase):
         self.assertIsNone(pressure.value)
         self.assertEqual(pressure.decision_stress,1)
         unknown_core=project_classified_native_core(original.core.soul_assessment,standing=original.standing,environment=unknown_env,
-            context=context,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment)
+            context=context,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment,boundary=original.core.boundary_assessment)
         self.assertIsNone(unknown_core.risk.measured_risk)
         self.assertFalse(unknown_core.capacity.capacity_known)
         state["parent"]["heard_index"]=0;state["topology_epoch"]=4
@@ -272,14 +272,14 @@ class InstalledAmbientTests(unittest.TestCase):
             b"modeled-base-environment",actual_operation=op,evaluated_at=1030)
         with self.assertRaisesRegex(ValidationError,"topology"):
             project_classified_native_core(original.core.soul_assessment,standing=original.standing,environment=foreign_env,
-                context=context,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment)
+                context=context,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment,boundary=original.core.boundary_assessment)
         state["topology_epoch"]=5
         def current_geometry(policy):
             current_env=InstalledEnvironmentVerifier(original.context.deployment_profile_bytes,Environment(),"sha256",ambient_verifier=policy).evaluate(
                 b"modeled-base-environment",actual_operation=op,evaluated_at=1030)
             selected=replace(context,ambient_profile_bytes=policy.profile_bytes)
             current_core=project_classified_native_core(original.core.soul_assessment,standing=original.standing,environment=current_env,
-                context=selected,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment)
+                context=selected,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment,boundary=original.core.boundary_assessment)
             current_claims=NativeCoreClaimsSource(current_core,original.standing,selected,original.assertion_metadata_bytes)
             current_proof=InstalledProofIssuer(current_claims,f["signer"],f["outer_verifier"],"EdDSA","TEST-ed25519").issue(now=1030,clock_healthy=True)
             selected_profile=dict(evaluation,ambient_repair_profile_digest=_digest(json.loads(policy.profile_bytes),"sha256"))

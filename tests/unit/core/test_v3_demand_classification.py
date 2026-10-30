@@ -23,6 +23,11 @@ class DemandClassificationTests(unittest.TestCase):
     def test_observed_and_unavailable_inputs_are_operation_bound(self):
         import rfc8785
         vectors = json.loads(VECTORS.read_text())
+        from tests.unit.core._v3_declaration_fixture import declare_bmc_labels
+        from tests.unit.core._v3_declaration_fixture import complete_core_declaration,fixture_boundary
+        complete_core_declaration(vectors["deployment_profile"],vectors["operation"])
+        from tests.unit.core._v3_declaration_fixture import rebind_valid_supplier
+        rebind_valid_supplier(vectors)
         raw_profile = rfc8785.dumps(vectors["deployment_profile"])
         verifier = InstalledDemandVerifier(
             raw_profile, rfc8785.dumps(vectors["supplier_profile_payload"]),
@@ -44,7 +49,7 @@ class DemandClassificationTests(unittest.TestCase):
             def verify(self, *args, **kwargs):
                 return AuthenticatedEnvironmentEvidence(rfc8785.dumps({"factors": {
                     name: {"signals": dict.fromkeys(config["signals"], 0), "measured_stress": 0}
-                    for name, config in profile["risk_factors"].items()}}))
+                    for name, config in profile["risk_factors"].items()}}),("body.hardware.bmc_reachable",))
         environment_verifier = InstalledEnvironmentVerifier(raw_profile, EnvironmentAdapter(), "sha256")
         verified_environment = environment_verifier.evaluate(b"environment", actual_operation=vectors["operation"], evaluated_at=1030)
         other_environment = environment_verifier.evaluate(b"environment", actual_operation=vectors["operation"], evaluated_at=1031)
@@ -75,7 +80,7 @@ class DemandClassificationTests(unittest.TestCase):
             core = project_classified_native_core(
                 verified_soul, standing=verified_standing, environment=verified_environment,
                 context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"), demand=result,
-            )
+             boundary=fixture_boundary(profile,vectors["operation"],1030))
             self.assertEqual(core.capacity.demand, expected)
             self.assertIs(core.classified_demand, result)
             self.assertIs(core.standing_assessment, verified_standing)
@@ -93,7 +98,7 @@ class DemandClassificationTests(unittest.TestCase):
             enclosure=InstalledEnclosureVerifier(raw_profile,rfc8785.dumps(enclosure_profile),EnclosureSource(),"sha256").evaluate(
                 actual_operation=vectors["operation"],evaluated_at=1030,clock_healthy=True)
             nested_context=NativeCoreContext(raw_profile,rfc8785.dumps(vectors["operation"]),1030,"sha256",rfc8785.dumps(enclosure_profile))
-            nested=project_classified_native_core(verified_soul,standing=verified_standing,environment=verified_environment,context=nested_context,demand=result,enclosure=enclosure)
+            nested=project_classified_native_core(verified_soul,standing=verified_standing,environment=verified_environment,context=nested_context,demand=result,enclosure=enclosure, boundary=fixture_boundary(profile,vectors["operation"],1030,parent_zone="zone:cyan"))
             self.assertEqual(nested.risk.measured_risk,Decimal("0.2"))
             self.assertEqual(nested.capacity.measured_effective_trust,nested.standing.base_trust*Decimal("0.8"))
             self.assertIs(nested.enclosure_assessment,enclosure)
@@ -103,30 +108,30 @@ class DemandClassificationTests(unittest.TestCase):
             self.assertEqual(nested_claims["ktp"]["r"],0.2)
             self.assertEqual(nested_claims["ktp"]["e_trust"],56)
             for changed in (dict(metadata,zone="zone:other"),dict(metadata,exp=1041)):
-                with self.assertRaisesRegex(ValidationError,"enclosure"):
+                with self.assertRaisesRegex(ValidationError,"enclosure|boundary"):
                     NativeCoreClaimsSource(nested,verified_standing,nested_context,rfc8785.dumps(changed))
-            with self.assertRaisesRegex(ValidationError,"enclosure"):
+            with self.assertRaisesRegex(ValidationError,"enclosure|boundary"):
                 NativeCoreClaimsSource(nested,verified_standing,replace(nested_context,enclosure_profile_bytes=None),
                     rfc8785.dumps(dict(metadata,exp=1041)))
-            with self.assertRaisesRegex(ValidationError,"enclosure"):
-                project_classified_native_core(verified_soul,standing=verified_standing,environment=verified_environment,context=nested_context,demand=result)
-            with self.assertRaisesRegex(ValidationError,"enclosure"):
+            with self.assertRaisesRegex(ValidationError,"enclosure|boundary"):
+                project_classified_native_core(verified_soul,standing=verified_standing,environment=verified_environment,context=nested_context,demand=result, boundary=fixture_boundary(profile,vectors["operation"],1030,parent_zone="zone:cyan"))
+            with self.assertRaisesRegex(ValidationError,"enclosure|boundary"):
                 project_classified_native_core(verified_soul,standing=verified_standing,environment=verified_environment,
-                    context=replace(nested_context,enclosure_profile_bytes=None),demand=result,enclosure=enclosure)
+                    context=replace(nested_context,enclosure_profile_bytes=None),demand=result,enclosure=enclosure, boundary=fixture_boundary(profile,vectors["operation"],1030,parent_zone="zone:cyan"))
             with self.assertRaisesRegex(ValidationError, "environment belongs"):
                 project_classified_native_core(verified_soul, standing=verified_standing, environment=other_environment, demand=result,
-                    context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"))
+                    context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"), boundary=fixture_boundary(profile,vectors["operation"],1030))
             with self.assertRaisesRegex(ValidationError, "standing belongs"):
                 project_classified_native_core(verified_soul, standing=other_standing, environment=verified_environment, demand=result,
-                    context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"))
+                    context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"), boundary=fixture_boundary(profile,vectors["operation"],1030))
             with self.assertRaises(ValidationError):
                 project_classified_native_core(verified_soul, standing=standing(), environment=verified_environment, demand=result,
-                    context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"))
+                    context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1030, "sha256"), boundary=fixture_boundary(profile,vectors["operation"],1030))
             with self.assertRaises(ValidationError):
                 project_classified_native_core(
                     verified_soul, standing=verified_standing, environment=verified_environment, demand=result,
                     context=NativeCoreContext(raw_profile, rfc8785.dumps(vectors["operation"]), 1031, "sha256"),
-                )
+                 boundary=fixture_boundary(profile,vectors["operation"],1030))
             with self.assertRaises(ValidationError):
                 classifier.classify(assessment, actual_operation={**vectors["operation"], "resource": "urn:other"}, evaluated_at=1030)
             with self.assertRaises(ValidationError):

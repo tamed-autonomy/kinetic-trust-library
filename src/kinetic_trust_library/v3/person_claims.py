@@ -39,7 +39,8 @@ class NativePersonClaimsSource:
                 or self.environment is not None and type(self.environment) is not NativeEnvironmentAssessment
                 or self.algorithm not in ("sha256","sha384")):
             raise ValidationError("person assertions require actual installed immutable standing/Soul/environment assessments")
-        dp=_parse_jcs_object(self.deployment_profile_bytes);m=_parse_jcs_object(self.assertion_metadata_bytes)
+        from .deployment_declaration import validate_deployment_declaration
+        dp=validate_deployment_declaration(self.deployment_profile_bytes);m=_parse_jcs_object(self.assertion_metadata_bytes)
         s=_parse_jcs_object(self.standing.authenticated_state_bytes);op=_parse_jcs_object(self.standing.operation_bytes)
         now=self.standing.evaluated_at;deployment=_digest(dp,self.algorithm);operation=digest_demand_operation(op,algorithm=self.algorithm)
         roots=self.standing.roots;root_context=_parse_jcs_object(roots.context_bytes)

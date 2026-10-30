@@ -1,5 +1,6 @@
 import json
 import unittest
+from kinetic_trust_library.errors import ValidationError
 from pathlib import Path
 from importlib.util import find_spec
 from kinetic_trust_library.v3.installed_environment import InstalledEnvironmentVerifier, AuthenticatedEnvironmentEvidence
@@ -11,14 +12,25 @@ class InstalledEnvironmentTests(unittest.TestCase):
         import rfc8785
         vectors = json.loads((Path(__file__).parents[3] / "spec/proposals/demand-supplier-v1.json").read_text())
         profile = vectors["deployment_profile"]
+        from tests.unit.core._v3_declaration_fixture import declare_bmc_labels
+        declare_bmc_labels(profile)
         body = {"factors": {name: {"signals": dict.fromkeys(config["signals"], 0), "measured_stress": 0, "feed_undefined": []}
                            for name, config in profile["risk_factors"].items()}}
         class Adapter:
+            dependencies=("body.hardware.bmc_reachable",)
             def verify(self, *args, **kwargs):
-                return AuthenticatedEnvironmentEvidence(rfc8785.dumps(body))
-        verifier = InstalledEnvironmentVerifier(rfc8785.dumps(profile), Adapter(), "sha256")
+                return AuthenticatedEnvironmentEvidence(rfc8785.dumps(body),self.dependencies)
+        adapter=Adapter()
+        verifier = InstalledEnvironmentVerifier(rfc8785.dumps(profile), adapter, "sha256")
         complete = verifier.evaluate(b"source evidence", actual_operation=vectors["operation"], evaluated_at=1030)
         self.assertTrue(all(f.state == "observable" for f in complete.factors))
+        self.assertEqual(complete.label_set_dependencies,("body.hardware.bmc_reachable",))
+        for dependencies in ((),("body.hardware.bmc_reachable",)*2,["body.hardware.bmc_reachable"],
+                             ("body.hardware.bmc_reachable","soul.temporal.action_rate")):
+            adapter.dependencies=dependencies
+            with self.subTest(dependencies=dependencies),self.assertRaises(ValidationError):
+                verifier.evaluate(b"source evidence",actual_operation=vectors["operation"],evaluated_at=1030)
+        adapter.dependencies=("body.hardware.bmc_reachable",)
         name = "evidence_density"
         body["factors"][name]["signals"].pop(profile["risk_factors"][name]["signals"][0])
         missing = verifier.evaluate(b"source evidence", actual_operation=vectors["operation"], evaluated_at=1030)

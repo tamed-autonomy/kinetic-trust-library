@@ -61,6 +61,8 @@ class ReadinessTests(unittest.TestCase):
             assessor_registry_digest=d("registry"),operations=[dict(operation_id=operation["operation"],scope=scope,
                 assessment_spec_digest=d("assessment-spec"),max_age_seconds=300,required_checks=["rollback","permissions"],assessor_ids=["assessor-1"])])
         deployment=json.loads((Path(__file__).parents[3]/"spec/proposals/demand-supplier-v1.json").read_text())["deployment_profile"]
+        from tests.unit.core._v3_declaration_fixture import declare_bmc_labels
+        declare_bmc_labels(deployment)
         deployment["standing_policy"]=dict(mode="history-with-scoped-readiness-v1",profile_id=profile["profile_id"],version=2,digest=digest(profile))
         from tests.unit.core._v3_human_fixture import human_fixture
         human_fixture_data=human_fixture(operation)
@@ -196,6 +198,11 @@ class ReadinessTests(unittest.TestCase):
         bv=InstalledBoundaryVerifier(rfc8785.dumps(deployment),BoundarySource(),"sha256")
         native=InstalledNativeEvaluationVerifier(av,dv,gv,1000,1006,boundary_verifier=bv)
         from dataclasses import replace
+        for missing in ("boundary","label_sets"):
+            incomplete=dict(deployment);del incomplete[missing]
+            incomplete_readiness=replace(dv.readiness_verifier,deployment_profile_bytes=rfc8785.dumps(incomplete))
+            with self.subTest(missing=missing),self.assertRaises(ValidationError):
+                replace(native,readiness_verifier=replace(dv,readiness_verifier=incomplete_readiness))
         fixture_pv=replace(pv,fixture_software_default=True)
         with self.assertRaisesRegex(ValidationError,"fixture"):
             replace(native,association_verifier=replace(av,proof_verifier=fixture_pv),

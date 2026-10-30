@@ -5,6 +5,8 @@ These interfaces require actual installed Sources and return assessments or
 conditional commit conditions. They never dispatch effects or select v2 data.
 Detailed provider DTOs and advanced policies remain in their component modules.
 """
+from .deployment_declaration import validate_deployment_declaration
+
 from kinetic_trust_library.errors import KTPError,ValidationError,ProofFormatError
 from .core_projection import NativeCoreContext,NativeCoreProjection,project_classified_native_core
 from .native_envelope import NativeEnvelopeThresholds,project_comparable_envelope
@@ -38,6 +40,7 @@ from .human_capacity import InstalledHumanCapacityVerifier
 
 
 __all__=(
+    "validate_deployment_declaration",
     "KTPError","ValidationError","ProofFormatError",
     "NativeCoreContext","NativeCoreProjection","project_classified_native_core","NativeEnvelopeThresholds","project_comparable_envelope",
     "InstalledProofVerifier","ProofVerificationResult","native_schema_bundle","RootProofBinding","InstalledProofIssuer","IssuedProof",

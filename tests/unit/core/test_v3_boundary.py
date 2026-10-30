@@ -79,7 +79,8 @@ class BoundaryTests(unittest.TestCase):
     def test_core_stops_before_other_inputs_on_boundary_denial(self):
         import rfc8785
         from kinetic_trust_library.v3.core_projection import NativeCoreContext,project_classified_native_core
-        v,p,op,state,calls,vectors=self.fixture()
+        from tests.unit.core.test_v3_deployment_declaration import fixture
+        v,p,op,state,calls,vectors=self.fixture(base_profile=fixture())
         state["subject_class"]="person"
         denied=v.evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
         context=NativeCoreContext(rfc8785.dumps(p),rfc8785.dumps(op),1030,"sha256")
@@ -107,7 +108,7 @@ class BoundaryTests(unittest.TestCase):
             def query(self,*,required_frameworks,**kwargs):return tuple(AuthenticatedSoulResponse(name,"clear",b"modeled-clear") for name in required_frameworks)
         class Environment:
             def verify(self,*args,**kwargs):return AuthenticatedEnvironmentEvidence(rfc8785.dumps({"factors":{
-                name:dict(signals=dict.fromkeys(config["signals"],0),measured_stress=.4) for name,config in p["risk_factors"].items()}}))
+                name:dict(signals=dict.fromkeys(config["signals"],0),measured_stress=.4) for name,config in p["risk_factors"].items()}}),("body.hardware.bmc_reachable",))
         class Standing:
             def verify(self,*args,**kwargs):return AuthenticatedStandingEvidence(original.standing.authenticated_body_bytes)
         class Demand:

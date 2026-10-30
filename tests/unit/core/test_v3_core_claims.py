@@ -48,6 +48,9 @@ class CoreClaimsTests(unittest.TestCase):
         vectors=json.loads((Path(__file__).parents[3]/"spec/proposals/demand-supplier-v1.json").read_text())
         profile,operation=vectors["deployment_profile"],vectors["operation"]
         operation={**operation,"actor":"agent:guarantor:7gen:optimized:a1b2c3d4"}
+        from tests.unit.core._v3_declaration_fixture import declare_bmc_labels
+        from tests.unit.core._v3_declaration_fixture import complete_core_declaration,fixture_boundary
+        complete_core_declaration(profile,operation)
         raw=rfc8785.dumps(profile)
         class Soul:
             state="clear"
@@ -61,7 +64,7 @@ class CoreClaimsTests(unittest.TestCase):
             def verify(self,*args,**kwargs):
                 return AuthenticatedEnvironmentEvidence(rfc8785.dumps({"factors":{
                     name:{"signals":{} if self.absent else dict.fromkeys(config["signals"],0),"measured_stress":.25}
-                    for name,config in profile["risk_factors"].items()}}))
+                    for name,config in profile["risk_factors"].items()}}),("body.hardware.bmc_reachable",))
         environment_adapter=Environment()
         roots=select_assessed_roots((),context_bytes=rfc8785.dumps(dict(subject=operation["actor"],subject_profile="software",
             generation=7,lineage="guarantor",hop_bound=profile["external_root"]["hop_bound"],deployment_digest=_digest(profile,"sha256"))),
@@ -97,7 +100,7 @@ class CoreClaimsTests(unittest.TestCase):
                 environment_adapter.absent=absent
                 soul=InstalledSoulVerifier(raw,soul_adapter,"sha256").evaluate(actual_operation=operation,evaluated_at=1030)
                 environment=InstalledEnvironmentVerifier(raw,environment_adapter,"sha256").evaluate(b"environment",actual_operation=operation,evaluated_at=1030)
-                core=project_classified_native_core(soul,standing=standing,environment=environment,context=context,demand=demand)
+                core=project_classified_native_core(soul,standing=standing,environment=environment,context=context,demand=demand,boundary=fixture_boundary(profile,operation,1030))
                 source=NativeCoreClaimsSource(core,standing,context,metadata)
                 issued=InstalledProofIssuer(source,Signer(),verifier,"EdDSA",key["kid"]).issue(now=1030,clock_healthy=True)
                 self.assertEqual(issued.verification.reason,expected)
@@ -154,7 +157,7 @@ class CoreClaimsTests(unittest.TestCase):
                             def classify(self,*args,**kwargs): return value
                         fixed_profile=rfc8785.dumps(dict(id="urn:ktp:classifier:fixed-test",version="test-v1",unit="urn:ktp:unit:action-risk-points",formula=str(value)))
                         fixed=InstalledDemandClassifier(raw,FixedClassifier(),"sha256",fixed_profile).classify(assessed,actual_operation=operation,evaluated_at=1030)
-                        fixed_core=project_classified_native_core(soul,standing=standing,environment=environment,context=context,demand=fixed)
+                        fixed_core=project_classified_native_core(soul,standing=standing,environment=environment,context=context,demand=fixed,boundary=fixture_boundary(profile,operation,1030))
                         fixed_source=NativeCoreClaimsSource(fixed_core,standing,context,metadata)
                         stopped=json.loads(NativeGeometrySource(fixed_source,fixed,issued.compact,verifier,geometry_profile,authority,"boundary",True).produce(evaluated_at=1030))
                         self.assertEqual(stopped["gates"]["capacity"],capacity_gate)

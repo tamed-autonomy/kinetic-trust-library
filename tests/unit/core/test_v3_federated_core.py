@@ -35,7 +35,7 @@ class FederatedCoreTests(unittest.TestCase):
         self.assertEqual(len([name for name,_ in standing.base.ceilings if name.startswith("federation_ingress.")]),1)
         context=replace(original.context,federation_profile_bytes=policy.profile_bytes)
         def core(ctx):return project_classified_native_core(original.core.soul_assessment,standing=standing,
-            environment=original.core.environment_assessment,context=ctx,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment)
+            environment=original.core.environment_assessment,context=ctx,demand=original.core.classified_demand,enclosure=original.core.enclosure_assessment,boundary=original.core.boundary_assessment)
         result=core(context)
         self.assertEqual(result.capacity.measured_effective_trust,Decimal("33.6"))
         claims=NativeCoreClaimsSource(result,standing,context,original.assertion_metadata_bytes)
