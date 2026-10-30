@@ -542,3 +542,16 @@ or rewritten original acceptance. Ordinary repeated acceptance remains
 validity by the reservation's current deadline. Standalone readiness rejects
 stale/expired current reservations and preserves that shorter deadline. No new
 ordinary invocation, grant, replay exception or target release is implied.
+
+## 2026-10-30 continuing software checkpoint composition
+
+`software_checkpoint.InstalledSoftwareCheckpointVerifier` pins the exact installed
+consumer/reservation graph and revalidates current native gates plus software
+conditions while preserving the original invocation. The same signed decision,
+ordinary proof and original observations can survive a routine recheck while
+their original deadlines remain live. Each use ends at its shorter current-state
+deadline. Temporary native denials retain the last successful native, software
+and management checkpoints for fresh validation; retained data grants no action.
+Exact original observation expiration still withholds use. Conditional commit
+conditions include the checkpoint profile and current protected original
+reservation; scheduling, interruption and atomic enforcement remain Service work.

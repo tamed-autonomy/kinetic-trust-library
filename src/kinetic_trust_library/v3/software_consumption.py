@@ -40,6 +40,7 @@ class SoftwareConsumptionAssessment:
     decision_bytes: bytes | None
     clearance: object
     management_checkpoint: object
+    native_checkpoint: object
     evidence: object
     signature: object
     restriction_projection: object
@@ -133,6 +134,8 @@ class InstalledSoftwareConsumptionVerifier:
                     reason=reason,conditional_consumption=conditional and signed,action_permitted=False,
                     checked_at=evaluated_at,expires_at=expiry,operation_bytes=op_bytes,decision_bytes=decision_bytes if verified and signed else None,
                     clearance=c,management_checkpoint=c.management if c.management is not None else None if old is None else old.management_checkpoint,
+                    native_checkpoint=native_result if native_result.verifier is self.clearance_verifier.native_verifier
+                        and native_result.reason=="NATIVE_PREREQUISITES_VALID" else None if old is None else old.native_checkpoint,
                     evidence=e,signature=sig,restriction_projection=projection,supervision=level,ceilings=ceilings,
                     native_constraints_bytes=c.tightened_constraints_bytes if verified else None,commit_conditions_bytes=conditions).items():object.__setattr__(r,k,v)
             return r
@@ -179,10 +182,22 @@ class InstalledSoftwareConsumptionVerifier:
         # native lease contract, not a second currently-live permission token.
         # Its complete signed original remains bound; current grant status and
         # expiration are independently established by the native graph.
-        max_expiry=min(c.expires_at,e.inputs_expires_at,native_result.expires_at,c.lease.expires_at,
-            native_result.readiness.expires_at,key_expiry)
+        # Signed artifact lifetime and the next live-state recheck are separate.
+        # Current reservation/status cache deadlines shorten this use below;
+        # they do not require re-signing an otherwise unchanged live sidecar.
+        nv=self.clearance_verifier.native_verifier
+        if nv.association_verifier.crosses_trust_boundary:
+            from kinetic_trust_library.proofs._jwt import _decode_segment
+            carrier=_parse_jcs_object(_decode_segment(native_result.association.carrier_binding.compact_carrier.split(".")[1],name="current geometry carrier"))
+            geometry_expiry=carrier["expires_at"]
+        else:geometry_expiry=nv.local_profile_expires_at
+        proof_claims=_parse_jcs_object(native_result.readiness.proof_verification.authenticated_payload_bytes)
+        attestation=_parse_jcs_object(native_result.readiness.readiness.attestation_bytes)
+        max_expiry=min(e.inputs_expires_at,c.lease.expires_at,geometry_expiry,proof_claims["exp"],
+            readiness_body["expires_at"],attestation["expires_at"],key_expiry)
         if body["expires_at"]>max_expiry:return result("SOFTWARE_VALIDITY_WIDENED")
-        geometry=_parse_jcs_object(native_result.canonical_geometry_bytes)["capacity"]
+        geometry=_parse_jcs_object(native_result.canonical_geometry_bytes).get("capacity")
+        if type(geometry) is not dict:return result("SOFTWARE_NATIVE_CAPACITY_UNAVAILABLE")
         if (geometry["unit"]!=ep["scale"] or any(_number(out[n])!=_number(a[n]) for n in ("autonomyDemand","environmentalCapacity"))
                 or out["capacityKnown"]!=a["capacityKnown"] or not geometry["capacityKnown"] and out["capacityKnown"]
                 or _number(out["autonomyDemand"])<_number(geometry["A"])

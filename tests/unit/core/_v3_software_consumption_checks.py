@@ -1,5 +1,5 @@
 """Compose software checks with the real signed native readiness fixture."""
-def check_consumption(test,native,combined,operation,deployment):
+def check_consumption(test,native,combined,operation,deployment,checkpoint_inputs):
     import hashlib,json,rfc8785
     from dataclasses import replace
     from tests.unit.core._v3_clearance_fixture import fixture,install_management,install_authority
@@ -9,7 +9,7 @@ def check_consumption(test,native,combined,operation,deployment):
     from kinetic_trust_library.v3.software_evidence import AuthenticatedSoftwarePrerequisite
     from kinetic_trust_library.v3.software_consumption import InstalledSoftwareConsumptionVerifier
     cf=fixture(native,combined,operation,deployment)
-    install_management(cf,operation,deployment,combined);install_authority(cf,operation,deployment)
+    management_state,_=install_management(cf,operation,deployment,combined);authority=install_authority(cf,operation,deployment)
     f=evidence_fixture(operation,deployment,zone=cf["state"]["zone"])
     _,key,sp,body,sign=signed_fixture()
     sp.update(zone=cf["state"]["zone"],execution_profile_digest=f["profile"]["execution_profile_digest"],policy_digest=f["profile"]["policy_digest"])
@@ -39,6 +39,8 @@ def check_consumption(test,native,combined,operation,deployment):
     test.assertEqual(good.expires_at,1001);test.assertEqual(good.native_constraints_bytes,combined.tightened_constraints_bytes)
     test.assertIsNotNone(good.commit_conditions_bytes)
     test.assertEqual(str(good.restriction_projection.margin),"0.1")
+    from tests.unit.core._v3_software_checkpoint_checks import check_software_checkpoint
+    check_software_checkpoint(test,v,f,cf,management_state,authority,good,sign,operation,checkpoint_inputs)
     baseline=json.loads(rfc8785.dumps(body))
     mutations=[("epoch",lambda:body.update(consumption_epoch=2)),
         ("proof",lambda:body.update(proof_digest="sha256:"+"0"*64)),

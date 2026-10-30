@@ -252,7 +252,9 @@ class InstalledSoftwareEvidenceVerifier:
             raise ValidationError("actual calibrated software capacity/demand assessment required")
         for name in ("autonomyDemand","environmentalCapacity"):as_decimal(assessment[name],name="software "+name,minimum=0,maximum=100)
         unknown=tuple(dict.fromkeys(undefined))
-        if unknown and (not p["allow_conservative_capacity"] or assessment["capacityKnown"]):valid=False;reason="SOFTWARE_ESTIMATE_UNAVAILABLE"
+        if unknown and (not p["allow_conservative_capacity"] or assessment["capacityKnown"]):
+            if valid:reason="SOFTWARE_ESTIMATE_UNAVAILABLE"
+            valid=False
         if values["control_latency"] is None:
             valid=False;reason="SOFTWARE_CONTROL_LATENCY_UNAVAILABLE"
         if (values["invalidation"] is None or values["invalidation"]["status"]!="active"):
