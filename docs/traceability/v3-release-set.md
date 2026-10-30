@@ -456,6 +456,15 @@ adoption authority or governance workflow. See
 `docs/plans/2026-10-30-charter-amendment.md` for exact proposal source, source-copy
 discrepancy, recurrence wording and remaining petition/ledger scope.
 
+Charter seek/attendance checkpoint (2026-10-30): pure procedural projections
+check bound-rule record-citing seeks, declared current recurrence/window,
+published route and actual scoped authority publications. Missing recurrence
+does not blame the filer or close the council route. Incomplete refusals remain
+contestable; late attendance retains authority debt, and later notice preserves
+earlier refusal. The translated AM16 chain reaches forward version metadata
+without a gate bypass or mutation. See `docs/plans/2026-10-30-charter-seek.md`
+for actual ledger, publication, response-adequacy and zone-gate obligations.
+
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
 contract recorded as such. External ownership must be justified by actual I/O,
