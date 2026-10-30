@@ -439,6 +439,13 @@ to the closed normative deployment wire. A complete schema-valid native
 deployment now exercises the capacity path, and profile/deployment mismatch
 rejects. See the updated human-capacity plan.
 
+Claim-substrate checkpoint (2026-10-30): a pure metadata assessment exercises
+all three exact retained claim-substrate cases. It requires an independently
+installed, immutable RFC-set inventory and exact profile identifier/version,
+preserves the claimed level, and rejects missing or uncarried profiles. Accepted
+metadata explicitly leaves evidence and runtime conformance unverified and
+enables no execution profile. See `docs/plans/2026-10-30-claim-substrate.md`.
+
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
 contract recorded as such. External ownership must be justified by actual I/O,
