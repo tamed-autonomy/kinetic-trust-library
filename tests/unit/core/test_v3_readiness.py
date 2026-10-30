@@ -233,6 +233,48 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(authority_clearance().reason,"AGENT_CAN_CONSTRUCT_LEASE")
         self.assertFalse(authority_clearance().conditional_clear)
         from tests.unit.core._v3_clearance_fixture import install_management
+        # Expiry is classified using a real signed ordinary proof at its actual
+        # expiry instant, with current independent management and grant state.
+        from kinetic_trust_library.v3.proof_expiry import InstalledProofExpiryVerifier
+        expired_native=native.verify(actual_bytes,association_bytes,ordinary_compact,
+            decision_bytes=rfc8785.dumps(decision),attestation_bytes=rfc8785.dumps(attestation),
+            invocation_evidence=b"fixture-actual-invocation",now=1008,clock_healthy=True)
+        self.assertEqual(expired_native.association.proof_verification.reason,"TP_TIME")
+        expiry_cf=clearance_fixture(native,expired_native,operation,deployment,now=1008)
+        install_management(expiry_cf,operation,deployment,expired_native,now=1008)
+        ep=dict(id="proof-expiry:clear",version=1,zone="zone:alpha",
+            formula="signed-ordinary-expiry-refresh-v1",refresh_path="proof:refresh")
+        ev=InstalledProofExpiryVerifier(pv,rfc8785.dumps(ep))
+        cp=expiry_cf["profiles"]["clearance"];cp["proof_expiry_profile_digest"]=digest(ep)
+        expiry_cf["state"]["profile_digest"]=digest(cp)
+        expiry_cf["verifier"]=replace(expiry_cf["verifier"],profile_bytes=rfc8785.dumps(cp),proof_expiry_verifier=ev)
+        def expiry_clearance():return expiry_cf["verifier"].evaluate(expired_native,actual_operation=operation,
+            evaluated_at=1008,clock_healthy=True)
+        expired_result=expiry_clearance()
+        self.assertEqual(expired_result.kind,"Expired");self.assertEqual(expired_result.reissue_path,"proof:refresh")
+        self.assertFalse(expired_result.action_permitted);self.assertFalse(expired_result.hand_back_required)
+        self.assertEqual(expired_result.lease.expires_at,1108)
+        other_operation=dict(operation,resource="resource:different")
+        from kinetic_trust_library.v3.demand_operation import digest_demand_operation
+        expiry_cf["state"]["operation_digest"]=digest_demand_operation(other_operation,algorithm="sha256")
+        # Current management is also bound to the invocation: no substitution
+        # may turn the old native result into a refreshed action.
+        with self.assertRaises(ValidationError):
+            expiry_cf["verifier"].evaluate(expired_native,actual_operation=other_operation,
+                evaluated_at=1008,clock_healthy=True)
+        expiry_cf["state"]["operation_digest"]=digest_demand_operation(operation,algorithm="sha256")
+        expiry_cf["state"]["lease"]["revoked"]=True
+        self.assertEqual(expiry_clearance().reason,"LEASE_REVOKED")
+        self.assertTrue(expiry_clearance().hand_back_required)
+        expiry_cf["state"]["lease"]["revoked"]=False
+        expiry_cf["state"]["current_grant_epoch"]+=1
+        self.assertEqual(expiry_clearance().reason,"LEASE_EPOCH_CHANGED")
+        expiry_cf["state"]["current_grant_epoch"]-=1
+        expiry_cf["state"]["adverse_stop"]={"kind":"Revoked"}
+        self.assertEqual(expiry_clearance().reason,"CLEARANCE_HAND_BACK_REQUIRED")
+        self.assertIsNone(expiry_clearance().proof_expiry)
+        with self.assertRaises(ValidationError):
+            replace(expiry_cf["verifier"],proof_expiry_verifier=None)
         management_cf=clearance_fixture(native,combined,operation,deployment)
         management_state,management_records=install_management(management_cf,operation,deployment,combined)
         def management_clearance(previous=None):return management_cf["verifier"].evaluate(combined,actual_operation=operation,

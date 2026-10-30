@@ -370,6 +370,14 @@ revocation requires actual claimant authority and remains independent. See
 `docs/plans/2026-10-29-formation-authority.md` for exact Source boundaries and
 remaining bootstrap, successful mint integration and structural authority work.
 
+Ordinary proof expiry checkpoint (2026-10-29): an installed signature/schema/
+scope/lifetime classifier supplies refresh metadata without historical Root
+evaluation. Selected current management and active-lease composition yields
+`Expired` with a distinct proof-refresh path; existing stops, revoked/changed
+grants and lease expiry retain precedence. No permission, renewal, hand-back or
+hysteresis event is created. See `docs/plans/2026-10-29-proof-expiry.md` for the
+remaining no-current-grant classification boundary.
+
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
 contract recorded as such. External ownership must be justified by actual I/O,
