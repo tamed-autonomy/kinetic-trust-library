@@ -473,6 +473,16 @@ clauses void while preserving unrelated terms and import arithmetic. Actual
 semantic classification, complete original history and enforcement remain
 authenticated provider responsibilities. See `docs/plans/2026-10-30-recognition.md`.
 
+Software-consumption prerequisite checkpoint (2026-10-30): exact retained
+optional-profile/schema/vector evidence now exercises all 26 shape cases,
+strict raw JCS/control/count rejection, selected non-widening magnitude/
+supervision cases and real P-256/Ed25519 signature checks under a distinct
+purpose and installed issuer/profile/policy. Availability loss zeros every
+effect magnitude; earlier vetoes and unknown-capacity floors remain. These are
+prerequisites only: complete current evidence/epoch/request/prerequisite
+composition remains unverified and ordinary-native still rejects substitution.
+See `docs/plans/2026-10-30-software-consumption.md`.
+
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
 contract recorded as such. External ownership must be justified by actual I/O,
