@@ -595,3 +595,15 @@ dependencies. Legacy locations retain the same helper behavior, URI public
 identity/parser-error boundary and tested contract. The root API, package version
 and normative RFC pin remain 2.1.0 pending deliberate adoption; this prepares the
 independent v3 tree for that eventual switch without runtime fallback.
+
+## 2026-10-30 sovereign Soul stop resolution
+
+`InstalledNativeSoulStopResolver` accepts an actual current authenticated native
+Soul veto, binds its literal authority URI through a pinned named sovereign
+mapping, and selects the active original grant's registered closed destination.
+Post-registration validation requires exact `Exceeded`/`exceeded_soul`, sovereign
+origin, named authority, original wire and unchanged grant/admission. Unknown
+authorities are not inferred, and a system contest cannot substitute for the
+community's closed protocol. Real signed integration exercises both rejections
+and the correct closed return path. Actual genuine sealing, durable registration,
+delivery and interruption remain Source/Service responsibilities.

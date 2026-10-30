@@ -231,6 +231,8 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(cleared.expires_at,1006)
         from tests.unit.core._v3_software_consumption_checks import check_consumption
         check_consumption(self,native,combined,operation,deployment,(reservation_verifier,reservation_state,state,boundary_state))
+        from tests.unit.core._v3_soul_stop_checks import check_soul_stop
+        check_soul_stop(self,native,operation,deployment,actual_bytes,association_bytes,ordinary,ordinary_key,private,decision,attestation,geometry)
         from tests.unit.core._v3_clearance_fixture import install_authority
         authority_cf=clearance_fixture(native,combined,operation,deployment)
         authority_f=install_authority(authority_cf,operation,deployment)
