@@ -1,4 +1,18 @@
 """Modeled current managed relation around an actual signed native result."""
+def install_authority(cf,operation,deployment,now=1000):
+    import rfc8785,json
+    from dataclasses import replace
+    from kinetic_trust_library.v3.demand_supplier import _digest
+    from tests.unit.core.test_v3_installed_authority_separation import fixture as authority_fixture
+    old=cf["verifier"]
+    f=authority_fixture(operation,deployment,cf["state"]["zone"],cf["state"]["native_geometry_digest"],
+        cf["profiles"]["non_clearance"]["lease_authority"],now)
+    p=cf["profiles"]["clearance"];p["authority_profile_digest"]=_digest(json.loads(f["v"].profile_bytes),"sha256")
+    cf["state"]["profile_digest"]=_digest(p,"sha256")
+    cf["verifier"]=replace(old,profile_bytes=rfc8785.dumps(p),authority_verifier=f["v"])
+    return f
+
+
 def fixture(native_verifier,native_result,operation,deployment,now=1000):
     import json,rfc8785
     from kinetic_trust_library.v3.demand_supplier import _digest

@@ -294,6 +294,14 @@ the historical v2 requirement/evidence map as historical documentation.
 
 ## Completion gate
 
+Structural authority checkpoint (2026-10-29): actual capability/process/key
+inventories, accepted-key custody, actually used outside-operator measurers,
+zone-specific quorum and explicit single-measurer limitations are checked by
+pure and installed audit-grade validators. Selected native conditional
+clearance composes the exact authority audit and earliest expiry. See
+`docs/plans/2026-10-29-authority-separation.md`; actual audited completeness,
+physical custody and protected commit currentness remain external evidence.
+
 Management checkpoint (2026-10-29): pure and installed classification histories
 preserve admissions, immediate demotions and original final hand-backs, with
 retained-checkpoint anti-rewrite validation. Uniform unmanaged denial, declared

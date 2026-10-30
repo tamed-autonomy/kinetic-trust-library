@@ -214,6 +214,16 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(cleared.supervision,combined.supervision)
         self.assertEqual(cleared.tightened_constraints_bytes,combined.tightened_constraints_bytes)
         self.assertEqual(cleared.expires_at,1006)
+        from tests.unit.core._v3_clearance_fixture import install_authority
+        authority_cf=clearance_fixture(native,combined,operation,deployment)
+        authority_f=install_authority(authority_cf,operation,deployment)
+        def authority_clearance():return authority_cf["verifier"].evaluate(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        self.assertTrue(authority_clearance().conditional_clear)
+        self.assertTrue(authority_clearance().authority_separation.valid)
+        authority_f["s"]["inventory"]["lease_constructor_processes"].append("process:helper")
+        authority_f["refresh"]()
+        self.assertEqual(authority_clearance().reason,"AGENT_CAN_CONSTRUCT_LEASE")
+        self.assertFalse(authority_clearance().conditional_clear)
         formation=cf["state"]["formation"]
         cf["state"]["formation"]=None
         self.assertEqual(clearance().reason,"CLEARANCE_FORMATION_REQUIRED")
