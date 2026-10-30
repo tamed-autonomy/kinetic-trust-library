@@ -89,6 +89,8 @@ class _InstalledNativeStopResolver:
                 or p["clearance_profile_digest"]!=_digest(cp,hb.algorithm)):
             raise ValidationError("native stop resolution differs from selected current clearance/zone policy")
 
+    def _reason(self,native_result):return "exceeded_permit_condition"
+
     def evaluate(self,native_result,*,actual_operation,evaluated_at,clock_healthy):
         cv=self.clearance_verifier;hb=cv.template_verifier.hand_back_verifier
         if (type(native_result) is not NativeEvaluationResult or native_result.verifier is not cv.native_verifier
@@ -114,9 +116,10 @@ class _InstalledNativeStopResolver:
         actual={k:v for k,v in request.items() if k not in ("version","demand","classification_profile")}
         if canonical_demand_operation_bytes(actual)!=op_bytes:
             raise ValidationError("native stop failure belongs to another actual operation")
+        reason=self._reason(native_result)
         cause=rfc8785.dumps(dict(profile_digest=_digest(_parse_jcs_object(self.profile_bytes),hb.algorithm),
             operation_digest=_digest(_parse_jcs_object(op_bytes),hb.algorithm),native_reason=native_result.reason,
-            evaluated_at=evaluated_at,reason="exceeded_permit_condition",template_digest=template.template_digest,
+            evaluated_at=evaluated_at,reason=reason,template_digest=template.template_digest,
             proof_digest=digest_complete_proof(native_result.association.compact_proof,algorithm=hb.algorithm),
             geometry_digest=None if native_result.canonical_geometry_bytes is None else _digest(_parse_jcs_object(native_result.canonical_geometry_bytes),hb.algorithm),
             clearance_state_digest=_digest(state,hb.algorithm),gate_profile_digests=[_digest(_parse_jcs_object(p.profile_bytes),hb.algorithm) for p in policies],
@@ -125,7 +128,8 @@ class _InstalledNativeStopResolver:
             readiness_context_digests=(None if native_result.readiness is None or native_result.readiness.readiness is None
                 else native_result.readiness.readiness.observed_context_digests)))
         prepared,current=_prepare_registered_stop(cv=cv,initial=initial,native_result=native_result,template=template,
-            profile_bytes=self.profile_bytes,cause=cause,op_bytes=op_bytes,preparation_source=self.preparation_source,evaluated_at=evaluated_at)
+            profile_bytes=self.profile_bytes,cause=cause,op_bytes=op_bytes,preparation_source=self.preparation_source,evaluated_at=evaluated_at,
+            expected_reason=reason)
         result=object.__new__(NativeStopResolution)
         for k,v in dict(clearance=current,template=template,cause_bytes=cause,preparation=prepared,evaluated_at=evaluated_at,
                 expires_at=min(current.expires_at,template.expires_at),action_permitted=False).items():object.__setattr__(result,k,v)
@@ -136,6 +140,29 @@ class _InstalledNativeStopResolver:
 class InstalledNativeAdjudicationStopResolver(_InstalledNativeStopResolver):
     _FORMULA="native-adjudication-return-path-v1"
     _FAILURES=frozenset(("ADJ_GATE_UNSATISFIED",))
+
+
+@dataclass(frozen=True,slots=True)
+class InstalledNativeCapacityStopResolver(_InstalledNativeStopResolver):
+    _FORMULA="native-capacity-return-path-v1"
+    _FAILURES=frozenset(("NATIVE_EVALUATION_RESTRICTED",))
+
+    def _reason(self,native_result):
+        from fractions import Fraction
+        c=_parse_jcs_object(native_result.canonical_geometry_bytes)["capacity"]
+        return "exceeded_zeroth_law" if c["capacityKnown"] and Fraction(str(c["A"]))>Fraction(str(c["E"])) else "exceeded_permit_condition"
+
+    def evaluate(self,native_result,*,actual_operation,evaluated_at,clock_healthy):
+        from fractions import Fraction
+        if (type(native_result) is not NativeEvaluationResult or native_result.canonical_geometry_bytes is None
+                or native_result.association.reason not in ("RB_BOUND","RB_CURRENT")):
+            raise ValidationError("capacity stop requires the actual authenticated native geometry restriction")
+        body=_parse_jcs_object(native_result.canonical_geometry_bytes);c=body.get("capacity")
+        if (type(c) is not dict or body["gates"]["soul"]!="passed"
+                or not (Fraction(str(c["E"]))==0 or Fraction(str(c["A"]))>=Fraction(str(c["E"])))):
+            raise ValidationError("capacity stop cannot attribute another restriction to measured capacity")
+        return super(InstalledNativeCapacityStopResolver,self).evaluate(native_result,actual_operation=actual_operation,
+            evaluated_at=evaluated_at,clock_healthy=clock_healthy)
 
 
 @dataclass(frozen=True,slots=True)

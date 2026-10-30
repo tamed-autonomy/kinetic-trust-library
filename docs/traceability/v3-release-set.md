@@ -607,3 +607,14 @@ authorities are not inferred, and a system contest cannot substitute for the
 community's closed protocol. Real signed integration exercises both rejections
 and the correct closed return path. Actual genuine sealing, durable registration,
 delivery and interruption remain Source/Service responsibilities.
+
+## 2026-10-30 native capacity stop resolution
+
+`InstalledNativeCapacityStopResolver` resolves the current verified native
+capacity restriction through the active original grant/template. Known measured
+A>E uses `exceeded_zeroth_law`; equality and uncertain conservative capacity use
+the required-condition reason. It preserves the passed Soul boundary, rejects
+unrelated restriction attribution, never divides by zero and post-validates the
+exact derived wire reason. Real signed integration covers measured excess,
+equality, known/unknown zero and substituted reason rejection. Current schema
+ordering rejects earlier-gate records that improperly retain a capacity pair.
