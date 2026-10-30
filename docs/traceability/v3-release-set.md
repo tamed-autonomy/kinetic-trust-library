@@ -603,6 +603,15 @@ a local-only order or supplying omitted/substituted/reordered carrier digests
 fails. Real signed protected-native integration exercises software issuance,
 continuing revalidation and actual-condition Exceeded return paths.
 
+Adjudication software prerequisite checkpoint (2026-10-30): the installed
+consumer now pins ordered gate IDs/profile digests/strict required flags, binds
+complete signed tokens for required gates, and keeps optional gates optional.
+Token issuance/original expiration bound the software artifact; current gate
+status bounds each use. Checkpoints reverify retained or explicit replacement
+tokens, with matching new software binding required after replacement. Real
+single/multiple/optional integration covers profile downgrade, omission,
+substitution/order/duplication, backdating, expiry and current revocation.
+
 ## 2026-10-30 sovereign Soul stop resolution
 
 `InstalledNativeSoulStopResolver` accepts an actual current authenticated native

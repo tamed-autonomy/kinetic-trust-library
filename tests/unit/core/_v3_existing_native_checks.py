@@ -1,5 +1,5 @@
 """Real signed native inputs, modeled current protected reservation Source."""
-def check_native_revalidation(test,native,combined,readiness_state,boundary_state):
+def check_native_revalidation(test,native,combined,readiness_state,boundary_state,gate_states=()):
     import json,rfc8785
     from kinetic_trust_library.v3.existing_association import InstalledExistingAssociationVerifier,AuthenticatedExistingAssociation
     from kinetic_trust_library.v3.demand_supplier import _digest
@@ -12,8 +12,11 @@ def check_native_revalidation(test,native,combined,readiness_state,boundary_stat
     class Source:
         def resolve(self,**kwargs):return AuthenticatedExistingAssociation(rfc8785.dumps(s),b"modeled current protected original invocation reservation")
     rv=InstalledExistingAssociationVerifier(native.association_verifier,rfc8785.dumps(p),Source())
-    def current(previous=combined,now=1000):return native.revalidate_existing(previous,reservation_verifier=rv,
-        invocation_evidence=b"fixture-actual-invocation",now=now,clock_healthy=True)
+    def current(previous=combined,now=1000):
+        tokens={json.loads(a.profile_bytes)["gate_id"]:a.token_bytes for a in previous.adjudications if a.token_bytes is not None}
+        kwargs=dict(adjudication_token=None if previous.adjudication is None else previous.adjudication.token_bytes) if native.adjudication_verifier is not None else dict(adjudication_tokens=tuple(tokens.items()))
+        return native.revalidate_existing(previous,reservation_verifier=rv,
+            invocation_evidence=b"fixture-actual-invocation",now=now,clock_healthy=True,**kwargs)
     value=current();test.assertEqual(value.reason,"NATIVE_PREREQUISITES_VALID");test.assertEqual(value.association.reason,"RB_CURRENT")
     test.assertEqual(value.expires_at,1002)
     readiness_state["checked_at"]=1002
@@ -25,9 +28,11 @@ def check_native_revalidation(test,native,combined,readiness_state,boundary_stat
     test.assertEqual(current().reason,"READINESS_INVALID")
     readiness_state["readiness_epoch"]-=1
     s["checked_at"]=1001;s["expires_at"]=1003;readiness_state["checked_at"]=boundary_state["checked_at"]=1001
+    for g in gate_states:g["checked_at"]=1001
     renewed=current(value,1001);test.assertEqual(renewed.reason,"NATIVE_PREREQUISITES_VALID")
     test.assertEqual(renewed.checked_at,1001);test.assertEqual(renewed.expires_at,1003)
     test.assertEqual(renewed.readiness.proof_verification.root_verification.checked_at,1001)
     test.assertEqual(renewed.association.compact_proof,combined.association.compact_proof)
     s["checked_at"]=1000;s["expires_at"]=1002;readiness_state["checked_at"]=boundary_state["checked_at"]=1000
+    for g in gate_states:g["checked_at"]=1000
     return rv,s

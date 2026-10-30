@@ -26,6 +26,12 @@ from .supervision_rails import LEVELS
 def _number(value):return Fraction(str(value))
 
 
+def _gate_profiles(native,algorithm):
+    policies=(native.adjudication_verifier,) if native.adjudication_verifier is not None else native.adjudication_verifiers
+    return [dict(gate_id=_parse_jcs_object(v.profile_bytes)["gate_id"],profile_digest=_digest(_parse_jcs_object(v.profile_bytes),algorithm),
+        required=_parse_jcs_object(v.profile_bytes)["gate_required"]) for v in policies]
+
+
 def _current_conditions_withhold(e):
     """Derive actual local condition loss independently of a stale candidate."""
     if not e.valid or not e.repair_path_verified or not e.supervision_available:return True
@@ -80,16 +86,20 @@ class InstalledSoftwareConsumptionVerifier:
             raise ValidationError("installed native clearance/evidence/signing declarations required")
         hb=cv.template_verifier.hand_back_verifier;p=_parse_jcs_object(self.profile_bytes)
         ep=_parse_jcs_object(ev.profile_bytes);sp=_parse_jcs_object(self.signature_profile_bytes)
+        gates=_gate_profiles(cv.native_verifier,ev.algorithm)
         expected_order=["readiness",*(["geometry_carrier"] if cv.native_verifier.association_verifier.crosses_trust_boundary else []),"lease","intent"]
+        expected_order.extend("adjudication:"+g["gate_id"] for g in gates if g["required"])
         # Validate the independent signing declaration without selecting a key
         # from the untrusted candidate. The current inventory is resolved at use.
         InstalledSoftwareDecisionSignatureVerifier(b"{}",self.signature_profile_bytes)
-        if (set(p)!={"id","version","zone","formula","clearance_profile_digest","evidence_profile_digest",
+        if (set(p)-{"adjudication_profiles"}!={"id","version","zone","formula","clearance_profile_digest","evidence_profile_digest",
                 "signature_profile_digest","prerequisite_order","original_artifact_contract"}
                 or not _name(p["id"]) or not _time(p["version"]) or p["version"]==0
                 or p["formula"]!="native-duration-software-consumption-v1"
                 or p["original_artifact_contract"]!="authenticated-vendor-grant-intent-v1"
                 or p["prerequisite_order"]!=expected_order
+                or ("adjudication_profiles" in p)!=bool(gates)
+                or gates and (p["adjudication_profiles"]!=gates or any(type(g["required"]) is not bool for g in p["adjudication_profiles"]))
                 or p["clearance_profile_digest"]!=_digest(_parse_jcs_object(cv.profile_bytes),ev.algorithm)
                 or p["evidence_profile_digest"]!=_digest(ep,ev.algorithm)
                 or p["signature_profile_digest"]!=_digest(sp,ev.algorithm)
@@ -100,7 +110,6 @@ class InstalledSoftwareConsumptionVerifier:
             raise ValidationError("software consumption requires exact current native management/authority and installed declaration bindings")
         nv=cv.native_verifier
         if (cv.relational_commit_verifier is not None or cv.reissue_verifier is not None
-                or nv.adjudication_verifier is not None or nv.adjudication_verifiers
                 or any(getattr(nv,n) is not None for n in ("repair_verifier","ambient_verifier","federation_verifier","normative_demand_verifier"))):
             raise ValidationError("this software adapter does not bind the complete artifacts of supplemental native prerequisite families")
 
@@ -191,7 +200,22 @@ class InstalledSoftwareConsumptionVerifier:
             carrier=native_result.association.carrier_binding
             if carrier is None:return result("SOFTWARE_PREREQUISITES_INVALID")
             carrier_originals=(carrier.compact_carrier.encode("ascii"),)
-        originals=(native_result.readiness.decision_bytes,*carrier_originals,*(p.artifact_bytes for p in prerequisites))
+        gates=_gate_profiles(self.clearance_verifier.native_verifier,algorithm)
+        if len(native_result.adjudications)!=len(gates):return result("SOFTWARE_PREREQUISITES_INVALID")
+        gate_tokens=[];gate_payloads=[];gate_conditions=[]
+        for declared,actual in zip(gates,native_result.adjudications):
+            if (actual.checked_at!=evaluated_at or actual.gate_required!=declared["required"]
+                    or _digest(_parse_jcs_object(actual.profile_bytes),algorithm)!=declared["profile_digest"]):
+                return result("SOFTWARE_PREREQUISITES_INVALID")
+            token_digest=None
+            if actual.gate_required:
+                if not actual.gate_satisfied or actual.token_bytes is None or actual.authenticated_payload_bytes is None:
+                    return result("SOFTWARE_PREREQUISITES_INVALID")
+                gate_tokens.append(actual.token_bytes);gate_payloads.append(_parse_jcs_object(actual.authenticated_payload_bytes))
+                token_digest=raw_digest(actual.token_bytes)
+            gate_conditions.append(dict(**declared,satisfied=actual.gate_satisfied,token_digest=token_digest,
+                current_state=None if actual.authenticated_state_bytes is None else _parse_jcs_object(actual.authenticated_state_bytes)))
+        originals=(native_result.readiness.decision_bytes,*carrier_originals,*(p.artifact_bytes for p in prerequisites),*gate_tokens)
         expected_prerequisites=[raw_digest(raw) for raw in originals]
         if (body["request_binding"]!=binding or body["request_digest"]!=_digest(binding,algorithm)
                 or body["proof_digest"]!=raw_digest(native_result.association.compact_proof.encode("ascii"))
@@ -201,7 +225,8 @@ class InstalledSoftwareConsumptionVerifier:
             return result("SOFTWARE_CURRENT_BINDING_INVALID")
         observations=_parse_array(e.observations_bytes)
         readiness_body=_parse_jcs_object(native_result.readiness.decision_bytes)
-        if body["evaluated_at"]<max(*(r["observed_at"] for r in observations),state["lease"]["issued_at"],readiness_body["evaluated_at"]):
+        if body["evaluated_at"]<max(*(r["observed_at"] for r in observations),state["lease"]["issued_at"],readiness_body["evaluated_at"],
+                *(g["iat"] for g in gate_payloads)):
             return result("SOFTWARE_EVALUATION_PRECEDES_INPUTS")
         # A principal's intent is a historical mint-time prerequisite under the
         # native lease contract, not a second currently-live permission token.
@@ -219,7 +244,7 @@ class InstalledSoftwareConsumptionVerifier:
         proof_claims=_parse_jcs_object(native_result.readiness.proof_verification.authenticated_payload_bytes)
         attestation=_parse_jcs_object(native_result.readiness.readiness.attestation_bytes)
         max_expiry=min(e.inputs_expires_at,c.lease.expires_at,geometry_expiry,proof_claims["exp"],
-            readiness_body["expires_at"],attestation["expires_at"],key_expiry)
+            readiness_body["expires_at"],attestation["expires_at"],key_expiry,*(g["exp"] for g in gate_payloads))
         if body["expires_at"]>max_expiry:return result("SOFTWARE_VALIDITY_WIDENED")
         geometry=_parse_jcs_object(native_result.canonical_geometry_bytes).get("capacity")
         if type(geometry) is not dict:return result("SOFTWARE_NATIVE_CAPACITY_UNAVAILABLE")
@@ -260,6 +285,7 @@ class InstalledSoftwareConsumptionVerifier:
             readiness_state=_parse_jcs_object(native_result.readiness.readiness.authenticated_state_bytes),
             readiness_keys_digest=raw_digest(native_result.readiness.readiness.trusted_keys_bytes),
             boundary_state=None if native_result.boundary is None else _parse_jcs_object(native_result.boundary.authenticated_state_bytes),
+            adjudication_gates=gate_conditions,
             native_graph_revalidation_required=True,
             evidence_frame=_parse_jcs_object(e.frame_bytes),evidence_digest=body["evidence_digest"],expires_at=expiry))
         return result("SOFTWARE_CONDITIONAL_CONSUMPTION",verified=True,conditional=True)

@@ -39,10 +39,15 @@ an `Authenticated…` type does not authenticate it.
 hand-back/template/non-clearance verifiers and actual provider interfaces are
 installed before these composed paths. The software consumer requires current
 management and structural authority checks. Its initial adapter explicitly
-rejects relational/reissue and supplemental prerequisite combinations until
-their complete original-artifact bindings are selected and implemented.
+rejects relational/reissue, repair, ambient, federation and normative-demand
+prerequisite combinations until their complete original-artifact bindings are
+selected and implemented.
 Protected native carriage includes its complete signed geometry carrier in the
 required software prerequisite order; a local-only order cannot downgrade it.
+Selected adjudication gates pin exact ordered policy identities and bind every
+required signed token. Optional gates remain optional under their installed
+policy. Checkpoints reverify retained tokens; replacements require a matching
+new software decision and preserve original token deadlines.
 
 Every returned `action_permitted` is false. Conditional Clear/consumption names
 the conditions the Service must satisfy, including native constraints and all

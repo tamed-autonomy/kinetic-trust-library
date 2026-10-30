@@ -1,13 +1,14 @@
 """Continuing use never renews original evidence or ordinary acceptance."""
-def check_software_checkpoint(test,consumer,f,cf,management,authority,good,sign,operation,inputs):
+def check_software_checkpoint(test,consumer,f,cf,management,authority,good,body,sign,operation,inputs):
     import json,rfc8785
     from kinetic_trust_library.v3.software_checkpoint import InstalledSoftwareCheckpointVerifier
     from kinetic_trust_library.v3.demand_supplier import _digest
-    rv,reservation,readiness,boundary=inputs
+    rv,reservation,readiness,boundary=inputs[:4]
+    gate_states=inputs[4] if len(inputs)>4 else ()
     p=dict(id="software-checkpoint:a",version=1,zone="zone:alpha",formula="native-software-checkpoint-v1",
         consumer_profile_digest=_digest(json.loads(consumer.profile_bytes),"sha256"),reservation_profile_digest=_digest(json.loads(rv.profile_bytes),"sha256"))
     verifier=InstalledSoftwareCheckpointVerifier(consumer,rv,rfc8785.dumps(p))
-    states=(reservation,readiness,boundary,cf["state"],cf["template_state"],management,authority["s"],f["state"])
+    states=(reservation,readiness,boundary,cf["state"],cf["template_state"],management,authority["s"],f["state"],*gate_states)
     def advance(now):
         for state in states:state["checked_at"]=now
         reservation["expires_at"]=now+2
@@ -33,6 +34,9 @@ def check_software_checkpoint(test,consumer,f,cf,management,authority,good,sign,
         readiness["readiness_epoch"]-=1
         recovered=verifier.evaluate(raw,denied,actual_operation=operation,invocation_evidence=b"fixture-actual-invocation",evaluated_at=1001,clock_healthy=True)
         test.assertTrue(recovered.conditional_consumption,recovered.consumption.reason)
+        if len(inputs)>5:
+            from tests.unit.core._v3_software_adjudication_checks import check_adjudication_checkpoint
+            check_adjudication_checkpoint(test,verifier,current,body,sign,operation,inputs[5],advance)
         from dataclasses import replace
         from kinetic_trust_library.errors import ValidationError
         other=replace(verifier,profile_bytes=rfc8785.dumps(dict(p,id="checkpoint:other")))

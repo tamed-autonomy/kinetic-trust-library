@@ -532,6 +532,8 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(favorable.canonical_geometry_bytes,combined.canonical_geometry_bytes)
         self.assertTrue(favorable.adjudication.gate_satisfied)
         self.assertEqual(favorable.expires_at,1006)
+        gate_reservation,gate_reservation_state=check_native_revalidation(self,native,favorable,state,boundary_state,(adjudication["state"],))
+        check_consumption(self,native,favorable,operation,deployment,(gate_reservation,gate_reservation_state,state,boundary_state,(adjudication["state"],),(adjudication,)))
         gate_cf=clearance_fixture(native,favorable,operation,deployment)
         gate_clear=gate_cf["verifier"].evaluate(favorable,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
         self.assertTrue(gate_clear.conditional_clear)
@@ -597,6 +599,8 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(unchanged.reason,"NATIVE_PREREQUISITES_VALID")
         self.assertEqual(unchanged.supervision,combined.supervision)
         self.assertEqual(unchanged.canonical_geometry_bytes,combined.canonical_geometry_bytes)
+        optional_reservation,optional_reservation_state=check_native_revalidation(self,native,unchanged,state,boundary_state,(adjudication["state"],))
+        check_consumption(self,native,unchanged,operation,deployment,(optional_reservation,optional_reservation_state,state,boundary_state,(adjudication["state"],),(adjudication,)))
         native=no_norm
         first=adjudication_fixture(operation,deployment,1000,gate_id="first")
         second=adjudication_fixture(operation,deployment,1000,gate_id="second")
@@ -609,6 +613,8 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(multiple.canonical_geometry_bytes,combined.canonical_geometry_bytes)
         self.assertEqual(multiple.tightened_constraints_bytes,combined.tightened_constraints_bytes)
         self.assertEqual(multiple.supervision,combined.supervision)
+        multi_reservation,multi_reservation_state=check_native_revalidation(self,native,multiple,state,boundary_state,(first["state"],second["state"]))
+        check_consumption(self,native,multiple,operation,deployment,(multi_reservation,multi_reservation_state,state,boundary_state,(first["state"],second["state"]),(first,second)))
         self.assertEqual(whole(tokens=(("first",second["sign"]()),("second",first["sign"]()))).reason,"ADJ_GATE_UNSATISFIED")
         second["payload"]["favorable"]=False
         self.assertEqual(whole(tokens=(("first",first["sign"]()),("second",second["sign"]()))).reason,"ADJ_GATE_UNSATISFIED")

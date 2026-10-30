@@ -9,6 +9,8 @@ from .demand_supplier import _digest
 from .execution_observation import _name
 from .root_lifecycle import _time
 
+_REUSE_TOKEN=object()
+
 
 @dataclass(frozen=True,slots=True,init=False)
 class SoftwareCheckpointAssessment:
@@ -44,7 +46,7 @@ class InstalledSoftwareCheckpointVerifier:
             raise ValidationError("checkpoint must pin the exact native/software/reservation graph before use")
 
     def evaluate(self,decision_bytes,previous_assessment,*,actual_operation,invocation_evidence,evaluated_at,clock_healthy,
-            readiness_decision_bytes=None,readiness_attestation_bytes=None):
+            readiness_decision_bytes=None,readiness_attestation_bytes=None,adjudication_token=_REUSE_TOKEN,adjudication_tokens=_REUSE_TOKEN):
         import rfc8785
         if type(previous_assessment) is SoftwareCheckpointAssessment:
             if previous_assessment.verifier is not self:raise ValidationError("prior checkpoint belongs to another installed graph")
@@ -55,9 +57,17 @@ class InstalledSoftwareCheckpointVerifier:
                 or not _time(evaluated_at) or clock_healthy is not True or previous.checked_at>evaluated_at
                 or (readiness_decision_bytes is None)!=(readiness_attestation_bytes is None)):
             raise ValidationError("checkpoint requires the actual retained operation, native acceptance and healthy current time")
-        native=self.consumer.clearance_verifier.native_verifier.revalidate_existing(previous.native_checkpoint,
+        verifier=self.consumer.clearance_verifier.native_verifier
+        if adjudication_token is _REUSE_TOKEN:
+            adjudication_token=(previous.native_checkpoint.adjudication.token_bytes
+                if verifier.adjudication_verifier is not None and previous.native_checkpoint.adjudication is not None else None)
+        if adjudication_tokens is _REUSE_TOKEN:
+            adjudication_tokens=tuple((_parse_jcs_object(a.profile_bytes)["gate_id"],a.token_bytes)
+                for a in previous.native_checkpoint.adjudications if a.token_bytes is not None) if verifier.adjudication_verifier is None else ()
+        native=verifier.revalidate_existing(previous.native_checkpoint,
             reservation_verifier=self.reservation_verifier,invocation_evidence=invocation_evidence,now=evaluated_at,clock_healthy=clock_healthy,
-            decision_bytes=readiness_decision_bytes,attestation_bytes=readiness_attestation_bytes)
+            decision_bytes=readiness_decision_bytes,attestation_bytes=readiness_attestation_bytes,
+            adjudication_token=adjudication_token,adjudication_tokens=adjudication_tokens)
         consumption=self.consumer.evaluate(decision_bytes,native,actual_operation=actual_operation,evaluated_at=evaluated_at,
             clock_healthy=clock_healthy,previous_assessment=previous)
         conditions=None
