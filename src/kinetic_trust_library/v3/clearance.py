@@ -20,10 +20,11 @@ from .supervision_rails import LEVELS
 from .reissue import InstalledHandBackReissueVerifier,HandBackReissueAssessment
 from .relational_commit import InstalledRelationalCommitVerifier,RelationalCommitAssessment
 from .installed_authority_separation import InstalledAuthoritySeparationVerifier
+from .installed_management import InstalledManagementVerifier
 
 
 def _profile(p):
-    if (set(p)-{"reissue_profile_digest","relational_commit_profile_digest","authority_profile_digest"}!={"id","version","zone","formula","non_clearance_profile_digest","relational_clear"}
+    if (set(p)-{"reissue_profile_digest","relational_commit_profile_digest","authority_profile_digest","management_profile_digest"}!={"id","version","zone","formula","non_clearance_profile_digest","relational_clear"}
             or not _name(p["id"]) or not _name(p["zone"]) or not _time(p["version"]) or p["version"]==0
             or not is_digest(p["non_clearance_profile_digest"]) or p["formula"]!="native-template-lease-clearance-v1"
             or p["relational_clear"] not in ("unsupported","conditional-single-use-v1")
@@ -32,6 +33,7 @@ def _profile(p):
     if "reissue_profile_digest" in p and not is_digest(p["reissue_profile_digest"]):raise ValidationError("invalid selected reissue digest")
     if "relational_commit_profile_digest" in p and not is_digest(p["relational_commit_profile_digest"]):raise ValidationError("invalid selected relational commit digest")
     if "authority_profile_digest" in p and not is_digest(p["authority_profile_digest"]):raise ValidationError("invalid selected authority audit digest")
+    if "management_profile_digest" in p and not is_digest(p["management_profile_digest"]):raise ValidationError("invalid selected management digest")
     return p
 
 
@@ -65,6 +67,7 @@ class ClearanceAssessment:
     reissue: HandBackReissueAssessment | None
     relational_commit: RelationalCommitAssessment | None
     authority_separation: object
+    management: object
 
     def __init__(self,*args,**kwargs):raise TypeError("clearance requires installed native/template/lease validation")
 
@@ -79,6 +82,7 @@ class InstalledClearanceVerifier:
     reissue_verifier: InstalledHandBackReissueVerifier | None = None
     relational_commit_verifier: InstalledRelationalCommitVerifier | None = None
     authority_verifier: InstalledAuthoritySeparationVerifier | None = None
+    management_verifier: InstalledManagementVerifier | None = None
 
     def __post_init__(self):
         if (type(self.native_verifier) is not InstalledNativeEvaluationVerifier or type(self.template_verifier) is not InstalledHandBackTemplateVerifier
@@ -86,6 +90,12 @@ class InstalledClearanceVerifier:
                 or not callable(getattr(self.context_source,"resolve",None))):
             raise ValidationError("invalid installed clearance verifier")
         hb=self.template_verifier.hand_back_verifier;p=_profile(_parse_jcs_object(self.profile_bytes))
+        mv=self.management_verifier
+        if ("management_profile_digest" in p)!=(mv is not None):raise ValidationError("Clear management selection must be symmetric")
+        if mv is not None and (type(mv) is not InstalledManagementVerifier or mv.hand_back_verifier is not hb
+                or _parse_jcs_object(mv.profile_bytes)["zone"]!=p["zone"]
+                or p["management_profile_digest"]!=_digest(_parse_jcs_object(mv.profile_bytes),hb.algorithm)):
+            raise ValidationError("Clear management differs from installed return-path/zone policy")
         av=self.authority_verifier
         if ("authority_profile_digest" in p)!=(av is not None):
             raise ValidationError("Clear authority-audit selection must be symmetric")
@@ -117,14 +127,14 @@ class InstalledClearanceVerifier:
                 or p["non_clearance_profile_digest"]!=_digest(_parse_jcs_object(self.non_clearance_verifier.profile_bytes),hb.algorithm)):
             raise ValidationError("clearance policies differ on native deployment/zone or return path")
 
-    def evaluate(self,native_result,*,actual_operation,evaluated_at,clock_healthy,relational_token_bytes=None):
+    def evaluate(self,native_result,*,actual_operation,evaluated_at,clock_healthy,relational_token_bytes=None,previous_management=None):
         if type(native_result) is not NativeEvaluationResult or not _time(evaluated_at):
             raise ValidationError("clearance requires an immutable native result and current time")
         if relational_token_bytes is not None and (type(relational_token_bytes) is not bytes or len(relational_token_bytes)>262144):
             raise ValidationError("relational clearance requires immutable bounded signed token bytes")
         hb=self.template_verifier.hand_back_verifier;p=_profile(_parse_jcs_object(self.profile_bytes))
         op_bytes=canonical_demand_operation_bytes(actual_operation);op=_parse_jcs_object(op_bytes)
-        source=None;lease=None;template=None;non_clearance=None;reissue=None;relational_commit=None;authority_separation=None
+        source=None;lease=None;template=None;non_clearance=None;reissue=None;relational_commit=None;authority_separation=None;management=None
         def result(reason,kind=None,expiry=None,hand_back_required=False):
             r=object.__new__(ClearanceAssessment)
             for k,v in dict(valid=kind is not None,kind=kind,reason=reason,conditional_clear=kind=="Clear",action_permitted=False,
@@ -134,10 +144,17 @@ class InstalledClearanceVerifier:
                     profile_bytes=self.profile_bytes,operation_bytes=op_bytes,evaluated_at=evaluated_at,expires_at=expiry,
                     authenticated_state_bytes=None if source is None else source.state_bytes,
                     source_evidence_bytes=None if source is None else source.evidence_bytes,reissue=reissue,
-                    relational_commit=relational_commit,authority_separation=authority_separation).items():object.__setattr__(r,k,v)
+                    relational_commit=relational_commit,authority_separation=authority_separation,management=management).items():object.__setattr__(r,k,v)
             return r
         if native_result.verifier is not self.native_verifier:return result("CLEARANCE_NATIVE_POLICY",hand_back_required=True)
         if clock_healthy is not True or native_result.checked_at!=evaluated_at:return result("CLEARANCE_NATIVE_TIME",hand_back_required=True)
+        if previous_management is not None and self.management_verifier is None:
+            raise ValidationError("prior management checkpoint requires selected management verifier")
+        if self.management_verifier is not None:
+            management=self.management_verifier.evaluate(actual_operation=op,evaluated_at=evaluated_at,clock_healthy=clock_healthy,
+                credential_bytes=native_result.association.compact_proof.encode("utf-8"),previous_assessment=previous_management)
+            if not management.valid:return result("CLEARANCE_MANAGEMENT_INVALID",hand_back_required=management.hand_back_required)
+            if management.management.regime!="managed":return result("CLEARANCE_UNMANAGED",hand_back_required=management.hand_back_required)
         invocation=digest_demand_operation(op,algorithm=hb.algorithm)
         deployment=_digest(_parse_jcs_object(hb.deployment_profile_bytes),hb.algorithm)
         geometry_digest=None if native_result.canonical_geometry_bytes is None else _digest(_parse_jcs_object(native_result.canonical_geometry_bytes),hb.algorithm)
@@ -148,8 +165,10 @@ class InstalledClearanceVerifier:
                 or type(source.evidence_bytes) is not bytes or not source.evidence_bytes):
             raise ValidationError("clearance Source must authenticate complete actual current registry facts")
         s=_parse_jcs_object(source.state_bytes)
-        if (set(s)!={"deployment_digest","profile_digest","operation_digest","subject","zone","managed_relation_id","checked_at","expires_at",
+        expected={"deployment_digest","profile_digest","operation_digest","subject","zone","managed_relation_id","checked_at","expires_at",
                 "principal","consequence_class","mutates_relation","current_grant_epoch","template_digest","lease","intent","adverse_stop","native_geometry_digest","formation"}
+        if management is not None:expected.add("management_admission_anchor")
+        if (set(s)!=expected
                 or s["deployment_digest"]!=deployment or s["profile_digest"]!=_digest(p,hb.algorithm) or s["operation_digest"]!=invocation
                 or s["subject"]!=op["actor"] or s["zone"]!=p["zone"] or not _name(s["managed_relation_id"])
                 or not _time(s["checked_at"]) or s["checked_at"]!=evaluated_at or not _time(s["expires_at"]) or s["expires_at"]<=evaluated_at
@@ -173,6 +192,10 @@ class InstalledClearanceVerifier:
                 lease_authority=np["lease_authority"],template_digest=s["template_digest"],current_grant_epoch=s["current_grant_epoch"],
                 principal_token_max_age_seconds=np["principal_token_max_age_seconds"],evaluated_at=evaluated_at)
         except ValidationError:return result("CLEARANCE_LEASE_INVALID",hand_back_required=True)
+        if management is not None:
+            admission=_parse_jcs_object(management.authenticated_state_bytes)["history"][-1]
+            if s["management_admission_anchor"]!=admission["anchor"] or lease.issued_at<admission["occurred_at"]:
+                return result("CLEARANCE_MANAGEMENT_GRANT_BINDING",hand_back_required=True)
         if lease.reason=="LEASE_EXPIRED":
             non_clearance=self.non_clearance_verifier.evaluate(rfc8785.dumps(dict(kind="Expired",reissue_path=np["reissue_path"])),
                 actual_operation=op,evaluated_at=evaluated_at,clock_healthy=clock_healthy)
@@ -219,6 +242,7 @@ class InstalledClearanceVerifier:
             if not authority_separation.valid:return result(authority_separation.reason,hand_back_required=True)
         expiry=min(native_result.expires_at,template.expires_at,s["expires_at"],reissue.expires_at if reissue is not None else s["expires_at"])
         if authority_separation is not None:expiry=min(expiry,authority_separation.expires_at)
+        if management is not None:expiry=min(expiry,management.expires_at)
         if lease.single_use_required:
             relational_commit=self.relational_commit_verifier.evaluate(relational_token_bytes,rfc8785.dumps(s["lease"]),
                 evidence_digest=geometry_digest,actual_operation=op,evaluated_at=evaluated_at,clock_healthy=clock_healthy,not_after=expiry)

@@ -1,4 +1,32 @@
 """Modeled current managed relation around an actual signed native result."""
+def install_management(cf,operation,deployment,native_result,now=1000):
+    import rfc8785,json,hashlib
+    from dataclasses import replace
+    from kinetic_trust_library.v3.demand_supplier import _digest
+    from kinetic_trust_library.v3.demand_operation import digest_demand_operation
+    from kinetic_trust_library.v3.installed_management import InstalledManagementVerifier,AuthenticatedManagementContext
+    old=cf["verifier"];hb=old.template_verifier.hand_back_verifier;zone=cf["state"]["zone"]
+    p=dict(id="management:clear",version=1,zone=zone,formula="attested-management-history-v1",
+        hand_back_profile_digest=_digest(json.loads(hb.profile_bytes),"sha256"),registry="registry:membership",
+        append_protocol="audit:append",hostile_facing=False,wire_silence=False,admission_endpoint="channel:admission",
+        surface="surface:a",timing_uniformity_limit="No constant-time scheduling guarantee")
+    state=dict(deployment_digest=_digest(deployment,"sha256"),profile_digest=_digest(p,"sha256"),
+        operation_digest=digest_demand_operation(operation,algorithm="sha256"),subject=operation["actor"],zone=zone,
+        registry=p["registry"],append_protocol=p["append_protocol"],checked_at=now,expires_at=now+7,
+        credential_digest="sha256:"+hashlib.sha256(native_result.association.compact_proof.encode("utf-8")).hexdigest(),
+        request_kind="action",surface="surface:a",regime="managed",event_count=1,
+        history=[dict(kind="admitted",anchor="audit:admission",sequence=1,occurred_at=now-80,authority="authority:a",hand_back_digest=None)],
+        ledger_head=dict(anchor="audit:head",sequence=5))
+    records=[]
+    class Source:
+        def resolve(self,**kw):return AuthenticatedManagementContext(rfc8785.dumps(state),tuple(records),b"modeled complete actual management history/current ingress")
+    mv=InstalledManagementVerifier(hb,rfc8785.dumps(p),Source())
+    cp=cf["profiles"]["clearance"];cp["management_profile_digest"]=_digest(p,"sha256")
+    cf["state"].update(profile_digest=_digest(cp,"sha256"),management_admission_anchor="audit:admission")
+    cf["verifier"]=replace(old,profile_bytes=rfc8785.dumps(cp),management_verifier=mv)
+    return state,records
+
+
 def install_authority(cf,operation,deployment,now=1000):
     import rfc8785,json
     from dataclasses import replace
@@ -46,7 +74,7 @@ def fixture(native_verifier,native_result,operation,deployment,now=1000):
     records=dict(hand_back=None)
     class StopSource:
         def resolve(self,**kw):
-            s={k:v for k,v in state.items() if k not in ("native_geometry_digest","formation")};s["profile_digest"]=_digest(np,"sha256")
+            s={k:v for k,v in state.items() if k not in ("native_geometry_digest","formation","management_admission_anchor")};s["profile_digest"]=_digest(np,"sha256")
             return AuthenticatedNonClearanceContext(rfc8785.dumps(s),b"modeled authoritative current relation/grant/stop registry")
     non_clear=InstalledNonClearanceVerifier(hb,rfc8785.dumps(np),StopSource())
     class Source:

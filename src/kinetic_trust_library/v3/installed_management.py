@@ -29,6 +29,29 @@ def _profile(p):
     return p
 
 
+def _extend_history(current,old,evaluated_at):
+    """Validate Source-authenticated or sealed prior history, never raw claims.
+
+    An expired checkpoint still witnesses history; it confers no current
+    permission. Source authenticates durable restoration and actual origin.
+    """
+    scope=("deployment_digest","profile_digest","subject","zone","registry","append_protocol")
+    if (type(old) is not dict or set(old)!=set(current) or any(old[k]!=current[k] for k in scope)
+            or not _time(old["checked_at"]) or old["checked_at"]>evaluated_at
+            or not _time(old["expires_at"]) or old["expires_at"]<=old["checked_at"]
+            or type(old["ledger_head"]) is not dict or set(old["ledger_head"])!={"anchor","sequence"}
+            or not _name(old["ledger_head"]["anchor"])):
+        raise ValidationError("prior management history checkpoint scope/time is invalid")
+    project_management_history(history=old["history"],declared_regime=old["regime"],event_count=old["event_count"],
+        ledger_head_sequence=old["ledger_head"]["sequence"],evaluated_at=old["checked_at"])
+    count=old["event_count"]
+    if (current["history"][:count]!=old["history"]
+            or any(e["sequence"]<=old["ledger_head"]["sequence"] for e in current["history"][count:])
+            or current["ledger_head"]["sequence"]<old["ledger_head"]["sequence"]
+            or current["ledger_head"]["sequence"]==old["ledger_head"]["sequence"] and current["ledger_head"]["anchor"]!=old["ledger_head"]["anchor"]):
+        raise ValidationError("actual management history rewrites retained classification checkpoint")
+
+
 @dataclass(frozen=True,slots=True)
 class HistoricalDemotionHandBack:
     operation_bytes: bytes
@@ -40,6 +63,7 @@ class AuthenticatedManagementContext:
     state_bytes: bytes
     hand_backs: tuple
     evidence_bytes: bytes
+    retained_checkpoint_bytes: bytes | None=None
 
 
 @dataclass(frozen=True,slots=True,init=False)
@@ -58,6 +82,7 @@ class ManagementAssessment:
     operation_bytes: bytes
     authenticated_state_bytes: bytes
     source_evidence_bytes: bytes
+    retained_checkpoint_bytes: bytes | None
 
     def __init__(self,*args,**kwargs):raise TypeError("management requires authenticated complete history")
 
@@ -95,6 +120,7 @@ class InstalledManagementVerifier:
             operation_bytes=op_bytes,credential_bytes=credential_bytes,evaluated_at=evaluated_at)
         if (type(source) is not AuthenticatedManagementContext or type(source.state_bytes) is not bytes or len(source.state_bytes)>262144
                 or type(source.evidence_bytes) is not bytes or not source.evidence_bytes
+                or source.retained_checkpoint_bytes is not None and (type(source.retained_checkpoint_bytes) is not bytes or len(source.retained_checkpoint_bytes)>262144)
                 or type(source.hand_backs) is not tuple or len(source.hand_backs)>4096):
             raise ValidationError("management Source must authenticate complete classification history")
         s=_parse_jcs_object(source.state_bytes)
@@ -112,16 +138,14 @@ class InstalledManagementVerifier:
             raise ValidationError("management history differs from actual ingress/deployment/current scope")
         management=project_management_history(history=s["history"],declared_regime=s["regime"],event_count=s["event_count"],
             ledger_head_sequence=s["ledger_head"]["sequence"],evaluated_at=evaluated_at)
+        if source.retained_checkpoint_bytes is not None:
+            _extend_history(s,_parse_jcs_object(source.retained_checkpoint_bytes),evaluated_at)
         if previous_assessment is not None:
             previous=previous_assessment
             if type(previous) is not ManagementAssessment or previous.verifier is not self or previous.evaluated_at>evaluated_at:
                 raise ValidationError("prior management history must be a bound installed checkpoint")
             old=_parse_jcs_object(previous.authenticated_state_bytes)
-            count=old["event_count"]
-            if (old["subject"]!=s["subject"] or s["history"][:count]!=old["history"]
-                    or s["ledger_head"]["sequence"]<old["ledger_head"]["sequence"]
-                    or s["ledger_head"]["sequence"]==old["ledger_head"]["sequence"] and s["ledger_head"]["anchor"]!=old["ledger_head"]["anchor"]):
-                raise ValidationError("actual management history rewrites retained classification checkpoint")
+            _extend_history(s,old,evaluated_at)
         records={};total=0
         for item in source.hand_backs:
             if (type(item) is not HistoricalDemotionHandBack or type(item.operation_bytes) is not bytes
@@ -161,4 +185,5 @@ class InstalledManagementVerifier:
         for k,v in dict(valid=not missing,action_permitted=False,management=management,public_response=public,hand_backs=tuple(assessments),
             hand_back_required=missing,delivery_validation_required=delivery_required,deliveries=tuple(deliveries),verifier=self,evaluated_at=evaluated_at,expires_at=expiry,
             operation_bytes=op_bytes,authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes).items():object.__setattr__(r,k,v)
+        object.__setattr__(r,"retained_checkpoint_bytes",source.retained_checkpoint_bytes)
         return r

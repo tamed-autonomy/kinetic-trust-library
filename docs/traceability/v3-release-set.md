@@ -299,6 +299,14 @@ the historical v2 requirement/evidence map as historical documentation.
 
 ## Completion gate
 
+Management-clearance checkpoint (2026-10-29): exact installed current management
+history now composes into conditional Clear, binds the actual native credential
+and grant's current admission anchor, and blocks demoted/unmanaged requests.
+Retained-checkpoint validation rejects pre-head backfill as well as rewriting;
+Source-authenticated restored canonical checkpoints support restart continuity.
+See `docs/plans/2026-10-29-management-clearance.md` for Source durability,
+first-observation and protected commit boundaries.
+
 Capability-selection checkpoint (2026-10-29): Native Core contexts and installed
 native evaluation select `ordinary-native-v3` explicitly. Emergency-policy and
 Oracle-consensus bindings are rejected under the selected disabled-only scope;

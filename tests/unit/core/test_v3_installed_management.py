@@ -18,16 +18,17 @@ def fixture(hand_back_fixture=None):
         operation_digest=hs["operation_digest"],subject=op["actor"],zone="zone-a",checked_at=now,expires_at=now+7,
         registry=profile["registry"],append_protocol=profile["append_protocol"],credential_digest=None,surface="surface:a",
         request_kind="action",regime="unmanaged",history=[],event_count=0,ledger_head=dict(anchor="audit:head",sequence=5))
-    records=[]
+    records=[];retained=dict(bytes=None)
     class Source:
-        def resolve(self,**kw):return AuthenticatedManagementContext(rfc8785.dumps(state),tuple(records),b"modeled complete attested classification history")
+        def resolve(self,**kw):return AuthenticatedManagementContext(rfc8785.dumps(state),tuple(records),
+            b"modeled complete attested classification history and authentic persisted prior checkpoint",retained_checkpoint_bytes=retained["bytes"])
     verifier=InstalledManagementVerifier(hb,rfc8785.dumps(profile),Source())
     def demote():
         state["history"]=[dict(kind="admitted",anchor="audit:admit",sequence=1,occurred_at=now-100,authority="authority:a",hand_back_digest=None),
             dict(kind="demoted",anchor="audit:demote",sequence=2,occurred_at=now,authority="authority:a",hand_back_digest=_digest(wire,"sha256"))]
         state["event_count"]=2
         records.append(HistoricalDemotionHandBack(rfc8785.dumps(op),rfc8785.dumps(wire)))
-    return dict(v=verifier,s=state,hs=hs,w=wire,op=op,now=now,records=records,profile=profile,demote=demote)
+    return dict(v=verifier,s=state,hs=hs,w=wire,op=op,now=now,records=records,profile=profile,demote=demote,retained=retained)
 
 
 @unittest.skipUnless(all(find_spec(n) for n in ("rfc8785","jsonschema","cryptography")),"install v3-proofs")
@@ -54,6 +55,28 @@ class InstalledManagementTests(unittest.TestCase):
         from kinetic_trust_library.errors import ValidationError
         with self.assertRaisesRegex(ValidationError,"history"):
             self.evaluate(f,previous_assessment=prior)
+
+    def test_events_cannot_be_backfilled_before_an_already_observed_ledger_head(self):
+        from kinetic_trust_library.errors import ValidationError
+        f=fixture();prior=self.evaluate(f)
+        f["demote"]()
+        with self.assertRaisesRegex(ValidationError,"history"):
+            self.evaluate(f,previous_assessment=prior)
+
+    def test_authenticated_persisted_checkpoint_prevents_rewrite_after_restart(self):
+        from kinetic_trust_library.errors import ValidationError
+        f=fixture();f["demote"]();prior=self.evaluate(f)
+        f["retained"]["bytes"]=prior.authenticated_state_bytes
+        f["s"].update(history=[],event_count=0);f["records"].clear()
+        with self.assertRaisesRegex(ValidationError,"history"):
+            self.evaluate(f)
+
+    def test_authenticated_persisted_checkpoint_allows_genuine_later_admission(self):
+        f=fixture();prior=self.evaluate(f);f["retained"]["bytes"]=prior.authenticated_state_bytes
+        f["s"].update(regime="managed",event_count=1,history=[dict(kind="admitted",anchor="audit:new-admission",sequence=6,
+            occurred_at=f["now"],authority="authority:a",hand_back_digest=None)],ledger_head=dict(anchor="audit:head:6",sequence=6))
+        r=self.evaluate(f);self.assertTrue(r.valid);self.assertEqual(r.management.regime,"managed")
+        self.assertIsNone(r.public_response);self.assertFalse(r.action_permitted)
 
     def test_missing_final_hand_back_cannot_hide_demoted_membership(self):
         f=fixture();f["demote"]();f["records"].clear();r=self.evaluate(f)

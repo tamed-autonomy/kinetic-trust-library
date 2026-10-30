@@ -18,11 +18,15 @@ clearance gates remain mandatory for every managed action.
 
 A retained sealed assessment can be supplied as a prior checkpoint. The same
 installed verifier rejects history truncation, altered prior events, ledger
-rollback or equal-position changed heads. Source must provide complete history
+rollback, backfilled events before an already observed head, or equal-position
+changed heads. Source must provide complete history
 on first observation, and Service must persist prior checkpoints/ledger state;
 the SDK cannot detect a history never shown to it from counts alone. Policy
 migration requires an explicit historical-checkpoint adapter; replacing the
-verifier does not silently reauthorize an old checkpoint.
+verifier does not silently reauthorize an old checkpoint. The subsequent
+`2026-10-29-management-clearance.md` slice composes current management into
+conditional clearance and adds Source-authenticated restored checkpoints for
+restart continuity without deserializing arbitrary Python objects.
 
 Every demotion retains the original operation and immutable final hand-back.
 The installed hand-back validator must accept the same subject, demotion reason

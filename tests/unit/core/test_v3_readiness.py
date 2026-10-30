@@ -233,6 +233,25 @@ class ReadinessTests(unittest.TestCase):
         authority_f["refresh"]()
         self.assertEqual(authority_clearance().reason,"AGENT_CAN_CONSTRUCT_LEASE")
         self.assertFalse(authority_clearance().conditional_clear)
+        from tests.unit.core._v3_clearance_fixture import install_management
+        management_cf=clearance_fixture(native,combined,operation,deployment)
+        management_state,management_records=install_management(management_cf,operation,deployment,combined)
+        def management_clearance(previous=None):return management_cf["verifier"].evaluate(combined,actual_operation=operation,
+            evaluated_at=1000,clock_healthy=True,previous_management=previous)
+        managed=management_clearance();self.assertTrue(managed.conditional_clear)
+        management_cf["state"]["management_admission_anchor"]="another:admission"
+        self.assertEqual(management_clearance().reason,"CLEARANCE_MANAGEMENT_GRANT_BINDING")
+        management_cf["state"]["management_admission_anchor"]="audit:admission"
+        management_state["regime"]="unmanaged";management_state["event_count"]=2
+        management_cf["wire"]["reason"]=management_cf["hand_back_state"]["reason"]="demotion"
+        management_state["history"].append(dict(kind="demoted",anchor="audit:demotion",sequence=6,occurred_at=1000,
+            authority="authority:a",hand_back_digest=digest(management_cf["wire"])))
+        management_state["ledger_head"]=dict(anchor="audit:head:6",sequence=6)
+        from kinetic_trust_library.v3.installed_management import HistoricalDemotionHandBack
+        management_records.append(HistoricalDemotionHandBack(rfc8785.dumps(operation),rfc8785.dumps(management_cf["wire"])))
+        demoted=management_clearance(managed.management)
+        self.assertEqual(demoted.reason,"CLEARANCE_UNMANAGED");self.assertFalse(demoted.conditional_clear)
+        self.assertEqual(demoted.management.public_response.status,401)
         formation=cf["state"]["formation"]
         cf["state"]["formation"]=None
         self.assertEqual(clearance().reason,"CLEARANCE_FORMATION_REQUIRED")
