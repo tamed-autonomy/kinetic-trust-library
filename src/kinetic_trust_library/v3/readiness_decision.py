@@ -61,7 +61,10 @@ class InstalledReadinessDecisionVerifier:
                 ("proof_verification",proof)):
                 object.__setattr__(value,name,member)
             return value
-        if association.reason!="RB_BOUND" or association.canonical_request_bytes is None:
+        if association.reason not in ("RB_BOUND","RB_CURRENT") or association.canonical_request_bytes is None:
+            return result("READINESS_BINDING_INVALID")
+        if association.reason=="RB_CURRENT" and (association.checked_at!=evaluated_at
+                or not _time(association.expires_at) or evaluated_at>=association.expires_at):
             return result("READINESS_BINDING_INVALID")
         if clock_healthy is not True:
             return result("READINESS_UNAVAILABLE")
@@ -94,7 +97,8 @@ class InstalledReadinessDecisionVerifier:
                 state=trusted,assessor=assessor,issuer=issuer,now=evaluated_at,level=self.readiness_verifier.conformance_level)
         except (r.InvalidRecord,ProofFormatError,KeyError,ValueError,TypeError,UnicodeError,RecursionError):
             return result("READINESS_DECISION_INVALID")
-        return result("READINESS_DECISION_VALID",decision["expires_at"])
+        return result("READINESS_DECISION_VALID",min(decision["expires_at"],association.expires_at)
+            if association.reason=="RB_CURRENT" else decision["expires_at"])
 
 
 __all__=["InstalledReadinessDecisionVerifier","ReadinessDecisionResult"]

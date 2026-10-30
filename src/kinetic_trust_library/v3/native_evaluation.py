@@ -134,6 +134,34 @@ class InstalledNativeEvaluationVerifier:
                now: int, clock_healthy: bool, geometry_body_bytes: bytes | None = None,
                adjudication_token: bytes | None = None,
                adjudication_tokens: tuple[tuple[str,bytes], ...] = ()) -> NativeEvaluationResult:
+        return self._evaluate(request_bytes,association_bytes,compact_proof,decision_bytes=decision_bytes,
+            attestation_bytes=attestation_bytes,invocation_evidence=invocation_evidence,now=now,clock_healthy=clock_healthy,
+            geometry_body_bytes=geometry_body_bytes,adjudication_token=adjudication_token,adjudication_tokens=adjudication_tokens,
+            existing_association=None)
+
+    def revalidate_existing(self,previous,*,reservation_verifier,invocation_evidence,now,clock_healthy,
+            decision_bytes=None,attestation_bytes=None,adjudication_token=None,adjudication_tokens=()):
+        """Recheck current gates for the original reserved invocation only.
+
+        No ordinary acceptance/reserve, new grant, request ID or effect occurs.
+        Supporting original deadlines remain binding.
+        """
+        from .existing_association import InstalledExistingAssociationVerifier
+        if (type(previous) is not NativeEvaluationResult or previous.verifier is not self
+                or previous.reason!="NATIVE_PREREQUISITES_VALID" or not _time(now) or previous.checked_at>now
+                or type(reservation_verifier) is not InstalledExistingAssociationVerifier
+                or reservation_verifier.association_verifier is not self.association_verifier):
+            raise ValidationError("native current use requires the original installed evaluation and reservation policy")
+        association=reservation_verifier.verify(previous.association,invocation_evidence=invocation_evidence,now=now,clock_healthy=clock_healthy)
+        return self._evaluate(previous.association.canonical_request_bytes,previous.association.canonical_association_bytes,
+            previous.association.compact_proof,decision_bytes=previous.readiness.decision_bytes if decision_bytes is None else decision_bytes,
+            attestation_bytes=previous.readiness.readiness.attestation_bytes if attestation_bytes is None else attestation_bytes,
+            invocation_evidence=invocation_evidence,now=now,clock_healthy=clock_healthy,
+            geometry_body_bytes=None if self.association_verifier.crosses_trust_boundary else previous.canonical_geometry_bytes,
+            adjudication_token=adjudication_token,adjudication_tokens=adjudication_tokens,existing_association=association)
+
+    def _evaluate(self,request_bytes,association_bytes,compact_proof,*,decision_bytes,attestation_bytes,invocation_evidence,
+            now,clock_healthy,geometry_body_bytes,adjudication_token,adjudication_tokens,existing_association):
         import rfc8785
         if not _time(now):raise ValidationError("native evaluation requires trusted current time")
         if (type(adjudication_tokens) is not tuple or len(adjudication_tokens)>256
@@ -146,8 +174,8 @@ class InstalledNativeEvaluationVerifier:
                 or adjudication_token is not None and self.adjudication_verifier is None
                 or adjudication_tokens and self.adjudication_verifier is not None):
             raise ValidationError("adjudication candidates differ from declared gates")
-        association=self.association_verifier.verify(request_bytes,association_bytes,compact_proof,
-            invocation_evidence=invocation_evidence,now=now,clock_healthy=clock_healthy)
+        association=existing_association if existing_association is not None else self.association_verifier.verify(
+            request_bytes,association_bytes,compact_proof,invocation_evidence=invocation_evidence,now=now,clock_healthy=clock_healthy)
         raw=constraints=None
         readiness=None
         adjudication=None
@@ -172,7 +200,7 @@ class InstalledNativeEvaluationVerifier:
                 ("normative_demand",normative_demand),("readiness_input_digests",readiness_input_digests)):
                 object.__setattr__(value,name,member)
             return value
-        if association.reason!="RB_BOUND":return result(association.reason)
+        if association.reason!=("RB_BOUND" if existing_association is None else "RB_CURRENT"):return result(association.reason)
         actual=_parse_jcs_object(association.canonical_request_bytes)
         if self.boundary_verifier is not None:
             operation={name:value for name,value in actual.items() if name not in ("version","demand","classification_profile")}
@@ -346,6 +374,7 @@ class InstalledNativeEvaluationVerifier:
             if any(value.gate_required and not value.gate_satisfied for value in adjudications):
                 return result("ADJ_GATE_UNSATISFIED", projected["supervision"])
             expiry=min((expiry,*(value.expires_at for value in adjudications if value.gate_required)))
+        if association.expires_at is not None:expiry=min(expiry,association.expires_at)
         return result("NATIVE_PREREQUISITES_VALID",projected["supervision"],expiry)
 
 

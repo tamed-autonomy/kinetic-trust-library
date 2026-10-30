@@ -66,6 +66,11 @@ def _association_validator():
 
 @dataclass(frozen=True,slots=True,init=False)
 class RequestAssociationResult:
+    verifier: object
+    checked_at: int
+    expires_at: int | None
+    reservation_state_bytes: bytes | None
+    reservation_evidence_bytes: bytes | None
     reason: str
     proof_reason: str | None
     canonical_request_bytes: bytes | None
@@ -96,10 +101,15 @@ class InstalledRequestAssociationVerifier:
 
     def verify(self,request_bytes: bytes,association_bytes: bytes,proof: str,*,
                invocation_evidence: bytes,now: int,clock_healthy: bool) -> RequestAssociationResult:
+        return self._verify(request_bytes,association_bytes,proof,invocation_evidence=invocation_evidence,
+            now=now,clock_healthy=clock_healthy,reservation_verifier=None,previous=None)
+
+    def _verify(self,request_bytes,association_bytes,proof,*,invocation_evidence,now,clock_healthy,reservation_verifier,previous):
         import rfc8785
         canonical=association_canonical=None
         carrier_binding=None
         verified=None
+        reservation_state=reservation_evidence=expiry=None
         try:
             try:
                 request,canonical=_parse(request_bytes)
@@ -159,16 +169,23 @@ class InstalledRequestAssociationVerifier:
                         or carrier_binding.compact_proof!=proof or carrier_binding.verified_at!=now):
                     carrier_binding=None
                     raise _Failure("RB_CARRIER")
-            reason=self.replay_adapter.reserve(replay_domain=actual["replay_domain"],request_id=actual["request_id"],
+            scope=dict(replay_domain=actual["replay_domain"],request_id=actual["request_id"],
                 request_digest=request_digest,proof_digest=proof_digest,issuer=claims["iss"],proof_jti=claims["jti"])
-            if reason not in ("RB_BOUND","RB_REPLAY_STATE","RB_COLLISION","RB_REPLAY","RB_JTI_COLLISION"):
-                reason="RB_REPLAY_STATE"
-            if reason!="RB_BOUND": raise _Failure(reason)
+            if reservation_verifier is None:
+                reason=self.replay_adapter.reserve(**scope)
+                if reason not in ("RB_BOUND","RB_REPLAY_STATE","RB_COLLISION","RB_REPLAY","RB_JTI_COLLISION"):
+                    reason="RB_REPLAY_STATE"
+                if reason!="RB_BOUND": raise _Failure(reason)
+            else:
+                reason,expiry,reservation_state,reservation_evidence=reservation_verifier._current(scope,previous,now)
+                if reason!="RB_CURRENT":raise _Failure(reason)
             proof_reason=None
         except _Failure as exc:
             reason,proof_reason=exc.reason,exc.proof_reason
         result=object.__new__(RequestAssociationResult)
-        for name,value in (("reason",reason),("proof_reason",proof_reason),("canonical_request_bytes",canonical),
+        for name,value in (("verifier",self),("checked_at",now),("expires_at",expiry),
+                           ("reservation_state_bytes",reservation_state),("reservation_evidence_bytes",reservation_evidence),
+                           ("reason",reason),("proof_reason",proof_reason),("canonical_request_bytes",canonical),
                            ("canonical_association_bytes",association_canonical),("compact_proof",proof),
                            ("carrier_binding",carrier_binding),("proof_verification",verified)):
             object.__setattr__(result,name,value)

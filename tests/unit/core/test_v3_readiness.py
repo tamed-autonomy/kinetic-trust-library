@@ -218,6 +218,8 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(combined.reason,"NATIVE_PREREQUISITES_VALID")
         self.assertEqual(combined.supervision,"stable")
         self.assertEqual(combined.expires_at,1006)
+        from tests.unit.core._v3_existing_native_checks import check_native_revalidation
+        reservation_verifier,reservation_state=check_native_revalidation(self,native,combined,state,boundary_state)
         from tests.unit.core._v3_clearance_fixture import fixture as clearance_fixture
         cf=clearance_fixture(native,combined,operation,deployment)
         def clearance(value=combined):return cf["verifier"].evaluate(value,actual_operation=operation,evaluated_at=1000,clock_healthy=True)

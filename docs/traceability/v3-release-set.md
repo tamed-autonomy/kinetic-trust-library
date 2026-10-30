@@ -529,3 +529,16 @@ decision or commit conditions. The completed signed artifact is independently
 rechecked against current software/clearance Sources while retaining protected
 continuity checkpoints. Actual native freshness and atomic execution remain
 explicit caller/Service obligations; issuance does not release effects.
+
+## 2026-10-30 replay-safe current native use
+
+`existing_association.InstalledExistingAssociationVerifier` checks an installed
+Source's complete current protected original reservation under an exact private
+registry/profile, without calling ordinary reserve. The distinct `RB_CURRENT`
+prerequisite binds current actual invocation, proof/Root/carrier and original
+request/proof/issuer/JTI identity. Retained current-use evidence rejects rollback
+or rewritten original acceptance. Ordinary repeated acceptance remains
+`RB_REPLAY`. Native `revalidate_existing` reruns current selected gates and caps
+validity by the reservation's current deadline. Standalone readiness rejects
+stale/expired current reservations and preserves that shorter deadline. No new
+ordinary invocation, grant, replay exception or target release is implied.
