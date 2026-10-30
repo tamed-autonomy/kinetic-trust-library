@@ -465,6 +465,14 @@ earlier refusal. The translated AM16 chain reaches forward version metadata
 without a gate bypass or mutation. See `docs/plans/2026-10-30-charter-seek.md`
 for actual ledger, publication, response-adequacy and zone-gate obligations.
 
+Recognition checkpoint (2026-10-30): exact retained RC01–RC03 cases exercise
+recognition with no imported term, own-zone offered-coordination adoption/
+withdrawal, and protected class standing to amend/contest/object. Selected
+agreement validation marks recognition-derived obligation and membership
+clauses void while preserving unrelated terms and import arithmetic. Actual
+semantic classification, complete original history and enforcement remain
+authenticated provider responsibilities. See `docs/plans/2026-10-30-recognition.md`.
+
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
 contract recorded as such. External ownership must be justified by actual I/O,

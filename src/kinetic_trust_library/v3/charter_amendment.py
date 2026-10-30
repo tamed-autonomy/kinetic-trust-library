@@ -14,7 +14,8 @@ from .native_envelope import project_comparable_envelope
 
 PROTECTED_EFFECTS=frozenset(("change-recursive-constraint","change-minimum-governor-base","remove-amendment-process",
     "remove-dispute-process","remove-amendment-route","unpublish-amendment-route","change-declared-recurrence",
-    "disable-declared-recurrence","override-veto","change-repair-invariants"))
+    "disable-declared-recurrence","override-veto","change-repair-invariants","remove-class-amendment-standing",
+    "remove-class-refusal-contest-standing","remove-class-objection-standing"))
 
 
 def _inventory(values):

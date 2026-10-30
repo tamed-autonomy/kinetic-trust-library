@@ -6,8 +6,9 @@ clauses. This internal representation is not a new Federation Agreement wire.
 from kinetic_trust_library.errors import ValidationError
 from .root_lifecycle import _time
 from .ambient_repair import ratio
+from .recognition import RECOGNITION_VOID_EFFECTS
 
-VOID_EFFECTS=frozenset(("delegate-veto","waive-veto","override-veto","foreign-evaluation","coordinate-inputs","bind-foreign-act"))
+VOID_EFFECTS=frozenset(("delegate-veto","waive-veto","override-veto","foreign-evaluation","coordinate-inputs","bind-foreign-act"))|RECOGNITION_VOID_EFFECTS
 
 
 def name(value):return type(value) is str and bool(value)

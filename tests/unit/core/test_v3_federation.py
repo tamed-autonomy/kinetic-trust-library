@@ -59,6 +59,16 @@ def fixture(operation=None,deployment=None,now=1000,receiving_zone="zone-b"):
 class FederationTests(unittest.TestCase):
     def evaluate(self,v,op):return v.evaluate(actual_operation=op,evaluated_at=1000,clock_healthy=True)
 
+    def test_recognition_derived_obligation_and_membership_clauses_are_void_only(self):
+        v,s,op,_,_=fixture()
+        s["agreement"]["clauses"]=[dict(id="clause:recognize",effect="recognition-only"),
+            dict(id="clause:obligation",effect="recognition-obligation"),
+            dict(id="clause:membership",effect="recognition-membership-condition")]
+        r=self.evaluate(v,op)
+        self.assertTrue(r.admitted);self.assertEqual(r.exportable_base,80)
+        self.assertEqual(r.void_clauses,("clause:obligation","clause:membership"))
+        self.assertEqual(r.factor.applied_factor,Fraction(7,10))
+
     def test_current_direction_exportable_operand_and_complete_binding(self):
         from kinetic_trust_library.errors import ValidationError
         v,state,op,profile,calls=fixture();result=self.evaluate(v,op)
