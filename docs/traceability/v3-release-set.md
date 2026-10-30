@@ -416,6 +416,15 @@ marked published-fixture verifier tests remain available. See
 `docs/plans/2026-10-29-native-schema-selection.md`; identity alone does not prove
 trusted schema content or Source correctness.
 
+Native stop-resolution checkpoint (2026-10-30): a selected required native
+adjudication failure now resolves its exact original registered return path,
+derives a bound cause, and revalidates the newly current `Exceeded` against
+original sealed bytes, stop anchor, active grant and admission. Source-only
+acknowledgments cannot establish completion; changed grants and substituted
+causes fail. Parked delivery remains owed. See
+`docs/plans/2026-10-30-native-stop-resolution.md` for bounded reason scope and
+actual durable preparation/sealing/delivery obligations.
+
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
 contract recorded as such. External ownership must be justified by actual I/O,

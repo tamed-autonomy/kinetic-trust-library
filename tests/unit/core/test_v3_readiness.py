@@ -501,6 +501,51 @@ class ReadinessTests(unittest.TestCase):
         self.assertTrue(gate_clear.conditional_clear)
         gate_stop=gate_cf["verifier"].evaluate(absent,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
         self.assertFalse(gate_stop.valid);self.assertTrue(gate_stop.hand_back_required)
+        from kinetic_trust_library.v3.native_stop_resolution import InstalledNativeAdjudicationStopResolver,PreparedNativeStop
+        install_management(gate_cf,operation,deployment,absent)
+        stop_policy=dict(id="native-stop:adjudication",version=1,zone="zone:alpha",formula="native-adjudication-return-path-v1",
+            clearance_profile_digest=digest(gate_cf["profiles"]["clearance"]))
+        prepared=[]
+        class StopPreparation:
+            def prepare(self,**kwargs):
+                prepared.append(kwargs)
+                wire=gate_cf["wire"];wire["reason"]="exceeded_permit_condition"
+                gate_cf["hand_back_state"].update(reason=wire["reason"],stop_origin="system")
+                gate_cf["state"]["adverse_stop"]=dict(id="audit:native-stop",kind="Exceeded",reason=wire["reason"],
+                    issued_at=wire["issued_at"],hand_back_digest=digest(wire))
+                gate_cf["records"]["hand_back"]=rfc8785.dumps(wire)
+                return PreparedNativeStop(kwargs["cause_bytes"],"audit:native-stop",rfc8785.dumps(wire),b"modeled appended exact cause and sealed current stop")
+        resolver=InstalledNativeAdjudicationStopResolver(gate_cf["verifier"],rfc8785.dumps(stop_policy),StopPreparation())
+        resolved=resolver.evaluate(absent,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        self.assertEqual(resolved.clearance.kind,"Exceeded");self.assertFalse(resolved.action_permitted)
+        self.assertEqual(resolved.clearance.non_clearance.hand_back.delivery_state,"parked")
+        self.assertTrue(resolved.clearance.non_clearance.hand_back.delivery_effort_required)
+        self.assertEqual(json.loads(resolved.cause_bytes)["native_reason"],"ADJ_GATE_UNSATISFIED")
+        self.assertEqual(prepared[0]["template_bytes"],resolved.template.template_bytes)
+        with self.assertRaises(ValidationError):resolver.evaluate(favorable,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        self.assertEqual(len(prepared),1)
+        gate_cf["state"]["adverse_stop"]=None;gate_cf["records"]["hand_back"]=None
+        class UnregisteredPreparation:
+            def prepare(self,**kwargs):return PreparedNativeStop(kwargs["cause_bytes"],"audit:missing",rfc8785.dumps(gate_cf["wire"]),b"no current stop record")
+        with self.assertRaises(ValidationError):replace(resolver,preparation_source=UnregisteredPreparation()).evaluate(
+            absent,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        class WrongCausePreparation:
+            def prepare(self,**kwargs):return PreparedNativeStop(b"{}","audit:other",rfc8785.dumps(gate_cf["wire"]),b"wrong cause")
+        with self.assertRaises(ValidationError):replace(resolver,preparation_source=WrongCausePreparation()).evaluate(
+            absent,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        class OfflinePreparation:
+            def prepare(self,**kwargs):raise OSError("stop ledger unavailable")
+        with self.assertRaises(OSError):replace(resolver,preparation_source=OfflinePreparation()).evaluate(
+            absent,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        class ChangedGrantPreparation(StopPreparation):
+            def prepare(self,**kwargs):
+                value=super().prepare(**kwargs)
+                gate_cf["state"]["lease"]["revoked"]=True
+                return value
+        with self.assertRaises(ValidationError):replace(resolver,preparation_source=ChangedGrantPreparation()).evaluate(
+            absent,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        gate_cf["state"]["lease"]["revoked"]=False
+        gate_cf["state"]["adverse_stop"]=None;gate_cf["records"]["hand_back"]=None
         adjudication["payload"]["favorable"]=False
         self.assertEqual(whole(token=adjudication["sign"]()).reason,"ADJ_GATE_UNSATISFIED")
         adjudication["payload"]["favorable"]=True
