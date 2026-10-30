@@ -692,3 +692,66 @@ issued-grant revocation right. Tests cover exact retained source wording,
 registration/formation/objection chronology, half-missing signature pairs,
 current native Clear withholding and direct counterparty revocation refusal.
 No mid-flight notification mechanism or human-classification outcome is invented.
+
+### Registered counterparty context checkpoint (2026-10-30)
+
+Exact HB-11-003 now has a separate installed companion for a populated registered
+counterparty endpoint. The original primary hand-back still must validate with
+full sealed context. Actual registered redaction-policy bytes bind through the
+original template; stable template identity avoids a digest cycle. Exact primary
+ciphertext, Source-authenticated original reference inventory, limited ciphertext
+and projection, recipient identity/key/route, operation, profiles, active registry
+anchor/epoch/revision and freshness are bound independently.
+
+The selected static reference rule discloses all actual primary environment
+attestation references, rather than pre-registering future reference IDs. The
+limited context has exactly action, the pinned wire reason-class enum and those
+references, never work product/drafts. Distinct endpoints/keys/principals are a
+conservative private-profile restriction. Real AES-GCM fixture decryption and
+field/digest/recipient/registration/operation mutation tests exercise the boundary.
+Actual encryption truth/custody/registry and durable delivery remain Source/Service
+responsibilities; construction makes no receipt or transport-success claim. Final
+readonly review found no actionable defects in this selected companion.
+
+### Pre-tag qualification boundary after continuous checkpoints (2026-10-30)
+
+The complete suite passes 1,381 tests; the latest installed wheel passes 23
+counterparty/primary/template/native/import checks. Earlier strict-deployment
+wheel verification checked all eight exact catalog source hashes and 36 relevant
+installed-package tests. The unsigned-formation checkpoint passed 1,376 full-suite
+tests and 22 installed-package tests. These counts describe tested behavior,
+not a percentage or denominator for full RFC conformance.
+
+Follow-up readonly source-case audits found and closed HB-02-004 and HB-11-003.
+A subsequent bounded Hand-back audit exercised 51 focused tests without another
+demonstrated deterministic mismatch. A bounded person/software/charter/nested/
+trajectory pass exercised 74 focused tests without another demonstrated settled
+Library defect. This does not establish all 73 Hand-back cases or every RFC MUST.
+
+Remaining precise RFC decision/reconciliation gates:
+
+- Exact wire treatment for repeating/high-precision derived numbers; current
+  writers reject nonrepresentable values instead of inventing rounding.
+- Person proof/prose reconciliation, approved trajectory ceilings, multiple-root
+  ranking and mixed imported/local standing; current paths remain explicitly
+  scoped and provisional.
+- Federation earned-at-80 versus Identity intrinsic-at-80 closure semantics.
+- Stronger named crypto/receipt profiles; unsupported claims are withheld.
+- Two published geometry cases with stale request preimages, retained unchanged;
+  isolated unsigned semantic corrections do not qualify the original fixtures.
+- Charter publishing-copy drift and protected recurrence interpretation.
+
+Authentic production Service evidence is independently required for registries,
+keys and signing/custody, complete protected history, calibrated measurements,
+real consent/liability/classification, durable reservations/epoch continuity,
+atomic final enforcement, effects, delivery and recovery. Modeled adapters cannot
+satisfy those obligations. The Library remains API-only and returns no execution
+permission from the newly added assessments.
+
+Final adoption still requires diffing every retained proposal/schema/catalog
+against the official tag, resolving the named conflicts, qualifying the complete
+chosen capability/source-case set, consuming Service integration and an expressly
+authorized root/API/version/pin cutover. Current package/root/pin remain 2.1.0;
+there is no v2 runtime/wire/API fallback in native modules. A fresh RFC fetch still
+shows origin/main 9612f7955d88e25d193dab2a17d51d0c9d9075d0 and no 3.0.0 tag.
+No PR, merge or release is authorized by these checkpoints.

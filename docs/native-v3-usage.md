@@ -140,3 +140,30 @@ revocation authority. An issued grant's principal retains independent revocation
 while direct Relational counterparty revocation still needs the completed witness.
 The Source authenticates identity, chronology and original objection evidence;
 classification and actual mint suspension remain outside this calculation.
+
+For a registered secondary endpoint, `InstalledCounterpartyHandBackVerifier`
+checks a limited encrypted context alongside the separately valid full primary
+hand-back. Its private `registered-counterparty-limited-context-v1` profile pins
+the original hand-back profile and actual registry. The complete authenticated
+redaction-policy bytes must hash to the original template's policy reference,
+match its stable identity/subject/class and pre-grant registration, and preserve
+the primary full tier. This avoids a template/policy digest cycle.
+
+The selected rule carries exactly `action`, `reason_class` and
+`attestation_references`. Reason class comes explicitly from `hand-back.reason`
+(the pinned schema names that enum the reason class). The registered reference
+rule is `all-primary-environment-attestations`, applied to the Source-authenticated
+complete inventory from the exact original ciphertext. Future reference IDs are
+not preselected at grant time. Secondary ciphertext, plaintext projection digest,
+original hand-back, both profiles, original policy, operation and registered
+principal/endpoint/key are independently matched. Distinct recipient principals,
+endpoints and keys are a conservative restriction of this selected profile.
+
+The Source must authenticate actual decryption/content, full original reference
+inventory, current registry status and recipient custody, including that the
+transporting agent cannot decrypt. The SDK never decrypts or delivers the bundle.
+The result retains the opaque ciphertext, checked provenance and a secondary
+delivery obligation; it contains no delivery-success assertion. Service must
+perform and record delivery separately. Primary full context and the closed
+hand-back wire remain unchanged. This profile requires an original registered
+grant; it provides no bootstrap/fallback disclosure rule.
