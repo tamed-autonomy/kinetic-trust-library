@@ -45,7 +45,10 @@ def evidence_fixture(operation=None,deployment=None,now=1000,zone="zone:software
             autonomyDemand=36,environmentalCapacity=40,capacityKnown=True))
     prerequisites=[]
     def refresh():
-        for i,r in enumerate(records):heads[r["kind"]]["record_digest"]=_digest(r,"sha256")
+        for i,r in enumerate(records):
+            originals[i]=rfc8785.dumps({"modeled_authenticated_source":r["kind"],"actual_value":r["value"],"observed_at":r["observed_at"]})
+            r["evidence_digest"]="sha256:"+hashlib.sha256(originals[i]).hexdigest()
+            heads[r["kind"]]["record_digest"]=_digest(r,"sha256")
         counters={k:{n:v[n] for n in ("source","epoch","sequence","record_digest")} for k,v in heads.items()}
         state["continuity_checkpoint"]=dict(anchor="audit:protected-checkpoint",registry=p["state_registry"],epoch=state["consumption_epoch"],
             revision=state["state_revision"],counter_heads_digest=_digest(counters,"sha256"),restriction_history_digest=_digest(state["restriction_history"],"sha256"))

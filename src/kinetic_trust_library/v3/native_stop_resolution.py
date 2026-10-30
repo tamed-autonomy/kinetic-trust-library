@@ -38,6 +38,37 @@ class NativeStopResolution:
     def __init__(self,*args,**kwargs):raise TypeError("native stop resolution requires current registered hand-back validation")
 
 
+def _prepare_registered_stop(*,cv,initial,native_result,template,profile_bytes,cause,op_bytes,preparation_source,evaluated_at):
+    """Validate a genuine Source-prepared stop through the current native graph."""
+    hb=cv.template_verifier.hand_back_verifier
+    state=_parse_jcs_object(initial.authenticated_state_bytes)
+    actual_operation=_parse_jcs_object(op_bytes)
+    prepared=preparation_source.prepare(profile_bytes=profile_bytes,cause_bytes=cause,
+        template_bytes=template.template_bytes,operation_bytes=op_bytes,evaluated_at=evaluated_at)
+    if (type(prepared) is not PreparedNativeStop or type(prepared.cause_bytes) is not bytes
+            or prepared.cause_bytes!=cause or not _name(prepared.stop_anchor)
+            or type(prepared.hand_back_bytes) is not bytes or len(prepared.hand_back_bytes)>262144
+            or type(prepared.evidence_bytes) is not bytes or not prepared.evidence_bytes):
+        raise ValidationError("native stop Source must authenticate exact cause, anchor and original sealed hand-back")
+    current=cv.evaluate(native_result,actual_operation=actual_operation,evaluated_at=evaluated_at,clock_healthy=True,
+        previous_management=initial.management)
+    if (not current.valid or current.kind!="Exceeded" or current.non_clearance is None
+            or current.non_clearance.hand_back.hand_back_bytes!=prepared.hand_back_bytes
+            or current.non_clearance.lease is None or not current.non_clearance.lease.active):
+        raise ValidationError("prepared native stop is not the actual current registered Exceeded hand-back")
+    now_state=_parse_jcs_object(current.authenticated_state_bytes)
+    wire=_parse_jcs_object(prepared.hand_back_bytes)
+    hs=_parse_jcs_object(current.non_clearance.hand_back.authenticated_state_bytes)
+    if (now_state["adverse_stop"]["id"]!=prepared.stop_anchor or now_state["lease"]!=state["lease"]
+            or now_state["intent"]!=state["intent"] or now_state["managed_relation_id"]!=state["managed_relation_id"]
+            or now_state["management_admission_anchor"]!=state["management_admission_anchor"]
+            or _parse_jcs_object(current.management.authenticated_state_bytes)["history"][-1]["anchor"]!=
+                _parse_jcs_object(initial.management.authenticated_state_bytes)["history"][-1]["anchor"]
+            or wire["reason"]!="exceeded_permit_condition" or _instant(wire["issued_at"])!=evaluated_at or hs["stop_origin"]!="system"):
+        raise ValidationError("native stop changed its actual cause, admission, grant or registered recourse branch")
+    return prepared,current
+
+
 @dataclass(frozen=True,slots=True)
 class _InstalledNativeStopResolver:
     clearance_verifier: InstalledClearanceVerifier
@@ -91,29 +122,8 @@ class _InstalledNativeStopResolver:
             readiness_input_digests=native_result.readiness_input_digests,
             readiness_context_digests=(None if native_result.readiness is None or native_result.readiness.readiness is None
                 else native_result.readiness.readiness.observed_context_digests)))
-        prepared=self.preparation_source.prepare(profile_bytes=self.profile_bytes,cause_bytes=cause,
-            template_bytes=template.template_bytes,operation_bytes=op_bytes,evaluated_at=evaluated_at)
-        if (type(prepared) is not PreparedNativeStop or type(prepared.cause_bytes) is not bytes
-                or prepared.cause_bytes!=cause or not _name(prepared.stop_anchor)
-                or type(prepared.hand_back_bytes) is not bytes or len(prepared.hand_back_bytes)>262144
-                or type(prepared.evidence_bytes) is not bytes or not prepared.evidence_bytes):
-            raise ValidationError("native stop Source must authenticate exact cause, anchor and original sealed hand-back")
-        current=cv.evaluate(native_result,actual_operation=actual_operation,evaluated_at=evaluated_at,clock_healthy=True,
-            previous_management=initial.management)
-        if (not current.valid or current.kind!="Exceeded" or current.non_clearance is None
-                or current.non_clearance.hand_back.hand_back_bytes!=prepared.hand_back_bytes
-                or current.non_clearance.lease is None or not current.non_clearance.lease.active):
-            raise ValidationError("prepared native stop is not the actual current registered Exceeded hand-back")
-        now_state=_parse_jcs_object(current.authenticated_state_bytes)
-        wire=_parse_jcs_object(prepared.hand_back_bytes)
-        hs=_parse_jcs_object(current.non_clearance.hand_back.authenticated_state_bytes)
-        if (now_state["adverse_stop"]["id"]!=prepared.stop_anchor or now_state["lease"]!=state["lease"]
-                or now_state["intent"]!=state["intent"] or now_state["managed_relation_id"]!=state["managed_relation_id"]
-                or now_state["management_admission_anchor"]!=state["management_admission_anchor"]
-                or _parse_jcs_object(current.management.authenticated_state_bytes)["history"][-1]["anchor"]!=
-                    _parse_jcs_object(initial.management.authenticated_state_bytes)["history"][-1]["anchor"]
-                or wire["reason"]!="exceeded_permit_condition" or _instant(wire["issued_at"])!=evaluated_at or hs["stop_origin"]!="system"):
-            raise ValidationError("native stop changed its actual cause, admission, grant or registered recourse branch")
+        prepared,current=_prepare_registered_stop(cv=cv,initial=initial,native_result=native_result,template=template,
+            profile_bytes=self.profile_bytes,cause=cause,op_bytes=op_bytes,preparation_source=self.preparation_source,evaluated_at=evaluated_at)
         result=object.__new__(NativeStopResolution)
         for k,v in dict(clearance=current,template=template,cause_bytes=cause,preparation=prepared,evaluated_at=evaluated_at,
                 expires_at=min(current.expires_at,template.expires_at),action_permitted=False).items():object.__setattr__(result,k,v)
@@ -132,7 +142,9 @@ class InstalledNativeReadinessStopResolver(_InstalledNativeStopResolver):
     _FAILURES=frozenset(("READINESS_UNAVAILABLE","READINESS_INVALID","READINESS_PROOF_INVALID","READINESS_DECISION_INVALID"))
 
     def evaluate(self,native_result,*,actual_operation,evaluated_at,clock_healthy):
-        if (type(native_result) is not NativeEvaluationResult or native_result.association.reason!="RB_BOUND"
+        if (type(native_result) is not NativeEvaluationResult or native_result.association.reason not in ("RB_BOUND","RB_CURRENT")
+                or native_result.association.reason=="RB_CURRENT" and (native_result.association.checked_at!=evaluated_at
+                    or not _time(native_result.association.expires_at) or evaluated_at>=native_result.association.expires_at)
                 or native_result.readiness is None or native_result.readiness.valid
                 or native_result.readiness_input_digests is None
                 or native_result.readiness.reason!=native_result.reason):

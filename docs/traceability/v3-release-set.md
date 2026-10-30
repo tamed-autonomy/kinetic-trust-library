@@ -555,3 +555,17 @@ and management checkpoints for fresh validation; retained data grants no action.
 Exact original observation expiration still withholds use. Conditional commit
 conditions include the checkpoint profile and current protected original
 reservation; scheduling, interruption and atomic enforcement remain Service work.
+
+## 2026-10-30 current software Exceeded return paths
+
+`software_stop_resolution.InstalledSoftwareStopResolver` now rechecks the pinned
+current-use graph and resolves actual software permit-condition loss through the
+original grant's registered template. Obligations follow authenticated current
+availability, capacity vetoes and already applicable ceilings independently of
+stale signed candidate values. Causes bind the actual calibrated assessment,
+current frame/state, grant, operation and candidate provenance. Shared registered
+stop validation requires the exact current `Exceeded` hand-back, unchanged grant/
+intent/relation/admission and system recourse; acknowledgment without append,
+substituted cause and revocation during preparation are rejected. Readiness stops
+also support fresh unexpired `RB_CURRENT`. Actual genuine sealing, durable cause/
+stop registration, delivery, retry and interruption remain provider/Service work.

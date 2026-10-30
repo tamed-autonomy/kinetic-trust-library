@@ -26,6 +26,18 @@ from .supervision_rails import LEVELS
 def _number(value):return Fraction(str(value))
 
 
+def _current_conditions_withhold(e):
+    """Derive actual local condition loss independently of a stale candidate."""
+    if not e.valid or not e.repair_path_verified or not e.supervision_available:return True
+    s=_parse_jcs_object(e.source_state_bytes);a=_parse_jcs_object(e.assessment_bytes);p=_parse_jcs_object(e.profile_bytes)
+    projection=project_software_restrictions(requested=s["requested_magnitudes"],candidate_ceilings=s["existing_ceilings"],
+        prior_ceilings=s["existing_ceilings"],candidate_supervision=s["existing_supervision"],prior_supervision=s["existing_supervision"],
+        demand=a["autonomyDemand"],capacity=a["environmentalCapacity"],capacity_known=a["capacityKnown"],
+        repair_path_verified=e.repair_path_verified,supervision_available=e.supervision_available,
+        thresholds=software_thresholds(p["envelope_thresholds"]))
+    return not projection.conditional_candidate or any(s["requested_magnitudes"][k]>limit for k,limit in projection.ceilings)
+
+
 @dataclass(frozen=True,slots=True,init=False)
 class SoftwareConsumptionAssessment:
     verifier: object
@@ -34,10 +46,12 @@ class SoftwareConsumptionAssessment:
     reason: str
     conditional_consumption: bool
     action_permitted: bool
+    hand_back_required: bool
     checked_at: int
     expires_at: int | None
     operation_bytes: bytes
     decision_bytes: bytes | None
+    observed_decision_bytes: bytes | None
     clearance: object
     management_checkpoint: object
     native_checkpoint: object
@@ -130,9 +144,14 @@ class InstalledSoftwareConsumptionVerifier:
         def result(reason,verified=False,conditional=False):
             r=object.__new__(SoftwareConsumptionAssessment)
             signed=issuance_selection is None
+            permit_lost=(c.conditional_clear and e is not None and e.checked_at==evaluated_at
+                and (_current_conditions_withhold(e)
+                    or reason in ("SOFTWARE_RESTRICTED","SOFTWARE_REVISED_OPERATION_REQUIRED")))
             for k,v in dict(verifier=self,verified=verified and signed,issuance_prepared=verified and not signed,
                     reason=reason,conditional_consumption=conditional and signed,action_permitted=False,
+                    hand_back_required=c.hand_back_required or permit_lost,
                     checked_at=evaluated_at,expires_at=expiry,operation_bytes=op_bytes,decision_bytes=decision_bytes if verified and signed else None,
+                    observed_decision_bytes=decision_bytes if signed and type(decision_bytes) is bytes and len(decision_bytes)<=262144 else None,
                     clearance=c,management_checkpoint=c.management if c.management is not None else None if old is None else old.management_checkpoint,
                     native_checkpoint=native_result if native_result.verifier is self.clearance_verifier.native_verifier
                         and native_result.reason=="NATIVE_PREREQUISITES_VALID" else None if old is None else old.native_checkpoint,

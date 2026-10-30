@@ -134,8 +134,22 @@ def check_consumption(test,native,combined,operation,deployment,checkpoint_input
         body["result"]["supervision"]="silent_veto"
         for ceiling in body["result"]["tightenedConstraints"]["ceilings"]:ceiling["max"]=0
         unavailable=evaluate();test.assertTrue(unavailable.verified,unavailable.reason);test.assertFalse(unavailable.conditional_consumption)
+        test.assertTrue(unavailable.hand_back_required)
+        from tests.unit.core._v3_software_stop_checks import check_software_stop
+        check_software_stop(test,v,cf,unavailable,operation,checkpoint_inputs[0])
         f["records"][index]["value"]=True;f["refresh"]()
         body.clear();body.update(json.loads(rfc8785.dumps(baseline)))
+    old_assessment=dict(f["state"]["assessment"])
+    f["state"]["assessment"].update(environmentalCapacity=30,basis_anchor="audit:capacity-loss")
+    f["state"]["state_revision"]=2;f["refresh"]()
+    capacity_lost=evaluate();test.assertFalse(capacity_lost.conditional_consumption)
+    test.assertTrue(capacity_lost.hand_back_required)
+    check_software_stop(test,v,cf,capacity_lost,operation,checkpoint_inputs[0])
+    f["state"]["assessment"].update(old_assessment);f["state"]["state_revision"]=1;f["refresh"]()
+    f["state"]["existing_ceilings"]["effectBytes"]=512;f["state"]["state_revision"]=2;f["refresh"]()
+    scope_lost=evaluate();test.assertTrue(scope_lost.hand_back_required);test.assertFalse(scope_lost.conditional_consumption)
+    check_software_stop(test,v,cf,scope_lost,operation,checkpoint_inputs[0])
+    f["state"]["existing_ceilings"]["effectBytes"]=1024;f["state"]["state_revision"]=1;f["refresh"]()
     # Protected evidence history is carried through the full sealed result.
     f["state"]["restriction_history"]=[dict(kind="impose",anchor="hold:software",sequence=1,occurred_at=999,
         authority="authority:software-hold",cause_anchor="cause:software")]

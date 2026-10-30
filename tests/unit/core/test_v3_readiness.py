@@ -490,6 +490,9 @@ class ReadinessTests(unittest.TestCase):
         from kinetic_trust_library.v3.native_stop_resolution import InstalledNativeReadinessStopResolver,PreparedNativeStop
         state["status"]="inactive"
         unready=whole();self.assertEqual(unready.reason,"READINESS_INVALID")
+        unready=native.revalidate_existing(combined,reservation_verifier=reservation_verifier,
+            invocation_evidence=b"fixture-actual-invocation",now=1000,clock_healthy=True)
+        self.assertEqual(unready.reason,"READINESS_INVALID");self.assertEqual(unready.association.reason,"RB_CURRENT")
         ready_stop_cf=clearance_fixture(native,unready,operation,deployment)
         ready_management,_=install_management(ready_stop_cf,operation,deployment,unready)
         ready_management["expires_at"]=1002
