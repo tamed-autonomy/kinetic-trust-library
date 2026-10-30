@@ -399,6 +399,15 @@ once, with no software defaults. Missing direction/acceptance supplies no import
 zero factor can retain admission. No local/imported accumulation, human capacity
 or execution is supplied. See `docs/plans/2026-10-29-person-federation.md`.
 
+Human capacity checkpoint (2026-10-29): a distinct installed prerequisite now
+validates approved measurement identity, review authority/anchor/time, actual
+human request/zone, comparable units and observation freshness. Soul-first
+evaluation preserves missing/zero/over-capacity and envelope equality vetoes,
+without software standing or credential-derived capacity. Native derived exact
+precision is preserved in the shared arithmetic. Real reviewed calibration and
+complete human authorization remain separate. See
+`docs/plans/2026-10-29-human-capacity.md`.
+
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
 contract recorded as such. External ownership must be justified by actual I/O,

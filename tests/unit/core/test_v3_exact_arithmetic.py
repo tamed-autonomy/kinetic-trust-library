@@ -37,6 +37,10 @@ class ExactNativeArithmeticTests(unittest.TestCase):
         projected = project_native_capacity(preflight_core(soul,factors=factors,weights=weights), standing=base, demand=76)
         self.assertLess(projected.decision_effective_trust, Decimal(76))
         self.assertEqual(projected.relation,"above")
+        from kinetic_trust_library.v3.native_envelope import project_native_envelope
+        envelope=project_native_envelope(projected)
+        self.assertEqual(envelope.supervision,"silent_veto")
+        self.assertIsNone(envelope.margin)
 
     def test_small_base_contribution_survives_share_composition(self):
         result = calculate_native_base_trust(por_contribution=1, root_score="1e-100",peer_share=0,peer_score=0,
