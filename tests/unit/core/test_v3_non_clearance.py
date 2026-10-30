@@ -125,6 +125,14 @@ class NonClearanceTests(unittest.TestCase):
         r=self.evaluate(v,dict(kind="Revoked",hand_back=w),op,now)
         self.assertTrue(r.valid);self.assertEqual(r.kind,"Revoked");self.assertTrue(r.hand_back.valid)
         self.assertFalse(r.formation_contest_required);self.assertFalse(r.action_permitted)
+        original_signature=(formation['countersigned_at'],formation['countersignature_anchor'])
+        formation.update(countersigned_at=None,countersignature_anchor=None,objection_at=now-70)
+        pending=self.evaluate(v,dict(kind='Revoked',hand_back=w),op,now)
+        self.assertFalse(pending.valid)
+        self.assertEqual(pending.reason,'CLEARANCE_FORMATION_CONTEST_REQUIRED')
+        self.assertTrue(pending.formation_contest_required)
+        formation['countersigned_at'],formation['countersignature_anchor']=original_signature
+        formation['objection_at']=None
         formation["relation_id"]="another:relation"
         self.assertFalse(self.evaluate(v,dict(kind="Revoked",hand_back=w),op,now).valid)
 

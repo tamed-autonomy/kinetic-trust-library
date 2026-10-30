@@ -676,3 +676,19 @@ Current boundary assessments remain separately required and bound to operation,
 zone/topology, time and expiry. Sealed environmental assessments retain the exact
 checked Source dependency tuple for downstream provenance, including additional
 Source-declared categories. Final readonly review found no actionable defects.
+
+### Unsigned formation objection checkpoint (2026-10-30)
+
+Source-case qualification reproduced an implementation gap in exact Hand-back
+HB-02-004: an actual Logistics counterparty declines to countersign and objects
+to the action classification. The old private formation record required a
+countersignature even to return the required mint suspension. Both signature
+fields may now be absent together only with a current scoped, anchored objection;
+the result is explicitly `pending-objection`, never a completed revocation witness.
+
+Absent issued-grant time is supported only for that pre-mint pending state and
+supplies no direct revocation authority. Existing principals keep their separate
+issued-grant revocation right. Tests cover exact retained source wording,
+registration/formation/objection chronology, half-missing signature pairs,
+current native Clear withholding and direct counterparty revocation refusal.
+No mid-flight notification mechanism or human-classification outcome is invented.

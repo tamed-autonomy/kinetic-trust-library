@@ -46,6 +46,35 @@ class FormationAuthorityTests(unittest.TestCase):
         self.assertTrue(r.minting_suspended);self.assertFalse(r.direct_revocation)
         self.assertTrue(r.human_classification_required)
 
+    def test_hb_02_004_declined_logistics_signature_suspends_minting(self):
+        import json
+        from pathlib import Path
+        source=json.loads((Path(__file__).parents[3]/'spec/proposals/hand-back-v1.json').read_text())
+        case=next(c for c in source['vectors'] if c['id']=='HB-02-004')
+        self.assertIn('declines to countersign',case['given']['template_submission'])
+        record=self.record();record.update(consequence_class='Logistics',objection_at=15,
+            countersigned_at=None,countersignature_anchor=None)
+        for issued in (None,20):
+            r=self.evaluate(record,consequence_class='Logistics',grant_issued_at=issued)
+            with self.subTest(issued=issued):
+                self.assertTrue(r.minting_suspended);self.assertTrue(r.human_classification_required)
+                self.assertFalse(r.direct_revocation);self.assertFalse(r.action_permitted)
+                self.assertEqual(r.formation_state,'pending-objection')
+        self.assertTrue(self.evaluate(record,consequence_class='Logistics',claimant='person:a').direct_revocation)
+        self.assertFalse(self.evaluate(record,consequence_class='Logistics',claimant='person:a',grant_issued_at=None).direct_revocation)
+
+    def test_pending_objection_never_establishes_counterparty_revocation(self):
+        record=self.record();record.update(objection_at=15,countersigned_at=None,countersignature_anchor=None)
+        r=self.evaluate(record)
+        self.assertFalse(r.direct_revocation);self.assertTrue(r.suspend_required)
+        self.assertEqual(r.formation_state,'pending-objection')
+        for patch in (dict(countersigned_at=15),dict(countersignature_anchor='audit:signature'),
+                      dict(objection_at=None),dict(objection_at=14),dict(objection_at=31),
+                      dict(witness_anchor=''),dict(registered_at=16)):
+            with self.subTest(patch=patch),self.assertRaises(ValidationError):self.evaluate(dict(record,**patch))
+        with self.assertRaises(ValidationError):self.evaluate(self.record(),grant_issued_at=None)
+        with self.assertRaises(ValidationError):self.evaluate(grant_issued_at=None)
+
     def test_facts_cannot_be_rebound_or_backfilled_after_grant(self):
         for changes in (dict(subject="agent:b"),dict(relation_id="relation:b"),
                         dict(template_digest="sha256:"+"b"*64),dict(countersigned_at=21),

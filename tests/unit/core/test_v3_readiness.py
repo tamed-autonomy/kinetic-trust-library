@@ -344,6 +344,12 @@ class ReadinessTests(unittest.TestCase):
         cf["state"]["formation"]=formation
         formation["objection_at"]=950
         self.assertEqual(clearance().reason,"CLEARANCE_FORMATION_CLASSIFICATION_REQUIRED")
+        original_signature=(formation['countersigned_at'],formation['countersignature_anchor'])
+        formation['countersigned_at']=formation['countersignature_anchor']=None
+        unsigned=clearance()
+        self.assertEqual(unsigned.reason,'CLEARANCE_FORMATION_CLASSIFICATION_REQUIRED')
+        self.assertFalse(unsigned.conditional_clear)
+        formation['countersigned_at'],formation['countersignature_anchor']=original_signature
         formation["objection_at"]=None
         formation["counterparty"]=""
         self.assertEqual(clearance().reason,"CLEARANCE_FORMATION_INVALID")

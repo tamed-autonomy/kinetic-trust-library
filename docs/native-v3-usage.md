@@ -130,3 +130,13 @@ installation declaration check before proof production. A declaration alone
 still cannot replace the separately authenticated, current boundary assessment.
 The sealed environment assessment retains the exact checked dependency tuple
 for subsequent audit composition.
+
+The private relation-formation projection distinguishes a completed countersigned
+witness from an authenticated `pending-objection`. In the latter, both
+countersignature fields are absent together and an actual scoped objection is
+required. Minting remains suspended pending human classification. Pre-mint callers
+may supply no issued-grant time only for that pending state; it grants no direct
+revocation authority. An issued grant's principal retains independent revocation,
+while direct Relational counterparty revocation still needs the completed witness.
+The Source authenticates identity, chronology and original objection evidence;
+classification and actual mint suspension remain outside this calculation.
