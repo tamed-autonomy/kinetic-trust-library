@@ -39,7 +39,7 @@ def evidence_fixture(operation=None,deployment=None,now=1000,zone="zone:software
         subject=op["actor"],zone=zone,checked_at=now,expires_at=now+7,request_binding=binding,
         target_revision=scope["target_revision"],recovery_boundary=scope["recovery_boundary"],mapping_digest=p["mapping_digest"],
         requested_magnitudes={"effectBytes":1024,"affectedObjects":1,"fanoutTargets":1},existing_ceilings={"effectBytes":1024,"affectedObjects":1,"fanoutTargets":1},
-        consumption_epoch=1,state_revision=1,state_registry=p["state_registry"],key_registry=p["key_registry"],key_registry_anchor="audit:keys",
+        consumption_epoch=1,state_revision=1,existing_supervision="stable",state_registry=p["state_registry"],key_registry=p["key_registry"],key_registry_anchor="audit:keys",
         signing_keys_digest=_digest({key["kid"]:key},"sha256"),heads=heads,restriction_history=[],
         assessment=dict(profile_digest=p["assessment_profile_digest"],basis_anchor="audit:calibrated-assessment",evaluated_at=now,
             autonomyDemand=36,environmentalCapacity=40,capacityKnown=True))

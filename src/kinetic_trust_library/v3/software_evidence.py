@@ -16,6 +16,7 @@ from .execution_observation import _name,_digest as is_digest
 from .root_lifecycle import _time
 from .software_restrictions import software_magnitudes
 from .native_envelope import NativeEnvelopeThresholds
+from .supervision_rails import LEVELS
 
 
 SOURCE_UNITS={"resource_pressure":"ratio","control_latency":"milliseconds","operation_assessment":"ratio-pair",
@@ -160,14 +161,14 @@ class InstalledSoftwareEvidenceVerifier:
         s=_parse_jcs_object(source.state_bytes);keys=_parse_jcs_object(source.signing_keys_bytes)
         expected={"deployment_digest","profile_digest","operation_digest","subject","zone","checked_at","expires_at","request_binding",
             "target_revision","recovery_boundary","mapping_digest","requested_magnitudes","existing_ceilings","consumption_epoch","state_revision",
-            "state_registry","key_registry","key_registry_anchor","signing_keys_digest","heads","restriction_history","assessment","continuity_checkpoint"}
+            "state_registry","key_registry","key_registry_anchor","signing_keys_digest","heads","restriction_history","assessment","continuity_checkpoint","existing_supervision"}
         if (set(s)!=expected or s["deployment_digest"]!=p["deployment_digest"] or s["profile_digest"]!=_digest(p,self.algorithm)
                 or s["operation_digest"]!=digest_demand_operation(op,algorithm=self.algorithm) or s["subject"]!=op["actor"] or s["zone"]!=p["zone"]
                 or not _time(s["checked_at"]) or s["checked_at"]!=evaluated_at or not _time(s["expires_at"]) or s["expires_at"]<=evaluated_at
                 or s["mapping_digest"]!=p["mapping_digest"] or not _name(s["target_revision"]) or not _name(s["recovery_boundary"])
                 or not _time(s["consumption_epoch"]) or s["consumption_epoch"]==0 or not _time(s["state_revision"]) or s["state_revision"]==0
                 or s["state_registry"]!=p["state_registry"] or s["key_registry"]!=p["key_registry"] or not _name(s["key_registry_anchor"])
-                or s["signing_keys_digest"]!=_digest(keys,self.algorithm)):
+                or s["signing_keys_digest"]!=_digest(keys,self.algorithm) or s["existing_supervision"] not in LEVELS):
             raise ValidationError("software Source differs from actual current deployment/profile/request/registry scope")
         b=software_binding(s["request_binding"])
         if (b["actor_id"]!=op["actor"] or b["request_id"]!=op["request_id"] or b["operation_id"]!=op["operation"] or b["resource_id"]!=op["resource"]
@@ -269,6 +270,7 @@ class InstalledSoftwareEvidenceVerifier:
             consumption_epoch=s["consumption_epoch"],state_revision=s["state_revision"],checkpoint=checkpoint,
             request_binding=b,target_revision=s["target_revision"],recovery_boundary=s["recovery_boundary"],mapping_digest=s["mapping_digest"],
             requested_magnitudes=s["requested_magnitudes"],existing_ceilings=s["existing_ceilings"],
+            existing_supervision=s["existing_supervision"],
             key_registry=s["key_registry"],key_registry_anchor=s["key_registry_anchor"],signing_keys_digest=s["signing_keys_digest"],
             source_health={kind:{n:h[n] for n in ("status","health_anchor","health_expires_at")} for kind,h in heads.items()},
             assessment={n:v for n,v in assessment.items() if n not in ("basis_anchor","evaluated_at")})
