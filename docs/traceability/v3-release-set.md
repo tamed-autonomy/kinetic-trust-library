@@ -489,3 +489,14 @@ contract recorded as such. External ownership must be justified by actual I/O,
 authority, factual assessment, persistence or workflow responsibility; it is
 not a reason to omit deterministic SDK validation or a record model. Neither
 the absence of the final tag nor passing the current suite closes these gaps.
+# 2026-10-30 current software evidence checkpoint
+
+The optional software profile now has a private installed evidence verifier:
+actual invocation/destination/session binding, complete ordered original-evidence
+hashes, current authenticated source heads/health, exclusive original freshness
+deadlines, independent current keys and protected restriction continuity. A
+retained assessment rejects rollback, rewritten heads, sequence/epoch gaps and
+erased restriction history. Resolution must address the original hold and cause
+under the installed authority. Current input expiry and next-checkpoint expiry
+are retained separately. Source owns authentication, calibration, complete
+durable history and actual restore. This stage does not authorize consumption.
