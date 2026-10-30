@@ -12,7 +12,7 @@ import hashlib
 from kinetic_trust_library.errors import ValidationError
 from .clearance import InstalledClearanceVerifier
 from .software_evidence import InstalledSoftwareEvidenceVerifier,software_thresholds
-from .software_decision_signature import InstalledSoftwareDecisionSignatureVerifier
+from .software_decision_signature import InstalledSoftwareDecisionSignatureVerifier,_software_key_authorized
 from .software_decision_shape import parse_software_decision
 from .software_restrictions import project_software_restrictions
 from .trust_proof_json import _parse_jcs_object
@@ -30,6 +30,7 @@ def _number(value):return Fraction(str(value))
 class SoftwareConsumptionAssessment:
     verifier: object
     verified: bool
+    issuance_prepared: bool
     reason: str
     conditional_consumption: bool
     action_permitted: bool
@@ -88,6 +89,27 @@ class InstalledSoftwareConsumptionVerifier:
             raise ValidationError("this software adapter does not bind the complete artifacts of supplemental native prerequisite families")
 
     def evaluate(self,decision_bytes,native_result,*,actual_operation,evaluated_at,clock_healthy,previous_assessment=None):
+        return self._assess(decision_bytes,native_result,actual_operation=actual_operation,evaluated_at=evaluated_at,
+            clock_healthy=clock_healthy,previous_assessment=previous_assessment,issuance_selection=None)
+
+    def prepare_issuance(self,payload_bytes,native_result,*,actual_operation,evaluated_at,clock_healthy,algorithm,kid,previous_assessment=None):
+        """Validate unsigned installed-source input without making it consumable.
+
+        A local placeholder is used solely to apply the unchanged closed wire
+        schema to an unsigned payload. It is never signature-verified, returned
+        as a decision, or given conditional-consumption/commit status.
+        """
+        import rfc8785
+        if type(payload_bytes) is not bytes or len(payload_bytes)>262144:
+            raise ValidationError("bounded canonical software issuance payload required")
+        body=_parse_jcs_object(payload_bytes)
+        if "signature" in body or body.get("evaluated_at")!=evaluated_at or algorithm not in ("ES256","EdDSA") or not _name(kid):
+            raise ValidationError("software issuer requires fresh unsigned payload and installed signing identity")
+        shape_only=rfc8785.dumps(dict(body,signature="e30.e30.AA"))
+        return self._assess(shape_only,native_result,actual_operation=actual_operation,evaluated_at=evaluated_at,
+            clock_healthy=clock_healthy,previous_assessment=previous_assessment,issuance_selection=(algorithm,kid))
+
+    def _assess(self,decision_bytes,native_result,*,actual_operation,evaluated_at,clock_healthy,previous_assessment,issuance_selection):
         if not _time(evaluated_at) or clock_healthy is not True:
             raise ValidationError("software use requires healthy current trusted time")
         import rfc8785
@@ -106,8 +128,10 @@ class InstalledSoftwareConsumptionVerifier:
         sig=projection=None;level="silent_veto";ceilings=();expiry=None;conditions=None
         def result(reason,verified=False,conditional=False):
             r=object.__new__(SoftwareConsumptionAssessment)
-            for k,v in dict(verifier=self,verified=verified,reason=reason,conditional_consumption=conditional,action_permitted=False,
-                    checked_at=evaluated_at,expires_at=expiry,operation_bytes=op_bytes,decision_bytes=decision_bytes if verified else None,
+            signed=issuance_selection is None
+            for k,v in dict(verifier=self,verified=verified and signed,issuance_prepared=verified and not signed,
+                    reason=reason,conditional_consumption=conditional and signed,action_permitted=False,
+                    checked_at=evaluated_at,expires_at=expiry,operation_bytes=op_bytes,decision_bytes=decision_bytes if verified and signed else None,
                     clearance=c,management_checkpoint=c.management if c.management is not None else None if old is None else old.management_checkpoint,
                     evidence=e,signature=sig,restriction_projection=projection,supervision=level,ceilings=ceilings,
                     native_constraints_bytes=c.tightened_constraints_bytes if verified else None,commit_conditions_bytes=conditions).items():object.__setattr__(r,k,v)
@@ -119,10 +143,19 @@ class InstalledSoftwareConsumptionVerifier:
         e=ev.evaluate(actual_operation=actual_operation,evaluated_at=evaluated_at,clock_healthy=clock_healthy,
             previous_assessment=None if old is None else old.evidence)
         if not e.valid:return result(e.reason)
-        sig=InstalledSoftwareDecisionSignatureVerifier(e.signing_keys_bytes,self.signature_profile_bytes).verify(
-            decision_bytes,now=evaluated_at,clock_healthy=clock_healthy)
-        if not sig.verified:return result(sig.reason)
-        body=parse_software_decision(decision_bytes);s=_parse_jcs_object(e.source_state_bytes)
+        body=parse_software_decision(decision_bytes)
+        if issuance_selection is None:
+            sig=InstalledSoftwareDecisionSignatureVerifier(e.signing_keys_bytes,self.signature_profile_bytes).verify(
+                decision_bytes,now=evaluated_at,clock_healthy=clock_healthy)
+            if not sig.verified:return result(sig.reason)
+            key_expiry=sig.signing_key_expires_at
+        else:
+            signing_algorithm,kid=issuance_selection
+            key=_parse_jcs_object(e.signing_keys_bytes).get(kid);sp=_parse_jcs_object(self.signature_profile_bytes)
+            if not _software_key_authorized(key,sp,body,evaluated_at) or key["kid"]!=kid or key["alg"]!=signing_algorithm:
+                return result("SOFTWARE_ISSUANCE_KEY_INVALID")
+            key_expiry=key["not_after"]
+        s=_parse_jcs_object(e.source_state_bytes)
         binding=_parse_jcs_object(e.request_binding_bytes);a=_parse_jcs_object(e.assessment_bytes);out=body["result"]
         def raw_digest(raw):return algorithm+":"+hashlib.new(algorithm,raw).hexdigest()
         prerequisites=e.prerequisites
@@ -147,7 +180,7 @@ class InstalledSoftwareConsumptionVerifier:
         # Its complete signed original remains bound; current grant status and
         # expiration are independently established by the native graph.
         max_expiry=min(c.expires_at,e.inputs_expires_at,native_result.expires_at,c.lease.expires_at,
-            native_result.readiness.expires_at,sig.signing_key_expires_at)
+            native_result.readiness.expires_at,key_expiry)
         if body["expires_at"]>max_expiry:return result("SOFTWARE_VALIDITY_WIDENED")
         geometry=_parse_jcs_object(native_result.canonical_geometry_bytes)["capacity"]
         if (geometry["unit"]!=ep["scale"] or any(_number(out[n])!=_number(a[n]) for n in ("autonomyDemand","environmentalCapacity"))
@@ -174,6 +207,7 @@ class InstalledSoftwareConsumptionVerifier:
         if not projection.conditional_candidate:return result("SOFTWARE_RESTRICTED",verified=True)
         if any(s["requested_magnitudes"][k]>limit for k,limit in ceilings):
             return result("SOFTWARE_REVISED_OPERATION_REQUIRED",verified=True)
+        if issuance_selection is not None:return result("SOFTWARE_ISSUANCE_PREPARED",verified=True)
         # These are conditions for the actual Service transaction, never proof
         # of atomicity, dispatch, target effects, reservations or reconciliation.
         conditions=rfc8785.dumps(dict(consumer_profile_digest=_digest(_parse_jcs_object(self.profile_bytes),algorithm),

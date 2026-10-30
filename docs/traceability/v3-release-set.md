@@ -517,3 +517,15 @@ This adapter explicitly rejects relational/reissue and supplemental prerequisite
 families until their complete original-artifact bindings are implemented. See
 `docs/plans/2026-10-30-native-software-consumption.md` for the exact scope and
 modeled-versus-real cryptographic integration evidence.
+
+## 2026-10-30 software decision producer
+
+`software_issuance.InstalledSoftwareDecisionIssuer` now validates an installed
+Source's canonical unsigned payload against the same complete scoped input graph
+before invoking a separate private signing adapter. Current key purpose, issuer,
+zone, algorithm, exact curve/type/public material and validity are checked first.
+Unsigned preparation never has verified/conditional-consumption status, a signed
+decision or commit conditions. The completed signed artifact is independently
+rechecked against current software/clearance Sources while retaining protected
+continuity checkpoints. Actual native freshness and atomic execution remain
+explicit caller/Service obligations; issuance does not release effects.

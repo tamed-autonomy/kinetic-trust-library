@@ -17,6 +17,33 @@ from .execution_observation import _name,_digest as is_digest
 SOFTWARE_DECISION_PURPOSE="ktp-software-substrate-decision"
 
 
+def _software_public_key_valid(key):
+    from kinetic_trust_library.proofs._algorithms import (
+        validate_ed25519_public_key,validate_es256_public_key,_PublicKeyShapeError)
+    try:
+        if key.get("alg")=="EdDSA" and (key.get("kty"),key.get("crv"))==("OKP","Ed25519"):
+            validate_ed25519_public_key(_decode_segment(key["x"],name="software key x"))
+        elif key.get("alg")=="ES256" and (key.get("kty"),key.get("crv"))==("EC","P-256"):
+            x=_decode_segment(key["x"],name="software key x");y=_decode_segment(key["y"],name="software key y")
+            if len(x)!=32 or len(y)!=32:return False
+            validate_es256_public_key(b"\x04"+x+y)
+            from cryptography.hazmat.primitives.asymmetric import ec
+            ec.EllipticCurvePublicNumbers(int.from_bytes(x,"big"),int.from_bytes(y,"big"),ec.SECP256R1()).public_key()
+        else:return False
+    except (ProofFormatError,_PublicKeyShapeError,KeyError,TypeError,ValueError):return False
+    return True
+
+
+def _software_key_authorized(key,p,body,now):
+    return (type(key) is dict and _name(key.get("kid")) and key.get("alg") in p["algorithms"] and _software_public_key_valid(key)
+        and key.get("revoked") is False and key.get("purpose")==SOFTWARE_DECISION_PURPOSE
+        and key.get("subject")==body["issuer_id"] and body["issuer_id"] in p["issuer_ids"] and key.get("zone_id")==p["zone"]
+        and _time(key.get("not_before")) and _time(key.get("not_after"))
+        and key["not_before"]<=body["evaluated_at"]<=now<body["expires_at"]<=key["not_after"]
+        and body["request_binding"]["execution_profile_digest"]==p["execution_profile_digest"]
+        and body["request_binding"]["policy_digest"]==p["policy_digest"])
+
+
 @dataclass(frozen=True,slots=True,init=False)
 class SoftwareSignatureAssessment:
     verified: bool
@@ -61,15 +88,8 @@ class InstalledSoftwareDecisionSignatureVerifier:
                 if len(header_raw)>1024:raise ValidationError("unbounded software signature header")
                 header=_parse_jcs_object(header_raw)
                 key=_parse_jcs_object(self.trusted_keys_bytes).get(header.get("kid"))
-                if (type(key) is not dict or not _name(key.get("kid")) or header.get("kid")!=key["kid"]
-                        or key.get("alg") not in p["algorithms"] or key.get("revoked") is not False
-                        or key.get("purpose")!=SOFTWARE_DECISION_PURPOSE or key.get("subject")!=body["issuer_id"]
-                        or body["issuer_id"] not in p["issuer_ids"] or key.get("zone_id")!=p["zone"]
-                        or header!={"alg":key["alg"],"kid":key["kid"],"typ":SOFTWARE_DECISION_PURPOSE}
-                        or not _time(key.get("not_before")) or not _time(key.get("not_after"))
-                        or not key["not_before"]<=body["evaluated_at"]<=now<body["expires_at"]<=key["not_after"]
-                        or body["request_binding"]["execution_profile_digest"]!=p["execution_profile_digest"]
-                        or body["request_binding"]["policy_digest"]!=p["policy_digest"]):
+                if (not _software_key_authorized(key,p,body,now) or header.get("kid")!=key["kid"]
+                        or header!={"alg":key["alg"],"kid":key["kid"],"typ":SOFTWARE_DECISION_PURPOSE}):
                     raise ValidationError("software signature differs from installed issuer/purpose/profile/time")
                 import rfc8785
                 payload=_decode_segment(pieces[1],name="software signature payload")

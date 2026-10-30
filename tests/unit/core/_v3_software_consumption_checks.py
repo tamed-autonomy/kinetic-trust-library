@@ -56,6 +56,58 @@ def check_consumption(test,native,combined,operation,deployment):
     body.clear();body.update(json.loads(rfc8785.dumps(baseline)));body["result"].pop("margin")
     test.assertTrue(evaluate().conditional_consumption)
     body.clear();body.update(json.loads(rfc8785.dumps(baseline)))
+    from kinetic_trust_library.v3.software_issuance import InstalledSoftwareDecisionIssuer
+    from kinetic_trust_library.errors import ValidationError
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    calls=[];intervene={"value":False}
+    class Claims:
+        def produce(self,**kwargs):return rfc8785.dumps({k:v for k,v in body.items() if k!="signature"})
+    class Signer:
+        def sign(self,message,*,algorithm,kid):
+            calls.append((algorithm,kid))
+            if intervene["value"]:cf["state"]["lease"]["revoked"]=True
+            return Ed25519PrivateKey.from_private_bytes(bytes(range(32))).sign(message)
+    issuer=InstalledSoftwareDecisionIssuer(v,Claims(),Signer(),"EdDSA",key["kid"])
+    preparation=v.prepare_issuance(Claims().produce(),combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True,
+        algorithm="EdDSA",kid=key["kid"])
+    test.assertTrue(preparation.issuance_prepared);test.assertFalse(preparation.verified)
+    test.assertFalse(preparation.conditional_consumption);test.assertIsNone(preparation.decision_bytes)
+    test.assertIsNone(preparation.commit_conditions_bytes)
+    issued=issuer.issue(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+    test.assertTrue(issued.verification.conditional_consumption)
+    test.assertEqual(calls,[("EdDSA",key["kid"])])
+    for patch in (dict(crv="Ed448"),dict(kty="EC"),dict(x="AA")):
+        original_key=dict(f["key"]);f["key"].update(patch)
+        f["state"]["signing_keys_digest"]=_digest({f["key"]["kid"]:f["key"]},"sha256")
+        with test.assertRaises(ValidationError):issuer.issue(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        test.assertEqual(len(calls),1)
+        f["key"].clear();f["key"].update(original_key)
+        f["state"]["signing_keys_digest"]=_digest({f["key"]["kid"]:f["key"]},"sha256")
+    from kinetic_trust_library.v3.native_issuance import _segment
+    original_key=dict(f["key"])
+    f["key"].update(alg="ES256",kty="EC",crv="P-256",x=_segment(bytes(32)),y=_segment(bytes(32)))
+    f["state"]["signing_keys_digest"]=_digest({f["key"]["kid"]:f["key"]},"sha256")
+    with test.assertRaises(ValidationError):replace(issuer,algorithm="ES256").issue(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+    test.assertEqual(len(calls),1)
+    f["key"].clear();f["key"].update(original_key)
+    f["state"]["signing_keys_digest"]=_digest({f["key"]["kid"]:f["key"]},"sha256")
+    body["proof_digest"]="sha256:"+"0"*64
+    with test.assertRaises(ValidationError):issuer.issue(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+    test.assertEqual(len(calls),1)  # Invalid input must not reach the private key.
+    body.clear();body.update(json.loads(rfc8785.dumps(baseline)))
+    for patch in (dict(issuer_id="issuer:other"),dict(evaluated_at=999)):
+        body.update(patch)
+        with test.assertRaises(ValidationError):issuer.issue(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        test.assertEqual(len(calls),1)
+        body.clear();body.update(json.loads(rfc8785.dumps(baseline)))
+    with test.assertRaises(ValidationError):replace(issuer,algorithm="ES256").issue(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+    test.assertEqual(len(calls),1)
+    class BadSigner:
+        def sign(self,*args,**kwargs):return b"invalid raw signature"
+    with test.assertRaises(ValidationError):replace(issuer,signer=BadSigner()).issue(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+    intervene["value"]=True
+    with test.assertRaises(ValidationError):issuer.issue(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+    cf["state"]["lease"]["revoked"]=False;intervene["value"]=False
     body["result"]["tightenedConstraints"]["ceilings"][0]["max"]=512
     tightened=evaluate();test.assertTrue(tightened.verified);test.assertFalse(tightened.conditional_consumption)
     test.assertEqual(tightened.reason,"SOFTWARE_REVISED_OPERATION_REQUIRED")
