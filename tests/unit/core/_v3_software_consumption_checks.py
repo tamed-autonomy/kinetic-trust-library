@@ -20,16 +20,21 @@ def check_consumption(test,native,combined,operation,deployment,checkpoint_input
         projection=rfc8785.dumps(cf["state"][kind])
         f["prerequisites"].append(AuthenticatedSoftwarePrerequisite(kind,"source-contract-original-bytes",
             b"modeled authenticated complete original signed "+kind.encode()+b":"+projection,projection))
+    carrier=() if combined.association.carrier_binding is None else (combined.association.carrier_binding.compact_carrier.encode("ascii"),)
+    order=["readiness",*(["geometry_carrier"] if carrier else []),"lease","intent"]
     p=dict(id="software-consumer:a",version=1,zone=cf["state"]["zone"],formula="native-duration-software-consumption-v1",
         clearance_profile_digest=_digest(json.loads(cf["verifier"].profile_bytes),"sha256"),
         evidence_profile_digest=_digest(f["profile"],"sha256"),signature_profile_digest=_digest(sp,"sha256"),
-        prerequisite_order=["readiness","lease","intent"],original_artifact_contract="authenticated-vendor-grant-intent-v1")
+        prerequisite_order=order,original_artifact_contract="authenticated-vendor-grant-intent-v1")
     v=InstalledSoftwareConsumptionVerifier(cf["verifier"],f["v"],rfc8785.dumps(sp),rfc8785.dumps(p))
+    if carrier:
+        from kinetic_trust_library.errors import ValidationError
+        with test.assertRaises(ValidationError):replace(v,profile_bytes=rfc8785.dumps(dict(p,prerequisite_order=["readiness","lease","intent"])))
     body.update(request_binding=f["state"]["request_binding"],request_digest=_digest(f["state"]["request_binding"],"sha256"),
         proof_digest="sha256:"+hashlib.sha256(combined.association.compact_proof.encode("ascii")).hexdigest(),
         evidence_digest=_digest(f["records"],"sha256"),consumption_epoch=1,evaluated_at=1000,expires_at=1004,
         prerequisite_digests=["sha256:"+hashlib.sha256(b).hexdigest() for b in
-            (combined.readiness.decision_bytes,*(a.artifact_bytes for a in f["prerequisites"]))])
+            (combined.readiness.decision_bytes,*carrier,*(a.artifact_bytes for a in f["prerequisites"]))])
     body["result"]=dict(autonomyDemand=36,environmentalCapacity=40,capacityKnown=True,
         repairPathVerified=True,supervisionAvailable=True,supervision="stable",margin=0.1,rationale=["current calibrated software assessment"],
         tightenedConstraints=dict(profile="software-substrate-execution",ceilings=[dict(magnitude=k,max=n) for k,n in f["state"]["requested_magnitudes"].items()]))
@@ -52,6 +57,10 @@ def check_consumption(test,native,combined,operation,deployment,checkpoint_input
         ("late expiry",lambda:body.update(expires_at=1005)),
         ("evaluation before evidence",lambda:body.update(evaluated_at=998)),
         ("wrong margin",lambda:body["result"].update(margin=0.2))]
+    if carrier:
+        mutations.extend([("omitted carrier",lambda:body["prerequisite_digests"].pop(1)),
+            ("substituted carrier",lambda:body["prerequisite_digests"].__setitem__(1,"sha256:"+"0"*64)),
+            ("reordered carrier",lambda:body["prerequisite_digests"].reverse())])
     for label,mutate in mutations:
         body.clear();body.update(json.loads(rfc8785.dumps(baseline)));mutate()
         with test.subTest(software=label):test.assertFalse(evaluate().conditional_consumption)

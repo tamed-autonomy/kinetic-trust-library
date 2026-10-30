@@ -889,6 +889,9 @@ class ReadinessTests(unittest.TestCase):
             attestation_bytes=rfc8785.dumps(attestation),invocation_evidence=b"fixture-actual-invocation",now=1000,clock_healthy=True)
         self.assertEqual(protected_result.reason,"NATIVE_PREREQUISITES_VALID")
         self.assertEqual(protected_result.expires_at,1006)
+        protected_reservation,protected_reservation_state=check_native_revalidation(self,protected,protected_result,state,boundary_state)
+        check_consumption(self,protected,protected_result,operation,deployment,
+            (protected_reservation,protected_reservation_state,state,boundary_state))
         substitution=protected.verify(actual_bytes,association_bytes,ordinary_compact,decision_bytes=rfc8785.dumps(decision),
             attestation_bytes=rfc8785.dumps(attestation),invocation_evidence=b"fixture-actual-invocation",now=1000,clock_healthy=True,
             geometry_body_bytes=rfc8785.dumps(geometry))

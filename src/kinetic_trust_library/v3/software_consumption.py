@@ -80,6 +80,7 @@ class InstalledSoftwareConsumptionVerifier:
             raise ValidationError("installed native clearance/evidence/signing declarations required")
         hb=cv.template_verifier.hand_back_verifier;p=_parse_jcs_object(self.profile_bytes)
         ep=_parse_jcs_object(ev.profile_bytes);sp=_parse_jcs_object(self.signature_profile_bytes)
+        expected_order=["readiness",*(["geometry_carrier"] if cv.native_verifier.association_verifier.crosses_trust_boundary else []),"lease","intent"]
         # Validate the independent signing declaration without selecting a key
         # from the untrusted candidate. The current inventory is resolved at use.
         InstalledSoftwareDecisionSignatureVerifier(b"{}",self.signature_profile_bytes)
@@ -88,7 +89,7 @@ class InstalledSoftwareConsumptionVerifier:
                 or not _name(p["id"]) or not _time(p["version"]) or p["version"]==0
                 or p["formula"]!="native-duration-software-consumption-v1"
                 or p["original_artifact_contract"]!="authenticated-vendor-grant-intent-v1"
-                or p["prerequisite_order"]!=["readiness","lease","intent"]
+                or p["prerequisite_order"]!=expected_order
                 or p["clearance_profile_digest"]!=_digest(_parse_jcs_object(cv.profile_bytes),ev.algorithm)
                 or p["evidence_profile_digest"]!=_digest(ep,ev.algorithm)
                 or p["signature_profile_digest"]!=_digest(sp,ev.algorithm)
@@ -185,7 +186,12 @@ class InstalledSoftwareConsumptionVerifier:
                 or any(p.representation!="source-contract-original-bytes" for p in prerequisites)
                 or any(_parse_jcs_object(p.projection_bytes)!=state[p.kind] for p in prerequisites)):
             return result("SOFTWARE_PREREQUISITES_INVALID")
-        originals=(native_result.readiness.decision_bytes,*(p.artifact_bytes for p in prerequisites))
+        carrier_originals=()
+        if self.clearance_verifier.native_verifier.association_verifier.crosses_trust_boundary:
+            carrier=native_result.association.carrier_binding
+            if carrier is None:return result("SOFTWARE_PREREQUISITES_INVALID")
+            carrier_originals=(carrier.compact_carrier.encode("ascii"),)
+        originals=(native_result.readiness.decision_bytes,*carrier_originals,*(p.artifact_bytes for p in prerequisites))
         expected_prerequisites=[raw_digest(raw) for raw in originals]
         if (body["request_binding"]!=binding or body["request_digest"]!=_digest(binding,algorithm)
                 or body["proof_digest"]!=raw_digest(native_result.association.compact_proof.encode("ascii"))

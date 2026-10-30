@@ -41,6 +41,8 @@ installed before these composed paths. The software consumer requires current
 management and structural authority checks. Its initial adapter explicitly
 rejects relational/reissue and supplemental prerequisite combinations until
 their complete original-artifact bindings are selected and implemented.
+Protected native carriage includes its complete signed geometry carrier in the
+required software prerequisite order; a local-only order cannot downgrade it.
 
 Every returned `action_permitted` is false. Conditional Clear/consumption names
 the conditions the Service must satisfy, including native constraints and all

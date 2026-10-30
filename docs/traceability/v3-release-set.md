@@ -596,6 +596,13 @@ identity/parser-error boundary and tested contract. The root API, package versio
 and normative RFC pin remain 2.1.0 pending deliberate adoption; this prepares the
 independent v3 tree for that eventual switch without runtime fallback.
 
+Protected software prerequisite checkpoint (2026-10-30): the actual native
+carriage choice now fixes the software prerequisite order. Protected use binds
+the complete unchanged signed geometry carrier, including signature; installing
+a local-only order or supplying omitted/substituted/reordered carrier digests
+fails. Real signed protected-native integration exercises software issuance,
+continuing revalidation and actual-condition Exceeded return paths.
+
 ## 2026-10-30 sovereign Soul stop resolution
 
 `InstalledNativeSoulStopResolver` accepts an actual current authenticated native
