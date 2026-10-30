@@ -22,6 +22,7 @@ from fractions import Fraction
 from .risk import _FACTORS
 from .normative_demand import InstalledNormativeDemandVerifier,NormativeDemandAssessment
 from .demand_supplier import _digest
+from .native_capabilities import validate_native_capabilities,ORDINARY_NATIVE_EXECUTION_PROFILE
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -62,6 +63,7 @@ class InstalledNativeEvaluationVerifier:
     federation_verifier: InstalledFederationVerifier | None = None
     normative_demand_verifier: InstalledNormativeDemandVerifier | None = None
     normative_classifier_profile_bytes: bytes | None = None
+    execution_profile: str = ORDINARY_NATIVE_EXECUTION_PROFILE
 
     def __post_init__(self):
         if (type(self.association_verifier) is not InstalledRequestAssociationVerifier
@@ -90,6 +92,7 @@ class InstalledNativeEvaluationVerifier:
             ids.append(_parse_jcs_object(policy.profile_bytes)["gate_id"])
         if len(set(ids))!=len(ids):raise ValidationError("duplicate declared adjudication gate")
         deployment=self.readiness_verifier.readiness_verifier.deployment_profile_bytes
+        validate_native_capabilities(_parse_jcs_object(deployment),execution_profile=self.execution_profile)
         normative=self.normative_demand_verifier
         if (normative is not None)!=(self.normative_classifier_profile_bytes is not None):
             raise ValidationError("native normative demand requires its selected classifier profile")

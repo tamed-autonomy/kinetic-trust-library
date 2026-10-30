@@ -33,6 +33,7 @@ from .boundary import BoundaryAssessment
 from .installed_repair import _profile as _repair_profile
 from .installed_ambient_repair import _profile as _ambient_profile
 from .federation_terms import profile_terms as _federation_profile
+from .native_capabilities import validate_native_capabilities,ORDINARY_NATIVE_EXECUTION_PROFILE
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,13 +47,14 @@ class NativeCoreContext:
     ambient_profile_bytes: bytes | None = None
     federation_profile_bytes: bytes | None = None
     normative_demand_profile_bytes: bytes | None = None
+    execution_profile: str = ORDINARY_NATIVE_EXECUTION_PROFILE
 
     def __post_init__(self):
         if (type(self.deployment_profile_bytes) is not bytes or type(self.operation_bytes) is not bytes
                 or type(self.evaluated_at) is not int or not 0 <= self.evaluated_at <= 2**53 - 1
                 or self.algorithm not in ("sha256", "sha384")):
             raise ValidationError("native Core context is invalid")
-        _parse_jcs_object(self.deployment_profile_bytes)
+        validate_native_capabilities(_parse_jcs_object(self.deployment_profile_bytes),execution_profile=self.execution_profile)
         digest_demand_operation(_parse_jcs_object(self.operation_bytes), algorithm=self.algorithm)
         if self.enclosure_profile_bytes is not None:
             if type(self.enclosure_profile_bytes) is not bytes:

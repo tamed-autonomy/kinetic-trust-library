@@ -196,6 +196,15 @@ class ReadinessTests(unittest.TestCase):
             def resolve(self,**kwargs):return AuthenticatedBoundaryContext(rfc8785.dumps(boundary_state),b"modeled-current-boundary")
         bv=InstalledBoundaryVerifier(rfc8785.dumps(deployment),BoundarySource(),"sha256")
         native=InstalledNativeEvaluationVerifier(av,dv,gv,1000,1006,boundary_verifier=bv)
+        from dataclasses import replace
+        for execution_profile in ("software-substrate-decision","consequential-action-evidence","emergency","oracle-consensus"):
+            with self.subTest(execution_profile=execution_profile),self.assertRaisesRegex(ValidationError,"unsupported"):
+                replace(native,execution_profile=execution_profile)
+        for optional in ("emergency_policy","oracle_consensus"):
+            unsupported_deployment=dict(deployment,**{optional:{}})
+            unsupported_readiness=replace(dv.readiness_verifier,deployment_profile_bytes=rfc8785.dumps(unsupported_deployment))
+            with self.subTest(optional=optional),self.assertRaisesRegex(ValidationError,"unsupported"):
+                replace(native,readiness_verifier=replace(dv,readiness_verifier=unsupported_readiness))
         def whole(body=None,token=None,tokens=()):
             return native.verify(actual_bytes,association_bytes,ordinary_compact,
                 decision_bytes=rfc8785.dumps(decision),attestation_bytes=rfc8785.dumps(attestation),

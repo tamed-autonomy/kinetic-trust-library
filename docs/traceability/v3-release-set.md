@@ -53,6 +53,11 @@ the Library checking a newly defined deterministic restriction.
 
 ## Broader release-set gaps and ownership
 
+Later dated checkpoint notes below supersede the earlier gap observations in
+this table. Optional capabilities are now explicitly rejected by the selected
+ordinary native profile as documented in the capability-selection checkpoint;
+they are not implemented or implicitly claimed.
+
 The vector counts are source-suite sizes, not passing-test counts. Commit links
 pin the inspected proposal; an untagged proposal is not released authority.
 Optional profiles are conditional scope decisions: either implement the named
@@ -293,6 +298,14 @@ or rename the package version while continuing to execute v2 semantics. Preserve
 the historical v2 requirement/evidence map as historical documentation.
 
 ## Completion gate
+
+Capability-selection checkpoint (2026-10-29): Native Core contexts and installed
+native evaluation select `ordinary-native-v3` explicitly. Emergency-policy and
+Oracle-consensus bindings are rejected under the selected disabled-only scope;
+software-substrate, downstream-effect and other execution-profile selectors
+cannot fall back to ordinary geometry/readiness. See
+`docs/plans/2026-10-29-native-capability-selection.md`. This closes silent
+unsupported-profile acceptance, not implementation of those optional protocols.
 
 Structural authority checkpoint (2026-10-29): actual capability/process/key
 inventories, accepted-key custody, actually used outside-operator measurers,
