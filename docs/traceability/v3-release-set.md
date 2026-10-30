@@ -299,6 +299,15 @@ the historical v2 requirement/evidence map as historical documentation.
 
 ## Completion gate
 
+Bootstrap-refusal checkpoint (2026-10-29): missing-template mint refusals have a
+separately typed, sealed request-principal/default-endpoint path, authenticated
+historical absence and predeclared defaults. Authority monitoring preserves
+actual template selection and the exact adjudicated pricing graph. Explicit
+v2 delivery origin supports request/template-based refusals without inventing
+a lease and preserves complete retry/escrow/receipt checks. See
+`docs/plans/2026-10-29-bootstrap-mint-refusal.md`; no template or Clear authority
+is fabricated, and actual Service transport/storage remains external.
+
 Later RFC-refresh checkpoint (2026-10-29): 18 exact current schema/vector
 snapshots adopt the coalesced `4ea1b6774dbe823659d305a4e5be4fa1af0e69ba`
 proposal and current hand-back/repair/L11 heads. Native units use the canonical

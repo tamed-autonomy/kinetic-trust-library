@@ -38,6 +38,27 @@ def _strings(items):
     return set(items)
 
 
+def _sealed_delivery(s,w,issued,now,recipient,redaction_policy_digest,ciphertext,algorithm):
+    """Shared sealed-context/delivery checks; no template/lease authority."""
+    bundle=s["bundle"];digest=algorithm+":"+hashlib.new(algorithm,ciphertext).hexdigest()
+    if (type(bundle) is not dict or set(bundle)!={"sealed_to","ciphertext_digest","recipient_endpoint","sections","tier","redaction_policy_digest","agent_can_read"}
+            or bundle["sealed_to"]!=recipient["key_id"] or bundle["recipient_endpoint"]!=recipient["endpoint"]
+            or bundle["ciphertext_digest"]!=digest or w["context"]!={"sealed_to":bundle["sealed_to"],"ciphertext_digest":digest}
+            or bundle["redaction_policy_digest"]!=redaction_policy_digest or bundle["agent_can_read"] is not False
+            or bundle["tier"]!="full" or _strings(bundle["sections"])!={"action","lease_history","environment_attestations","work_product"}):
+        raise ValidationError("hand-back requires actual full sealed recipient context")
+    d=s["delivery"]
+    if (type(d) is not dict or set(d)!={"channel_reachable","capacity","accepted_at","receipt_ref","attempts"}
+            or type(d["channel_reachable"]) is not bool or d["capacity"] not in ("available","exhausted","unknown")
+            or not _time(d["attempts"]) or not (d["accepted_at"] is None and d["receipt_ref"] is None
+                or _time(d["accepted_at"]) and issued<=d["accepted_at"]<=now and _name(d["receipt_ref"]))):
+        raise ValidationError("actual capacity-aware delivery evidence required")
+    delivery="delivered" if d["channel_reachable"] and d["capacity"]=="available" and d["accepted_at"] is not None else "parked"
+    if "delivery" in w and (w["delivery"]["state"]!=delivery or w["delivery"].get("attempts",d["attempts"])!=d["attempts"]):
+        raise ValidationError("wire delivery assertion differs from actual capacity/receipt")
+    return delivery
+
+
 @lru_cache(maxsize=1)
 def _wire_validator():
     from jsonschema import Draft202012Validator
@@ -208,20 +229,4 @@ class InstalledHandBackVerifier:
         expected={"system":"contest","principal":"contest","sovereign":"closed_by_authority","undetermined":"undetermined"}[s["stop_origin"]]
         if kind!=expected or (s["reason"]=="exceeded_soul")!=(s["stop_origin"]=="sovereign"):
             raise ValidationError("stop origin requires its own recourse arm")
-        bundle=s["bundle"];digest=self.algorithm+":"+hashlib.new(self.algorithm,ciphertext).hexdigest()
-        if (type(bundle) is not dict or set(bundle)!={"sealed_to","ciphertext_digest","recipient_endpoint","sections","tier","redaction_policy_digest","agent_can_read"}
-                or bundle["sealed_to"]!=recipient["key_id"] or bundle["recipient_endpoint"]!=recipient["endpoint"]
-                or bundle["ciphertext_digest"]!=digest or w["context"]!={"sealed_to":bundle["sealed_to"],"ciphertext_digest":digest}
-                or bundle["redaction_policy_digest"]!=t["redaction_policy_digest"] or bundle["agent_can_read"] is not False
-                or bundle["tier"]!="full" or _strings(bundle["sections"])!={"action","lease_history","environment_attestations","work_product"}):
-            raise ValidationError("hand-back requires actual full sealed recipient context")
-        d=s["delivery"]
-        if (type(d) is not dict or set(d)!={"channel_reachable","capacity","accepted_at","receipt_ref","attempts"}
-                or type(d["channel_reachable"]) is not bool or d["capacity"] not in ("available","exhausted","unknown")
-                or not _time(d["attempts"]) or not (d["accepted_at"] is None and d["receipt_ref"] is None
-                    or _time(d["accepted_at"]) and issued<=d["accepted_at"]<=now and _name(d["receipt_ref"]))):
-            raise ValidationError("actual capacity-aware delivery evidence required")
-        delivery="delivered" if d["channel_reachable"] and d["capacity"]=="available" and d["accepted_at"] is not None else "parked"
-        if "delivery" in w and (w["delivery"]["state"]!=delivery or w["delivery"].get("attempts",d["attempts"])!=d["attempts"]):
-            raise ValidationError("wire delivery assertion differs from actual capacity/receipt")
-        return delivery
+        return _sealed_delivery(s,w,issued,now,recipient,t["redaction_policy_digest"],ciphertext,self.algorithm)

@@ -7,6 +7,7 @@ ledger append, escalation, acknowledgment or permission is performed here.
 from dataclasses import dataclass
 from kinetic_trust_library.errors import ValidationError
 from .hand_back import InstalledHandBackVerifier
+from .bootstrap_hand_back import InstalledBootstrapHandBackVerifier
 from .delivery_effort import project_delivery_effort
 from .trust_proof_json import _parse_jcs_object
 from .demand_supplier import _digest
@@ -21,7 +22,7 @@ _TIMING=("retry_seconds","tolerance_seconds","escalation_seconds","escalation_ca
 def _profile(p):
     if (set(p)!={"id","version","zone","formula","hand_back_profile_digest","capacity_freshness_seconds","classes","ledger_owner","append_protocol"}
             or any(not _name(p[k]) for k in ("id","zone","ledger_owner","append_protocol")) or not _time(p["version"]) or p["version"]==0
-            or p["formula"]!="anchored-retry-and-escalation-v1" or not is_digest(p["hand_back_profile_digest"])
+            or p["formula"] not in ("anchored-retry-and-escalation-v1","anchored-retry-and-escalation-v2") or not is_digest(p["hand_back_profile_digest"])
             or not _time(p["capacity_freshness_seconds"]) or p["capacity_freshness_seconds"]==0
             or type(p["classes"]) is not dict or set(p["classes"])!={"Logistics","Coordination","Relational"}):
         raise ValidationError("complete selected hand-back delivery policy required")
@@ -61,24 +62,45 @@ class HandBackDeliveryAssessment:
 
 @dataclass(frozen=True,slots=True)
 class InstalledHandBackDeliveryVerifier:
-    hand_back_verifier: InstalledHandBackVerifier
+    hand_back_verifier: InstalledHandBackVerifier | InstalledBootstrapHandBackVerifier
     profile_bytes: bytes
     context_source: object
 
     def __post_init__(self):
-        if (type(self.hand_back_verifier) is not InstalledHandBackVerifier or type(self.profile_bytes) is not bytes
+        if (type(self.hand_back_verifier) not in (InstalledHandBackVerifier,InstalledBootstrapHandBackVerifier) or type(self.profile_bytes) is not bytes
                 or not callable(getattr(self.context_source,"resolve",None))):raise ValidationError("invalid installed delivery verifier")
         p=_profile(_parse_jcs_object(self.profile_bytes));hb=self.hand_back_verifier;hp=_parse_jcs_object(hb.profile_bytes)
         if p["zone"]!=hp["zone"] or p["hand_back_profile_digest"]!=_digest(hp,hb.algorithm):
             raise ValidationError("delivery policy differs from original installed hand-back policy/zone")
+        if type(hb) is InstalledBootstrapHandBackVerifier and p["formula"]!="anchored-retry-and-escalation-v2":
+            raise ValidationError("bootstrap delivery requires explicit v2 request-origin policy")
 
-    def evaluate(self,hand_back_bytes,*,actual_operation,evaluated_at,clock_healthy):
+    def evaluate(self,hand_back_bytes,*,actual_operation,evaluated_at,clock_healthy,request_id=None,request_anchor=None):
         hb=self.hand_back_verifier;p=_profile(_parse_jcs_object(self.profile_bytes))
-        original=hb.evaluate(hand_back_bytes,actual_operation=actual_operation,evaluated_at=evaluated_at,clock_healthy=clock_healthy)
+        bootstrap=type(hb) is InstalledBootstrapHandBackVerifier
+        if bootstrap:
+            original=hb.evaluate(hand_back_bytes,request_id=request_id,request_anchor=request_anchor,
+                actual_operation=actual_operation,evaluated_at=evaluated_at,clock_healthy=clock_healthy)
+        else:
+            if request_id is not None or request_anchor is not None:raise ValidationError("registered hand-back delivery cannot select a request fallback")
+            original=hb.evaluate(hand_back_bytes,actual_operation=actual_operation,evaluated_at=evaluated_at,clock_healthy=clock_healthy)
         if not original.valid:raise ValidationError("delivery lifecycle requires a separately valid original hand-back")
         op_bytes=canonical_demand_operation_bytes(actual_operation);op=_parse_jcs_object(op_bytes)
         wire=_parse_jcs_object(hand_back_bytes);message=_digest(wire,hb.algorithm);hs=_parse_jcs_object(original.authenticated_state_bytes)
-        issued=_at(wire["issued_at"]);recipient=hs["template"]["recipient"];lease=hs["lease"];q=p["classes"][hs["consequence_class"]]
+        issued=_at(wire["issued_at"]);lease=hs["lease"];q=p["classes"][hs["consequence_class"]]
+        origin_request_id=origin_request_anchor=None
+        if bootstrap:
+            recipient=hs["fallback"]["recipient"];request=hs["mint_request"]
+            origin_at=request["requested_at"];origin_kind="mint-request";template_digest=lease_id=None
+            origin_request_id=request["id"];origin_request_anchor=request["anchor"]
+        else:
+            recipient=hs["template"]["recipient"]
+            if lease is None:
+                if p["formula"]!="anchored-retry-and-escalation-v2":raise ValidationError("delivery without a granted lease requires explicit v2 origin policy")
+                origin_at=hs["template"]["registered_at"];origin_kind="template-registration"
+                template_digest=_digest(hs["template"],hb.algorithm);lease_id=None
+            else:
+                origin_at=lease["issued_at"];origin_kind="lease-grant";template_digest=lease["template_digest"];lease_id=lease["id"]
         source=self.context_source.resolve(deployment_profile_bytes=hb.deployment_profile_bytes,profile_bytes=self.profile_bytes,
             hand_back_bytes=hand_back_bytes,operation_bytes=op_bytes,evaluated_at=evaluated_at)
         if (type(source) is not AuthenticatedDeliveryContext or type(source.state_bytes) is not bytes or len(source.state_bytes)>262144
@@ -97,22 +119,27 @@ class InstalledHandBackDeliveryVerifier:
         if type(head) is not dict or set(head)!={"anchor","sequence"} or not is_digest(head["anchor"]) or not _time(head["sequence"]):
             raise ValidationError("actual durable delivery ledger head required")
         d=s["declaration"];binding=s["capacity_binding"]
-        if (type(d) is not dict or set(d)!={"anchor","profile_digest","declared_at","template_digest","lease_id","routes"}
-                or not is_digest(d["anchor"]) or d["profile_digest"]!=s["profile_digest"] or not _time(d["declared_at"]) or d["declared_at"]>lease["issued_at"]
-                or d["template_digest"]!=lease["template_digest"] or d["lease_id"]!=lease["id"] or type(d["routes"]) is not list or len(d["routes"])>4096
+        declaration_fields={"anchor","profile_digest","declared_at","template_digest","lease_id","routes"}
+        if p["formula"]=="anchored-retry-and-escalation-v2":declaration_fields|={"origin_kind","request_id","request_anchor"}
+        if (type(d) is not dict or set(d)!=declaration_fields
+                or not is_digest(d["anchor"]) or d["profile_digest"]!=s["profile_digest"] or not _time(d["declared_at"]) or d["declared_at"]>origin_at
+                or d["template_digest"]!=template_digest or d["lease_id"]!=lease_id or type(d["routes"]) is not list or len(d["routes"])>4096
                 or type(binding) is not dict or set(binding)!={"id","principal","declared_at","anchor"} or not _name(binding["id"])
                 or binding["principal"]!=recipient["principal"] or not is_digest(binding["anchor"]) or not _time(binding["declared_at"])
-                or binding["declared_at"]>lease["issued_at"]):raise ValidationError("actual original grant-time delivery/capacity declaration required")
+                or binding["declared_at"]>origin_at):raise ValidationError("actual original origin-time delivery/capacity declaration required")
+        if p["formula"]=="anchored-retry-and-escalation-v2" and (d["origin_kind"]!=origin_kind
+                or d["request_id"]!=origin_request_id or d["request_anchor"]!=origin_request_anchor):
+            raise ValidationError("delivery declaration substitutes original grant/template/request origin")
         routes={}
         for route in d["routes"]:
             if (type(route) is not dict or set(route)!={"ref","endpoint","principal","sealed_to","channel","registered_at","anchor"}
                     or not _name(route["ref"]) or route["ref"] in routes or not _name(route["channel"]) or not is_digest(route["anchor"])
                     or route["endpoint"]!=recipient["endpoint"] or route["principal"]!=recipient["principal"] or route["sealed_to"]!=recipient["key_id"]
-                    or not _time(route["registered_at"]) or route["registered_at"]>lease["issued_at"]):
+                    or not _time(route["registered_at"]) or route["registered_at"]>origin_at):
                 raise ValidationError("delivery cannot compose a new recipient, key or undeclared route at stop")
             routes[route["ref"]]=route
         if not {q["primary_route"],*q["escalation_routes"]}<=set(routes) or routes[q["primary_route"]]["channel"]!=recipient["channel"]:
-            raise ValidationError("actual primary/escalation routes were not all declared at grant")
+            raise ValidationError("actual primary/escalation routes were not all declared at the original origin")
         attempts=s["attempts"];escalations=s["escalations"]
         if (type(attempts) is not list or type(escalations) is not list or not _time(s["attempt_count"]) or s["attempt_count"]!=len(attempts)
                 or not _time(s["escalation_count"]) or s["escalation_count"]!=len(escalations)):

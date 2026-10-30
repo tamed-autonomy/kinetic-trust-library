@@ -43,13 +43,14 @@ def evaluate(args):
 def add_attempt(args,index=1,*,at=None,accepted=False,capacity="available"):
     from tests.unit.core.test_v3_delivery_effort import attempt
     _,s,hs,wire,_,now=args;at=now if at is None else at
+    recipient=hs["template" if "template" in hs else "fallback"]["recipient"]
     a=attempt(index,at,reachable=accepted,capacity=capacity,accepted=accepted);a["message_digest"]=s["hand_back_digest"]
     s["attempts"].append(a);s["attempt_count"]+=1
-    s["capacity_records"][a["capacity_anchor"]]=dict(binding="capacity:declared",principal=hs["template"]["recipient"]["principal"],
+    s["capacity_records"][a["capacity_anchor"]]=dict(binding="capacity:declared",principal=recipient["principal"],
         capacity=capacity,observed_at=at)
     if accepted:
         s["receipt_bindings"][a["receipt"]["anchor"]]=dict(hand_back_digest=s["hand_back_digest"],attempt_anchor=a["anchor"],
-            endpoint=hs["template"]["recipient"]["endpoint"],principal=hs["template"]["recipient"]["principal"],sealed_to=wire["context"]["sealed_to"],
+            endpoint=recipient["endpoint"],principal=recipient["principal"],sealed_to=wire["context"]["sealed_to"],
             ciphertext_digest=wire["context"]["ciphertext_digest"])
     return a
 

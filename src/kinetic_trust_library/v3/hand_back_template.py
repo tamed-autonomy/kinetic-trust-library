@@ -34,21 +34,33 @@ def _recourse(r,forbidden,kind):
 
 def validate_template(s,p,at):
     """Validate Source-authenticated facts; never establish their authenticity."""
-    t=s["template"];c=p["classes"][s["consequence_class"]]
+    t=s["template"]
     if (type(t) is not dict or set(t)!={"id","version","subject","consequence_class","registered_at","recipient","recourse","repair","redaction_policy_digest"}
             or not _name(t["id"]) or not _time(t["version"]) or t["version"]==0 or t["subject"]!=s["subject"]
             or t["consequence_class"]!=s["consequence_class"] or not _time(t["registered_at"]) or t["registered_at"]>at
             or not is_digest(t["redaction_policy_digest"])):
         raise ValidationError("actual registered subject/class template required")
+    return validate_return_path(s,p,t)
+
+
+def validate_return_path(s,p,t):
+    """Shared recipient/recourse invariants; does not establish registration.
+
+    Registered templates still require validate_template's separate checks.
+    Mint-refusal bootstrap paths use their own authenticated request/default
+    declaration and never become templates or grant authority here.
+    """
+    c=p["classes"][s["consequence_class"]]
+    if not is_digest(t["redaction_policy_digest"]):raise ValidationError("declared redaction policy required")
     recipient=t["recipient"]
     if (type(recipient) is not dict or set(recipient)!={"endpoint","principal","key_id","channel","ack_sla_seconds","liability_ref"}
             or any(not _name(recipient[k]) for k in ("endpoint","principal","key_id","channel","liability_ref"))
             or not _time(recipient["ack_sla_seconds"]) or not 0<recipient["ack_sla_seconds"]<=c["ack_sla_seconds"]
             or recipient["principal"]!=(s["subject"] if s["subject_profile"]=="person" else s["delegator"])):
-        raise ValidationError("registered accountable recipient/SLA mismatch")
+        raise ValidationError("accountable return recipient/SLA mismatch")
     repair=t["repair"]
     if type(repair) is not dict or set(repair)!={"subject","ref"} or repair["subject"]!=s["subject"] or not _name(repair["ref"]):
-        raise ValidationError("same-subject registered repair route required")
+        raise ValidationError("same-subject return repair route required")
     forbidden={s["subject"],s["operator"]}|_strings(s["operator_affiliates"])|_strings(s["measurers"])
     r=t["recourse"]
     if p["formula"]!=V2:
