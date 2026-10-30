@@ -16,6 +16,8 @@ from .schema_formats import installed_format_checker
 from .live_root import RootProofVerificationResult
 from .ingress import InstalledIngressVerifier, IngressVerificationResult
 
+NATIVE_PROOF_SCHEMA_ID = "https://kinetic-trust-protocol.net/specs/schemas/v3/trust-proof.json"
+
 
 @dataclass(frozen=True, slots=True)
 class InstalledSchemaBundle:
@@ -78,6 +80,8 @@ class InstalledProofVerifier:
                 or type(self.installed_algorithms) is not tuple or not callable(self.root_verifier)
                 or type(self.extension_handlers) is not tuple):
             raise ValidationError("installed proof verifier policy is invalid")
+        if self.schema_bundle.root_id != NATIVE_PROOF_SCHEMA_ID:
+            raise ValidationError("installed proof verifier requires the native v3 schema identity")
         _parse_jcs_object(self.trusted_keys_bytes)
         context = _parse_jcs_object(self.expected_context_bytes)
         if self.ingress_policy is not None:

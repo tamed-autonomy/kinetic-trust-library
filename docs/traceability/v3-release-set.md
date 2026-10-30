@@ -408,6 +408,14 @@ precision is preserved in the shared arithmetic. Real reviewed calibration and
 complete human authorization remain separate. See
 `docs/plans/2026-10-29-human-capacity.md`.
 
+Native policy-selection checkpoint (2026-10-29): installed v3 proof verification
+requires the canonical native schema identity; arbitrary/legacy schema roots
+cannot be selected through this API. Native evaluation and proof issuance also
+reject explicit fixture semantics. Generic local schema utilities and clearly
+marked published-fixture verifier tests remain available. See
+`docs/plans/2026-10-29-native-schema-selection.md`; identity alone does not prove
+trusted schema content or Source correctness.
+
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
 contract recorded as such. External ownership must be justified by actual I/O,

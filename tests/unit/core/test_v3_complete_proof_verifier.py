@@ -9,6 +9,16 @@ from kinetic_trust_library.v3.complete_proof_verifier import InstalledProofVerif
 
 @unittest.skipUnless(all(find_spec(m) for m in ("rfc8785", "jsonschema", "cryptography")), "install v3-proofs")
 class CompleteProofVerifierTests(unittest.TestCase):
+    def test_native_verifier_rejects_arbitrary_or_legacy_schema_selection(self):
+        import rfc8785
+        from kinetic_trust_library.errors import ValidationError
+        for identity in ("urn:test:any-proof","https://kinetic-trust-protocol.net/specs/schemas/v2/trust-proof.json"):
+            schema={"$schema":"https://json-schema.org/draft/2020-12/schema","$id":identity,"type":"object"}
+            bundle=InstalledSchemaBundle((rfc8785.dumps(schema),),identity)
+            with self.subTest(identity=identity),self.assertRaisesRegex(ValidationError,"native v3 schema"):
+                InstalledProofVerifier(bundle,b"{}",rfc8785.dumps({"subject_kind":"software_agent"}),
+                    ("ES256",),lambda payload,now:True)
+
     def test_all_published_ordered_outcomes_under_fixture_schema_composition(self):
         import rfc8785
         root = Path(__file__).parents[3]

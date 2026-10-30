@@ -41,6 +41,8 @@ class InstalledProofIssuer:
                 or self.algorithm not in self.verifier.installed_algorithms
                 or type(self.kid) is not str or not self.kid):
             raise ValidationError("installed proof issuance policy is invalid")
+        if self.verifier.fixture_software_default:
+            raise ValidationError("native proof issuance cannot select fixture semantics")
 
     def issue(self, *, now: int, clock_healthy: bool) -> IssuedProof:
         import rfc8785

@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 
 from kinetic_trust_library.errors import ValidationError, ProofFormatError
-from .complete_proof_verifier import InstalledProofVerifier
+from .complete_proof_verifier import InstalledProofVerifier, NATIVE_PROOF_SCHEMA_ID
 from .trust_proof_framing import parse_compact_framing
 from .trust_proof_json import _parse_jcs_object, parse_proof_json_objects
 from .trust_proof_time import _safe_time, trust_proof_time_valid
@@ -40,7 +40,7 @@ class InstalledProofExpiryVerifier:
                 or type(p["version"]) is not int or p["version"] < 1
                 or p["formula"] != "signed-ordinary-expiry-refresh-v1"
                 or p["zone"] != c["zone"] or c.get("subject_kind") not in ("software_agent", "person")
-                or self.proof_verifier.schema_bundle.root_id != "https://kinetic-trust-protocol.net/specs/schemas/v3/trust-proof.json"):
+                or self.proof_verifier.schema_bundle.root_id != NATIVE_PROOF_SCHEMA_ID):
             raise ValidationError("installed proof expiry profile is invalid")
 
     def evaluate(self, compact, *, actual_operation, evaluated_at, clock_healthy):

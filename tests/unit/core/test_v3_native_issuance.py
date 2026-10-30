@@ -33,6 +33,9 @@ class NativeIssuanceTests(unittest.TestCase):
                 return Ed25519PrivateKey.from_private_bytes(bytes(range(32))).sign(signing_input)
         signer=Signer()
         issuer=InstalledProofIssuer(Source(),signer,verifier,"EdDSA","TEST-ed25519")
+        from dataclasses import replace
+        with self.assertRaisesRegex(ValidationError,"fixture"):
+            replace(issuer,verifier=replace(verifier,fixture_software_default=True))
         result=issuer.issue(now=context["now"],clock_healthy=True)
         self.assertEqual(result.verification.reason,"TP_CLEAR")
         self.assertEqual(result.payload_bytes,rfc8785.dumps(payload))

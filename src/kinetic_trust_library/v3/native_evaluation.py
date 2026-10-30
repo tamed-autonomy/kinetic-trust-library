@@ -70,6 +70,8 @@ class InstalledNativeEvaluationVerifier:
                 or type(self.readiness_verifier) is not InstalledReadinessDecisionVerifier
                 or self.association_verifier.proof_verifier is not self.readiness_verifier.proof_verifier):
             raise ValidationError("native evaluation requires one installed ordinary proof policy")
+        if self.association_verifier.proof_verifier.fixture_software_default:
+            raise ValidationError("native evaluation cannot select fixture semantics")
         if not self.association_verifier.crosses_trust_boundary:
             if (type(self.local_geometry_verifier) is not InstalledGeometryVerifier
                     or self.local_geometry_verifier.proof_verifier is not self.association_verifier.proof_verifier

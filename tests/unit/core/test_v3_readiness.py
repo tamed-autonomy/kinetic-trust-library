@@ -196,6 +196,11 @@ class ReadinessTests(unittest.TestCase):
         bv=InstalledBoundaryVerifier(rfc8785.dumps(deployment),BoundarySource(),"sha256")
         native=InstalledNativeEvaluationVerifier(av,dv,gv,1000,1006,boundary_verifier=bv)
         from dataclasses import replace
+        fixture_pv=replace(pv,fixture_software_default=True)
+        with self.assertRaisesRegex(ValidationError,"fixture"):
+            replace(native,association_verifier=replace(av,proof_verifier=fixture_pv),
+                readiness_verifier=replace(dv,proof_verifier=fixture_pv),
+                local_geometry_verifier=replace(gv,proof_verifier=fixture_pv))
         for execution_profile in ("software-substrate-decision","consequential-action-evidence","emergency","oracle-consensus"):
             with self.subTest(execution_profile=execution_profile),self.assertRaisesRegex(ValidationError,"unsupported"):
                 replace(native,execution_profile=execution_profile)
