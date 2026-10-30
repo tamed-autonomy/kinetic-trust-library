@@ -10,6 +10,7 @@ from .native_evaluation import InstalledNativeEvaluationVerifier,NativeEvaluatio
 from .hand_back_template import InstalledHandBackTemplateVerifier,HandBackTemplateAssessment
 from .non_clearance import InstalledNonClearanceVerifier,NonClearanceAssessment
 from .lease import LeaseProjection,project_lease
+from .formation_authority import project_formation_authority
 from .root_lifecycle import _time
 from .execution_observation import _name,_digest as is_digest
 from .trust_proof_json import _parse_jcs_object
@@ -136,7 +137,7 @@ class InstalledClearanceVerifier:
             raise ValidationError("clearance Source must authenticate complete actual current registry facts")
         s=_parse_jcs_object(source.state_bytes)
         if (set(s)!={"deployment_digest","profile_digest","operation_digest","subject","zone","managed_relation_id","checked_at","expires_at",
-                "principal","consequence_class","mutates_relation","current_grant_epoch","template_digest","lease","intent","adverse_stop","native_geometry_digest"}
+                "principal","consequence_class","mutates_relation","current_grant_epoch","template_digest","lease","intent","adverse_stop","native_geometry_digest","formation"}
                 or s["deployment_digest"]!=deployment or s["profile_digest"]!=_digest(p,hb.algorithm) or s["operation_digest"]!=invocation
                 or s["subject"]!=op["actor"] or s["zone"]!=p["zone"] or not _name(s["managed_relation_id"])
                 or not _time(s["checked_at"]) or s["checked_at"]!=evaluated_at or not _time(s["expires_at"]) or s["expires_at"]<=evaluated_at
@@ -189,6 +190,17 @@ class InstalledClearanceVerifier:
         if (template.subject_profile!="software" or template.consequence_class!=lease.consequence_class
                 or template.principal!=s["principal"] or template.registered_at>lease.issued_at):
             return result("CLEARANCE_TEMPLATE_BINDING",hand_back_required=True)
+        if s["formation"] is None:return result("CLEARANCE_FORMATION_REQUIRED",hand_back_required=True)
+        try:
+            formation=project_formation_authority(subject=s["subject"],relation_id=s["managed_relation_id"],
+                consequence_class=s["consequence_class"],principal=s["principal"],claimant=s["principal"],
+                template_digest=s["template_digest"],grant_issued_at=lease.issued_at,
+                evaluated_at=evaluated_at,formation=s["formation"])
+            if s["formation"]["registered_at"]!=template.registered_at:
+                return result("CLEARANCE_FORMATION_INVALID",hand_back_required=True)
+        except ValidationError:return result("CLEARANCE_FORMATION_INVALID",hand_back_required=True)
+        if formation.minting_suspended:
+            return result("CLEARANCE_FORMATION_CLASSIFICATION_REQUIRED",hand_back_required=True)
         expiry=min(native_result.expires_at,template.expires_at,s["expires_at"],reissue.expires_at if reissue is not None else s["expires_at"])
         if lease.single_use_required:
             relational_commit=self.relational_commit_verifier.evaluate(relational_token_bytes,rfc8785.dumps(s["lease"]),

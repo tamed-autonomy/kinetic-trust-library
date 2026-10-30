@@ -81,9 +81,52 @@ class NonClearanceTests(unittest.TestCase):
         w["reason"]=hs["reason"]="revoked_by_principal";hs["stop_origin"]="principal"
         s["lease"]["revoked"]=True
         s["adverse_stop"].update(kind="Revoked",reason=w["reason"],hand_back_digest=_digest(w,"sha256"))
+        s["adverse_stop"]["authority"]=dict(claimant=s["principal"],formation=None)
         r=self.evaluate(v,dict(kind="Revoked",hand_back=w),op,now)
         self.assertTrue(r.valid);self.assertEqual(r.kind,"Revoked");self.assertFalse(r.action_permitted)
         self.assertEqual(r.lease.reason,"LEASE_REVOKED")
+
+    def test_unwitnessed_counterparty_revocation_is_contest_not_direct_revoked(self):
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        v,s,hs,w,op,now,_=fixture()
+        w["reason"]=hs["reason"]="revoked_by_counterparty"
+        s["adverse_stop"].update(kind="Revoked",reason=w["reason"],hand_back_digest=_digest(w,"sha256"),
+            authority=dict(claimant="person:counterparty",formation=None))
+        r=self.evaluate(v,dict(kind="Revoked",hand_back=w),op,now)
+        self.assertFalse(r.valid);self.assertIsNone(r.kind)
+        self.assertEqual(r.reason,"CLEARANCE_FORMATION_CONTEST_REQUIRED")
+        self.assertTrue(r.formation_contest_required);self.assertTrue(r.identity_assurance_required)
+        self.assertTrue(r.human_handoff_required)
+        self.assertFalse(r.action_permitted)
+
+    def test_revocation_without_actual_claimant_authority_is_rejected(self):
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        v,s,hs,w,op,now,_=fixture()
+        w["reason"]=hs["reason"]="revoked_by_principal"
+        s["adverse_stop"].update(kind="Revoked",reason=w["reason"],hand_back_digest=_digest(w,"sha256"))
+        self.assertFalse(self.evaluate(v,dict(kind="Revoked",hand_back=w),op,now).valid)
+
+    def test_witnessed_relational_counterparty_can_revoke_with_original_hand_back(self):
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        v,s,hs,w,op,now,_=fixture()
+        s.update(consequence_class="Relational",mutates_relation=True)
+        s["intent"]["consequence_class"]="Relational"
+        hs["consequence_class"]=hs["template"]["consequence_class"]=hs["lease"]["consequence_class"]="Relational"
+        td=_digest(hs["template"],"sha256")
+        hs["lease"]["template_digest"]=s["template_digest"]=td
+        s["lease"].update(consequence_class="Relational",kind="single-use",nonce="nonce:a",
+            expires_at=None,revoked=True,template_digest=td)
+        w["reason"]=hs["reason"]="revoked_by_counterparty";hs["stop_origin"]="principal"
+        formation=dict(subject=s["subject"],relation_id=s["managed_relation_id"],consequence_class="Relational",
+            template_digest=td,counterparty="person:counterparty",registered_at=now-100,formed_at=now-70,
+            countersigned_at=now-70,witness_anchor="audit:formation",countersignature_anchor="audit:signature",objection_at=None)
+        s["adverse_stop"].update(kind="Revoked",reason=w["reason"],hand_back_digest=_digest(w,"sha256"),
+            authority=dict(claimant="person:counterparty",formation=formation))
+        r=self.evaluate(v,dict(kind="Revoked",hand_back=w),op,now)
+        self.assertTrue(r.valid);self.assertEqual(r.kind,"Revoked");self.assertTrue(r.hand_back.valid)
+        self.assertFalse(r.formation_contest_required);self.assertFalse(r.action_permitted)
+        formation["relation_id"]="another:relation"
+        self.assertFalse(self.evaluate(v,dict(kind="Revoked",hand_back=w),op,now).valid)
 
     def test_expiry_does_not_need_human_delivery_or_a_fresh_principal_token(self):
         v,s,hs,w,op,now,_=fixture();s["adverse_stop"]=None;s["lease"]["expires_at"]=now

@@ -294,6 +294,15 @@ the historical v2 requirement/evidence map as historical documentation.
 
 ## Completion gate
 
+Formation/revocation checkpoint (2026-10-29): installed conditional clearance now
+requires relation/template/class-bound countersigned formation and blocks an
+unresolved formation objection. Direct counterparty revocation requires the
+matching Relational formation witness; unwitnessed claims require suspension,
+human classification and identity siting, never direct `Revoked`. Principal
+revocation requires actual claimant authority and remains independent. See
+`docs/plans/2026-10-29-formation-authority.md` for exact Source boundaries and
+remaining mint/refusal, bootstrap and structural authority work.
+
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
 contract recorded as such. External ownership must be justified by actual I/O,

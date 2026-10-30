@@ -25,10 +25,14 @@ def fixture(native_verifier,native_result,operation,deployment,now=1000):
         principal=hs["delegator"],consequence_class="Coordination",mutates_relation=False,current_grant_epoch=5,
         template_digest=lease["template_digest"],lease=lease,intent=intent,adverse_stop=None,
         native_geometry_digest=None if native_result.canonical_geometry_bytes is None else _digest(json.loads(native_result.canonical_geometry_bytes),"sha256"))
+    state["formation"]=dict(subject=operation["actor"],relation_id=state["managed_relation_id"],
+        consequence_class="Coordination",template_digest=lease["template_digest"],counterparty="person:counterparty",
+        registered_at=ts["template"]["registered_at"],formed_at=now-70,countersigned_at=now-70,
+        witness_anchor="audit:formation",countersignature_anchor="audit:signature",objection_at=None)
     records=dict(hand_back=None)
     class StopSource:
         def resolve(self,**kw):
-            s={k:v for k,v in state.items() if k!="native_geometry_digest"};s["profile_digest"]=_digest(np,"sha256")
+            s={k:v for k,v in state.items() if k not in ("native_geometry_digest","formation")};s["profile_digest"]=_digest(np,"sha256")
             return AuthenticatedNonClearanceContext(rfc8785.dumps(s),b"modeled authoritative current relation/grant/stop registry")
     non_clear=InstalledNonClearanceVerifier(hb,rfc8785.dumps(np),StopSource())
     class Source:
@@ -73,6 +77,7 @@ def install_relational(cf,operation,deployment,repair_ref_override=None,producti
     s["intent"]["consequence_class"]="Relational"
     s["lease"].update(consequence_class="Relational",kind="single-use",nonce="nonce:one-step",expires_at=None,template_digest=_digest(t,"sha256"))
     s["template_digest"]=cf["hand_back_state"]["lease"]["template_digest"]=s["lease"]["template_digest"]
+    s["formation"].update(consequence_class="Relational",template_digest=s["template_digest"])
     old,history,refresh=install_reissue(cf,operation,deployment)
     zone=json.loads(old.profile_bytes)["zone"]
     f=decision_fixture(operation,deployment,zone,s["lease"],old.hysteresis_verifier,repair_ref_override or t["repair"]["ref"])

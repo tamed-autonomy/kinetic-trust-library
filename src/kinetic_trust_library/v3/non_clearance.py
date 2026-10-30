@@ -15,6 +15,7 @@ from .demand_operation import canonical_demand_operation_bytes,digest_demand_ope
 from .demand_supplier import _digest
 from .root_lifecycle import _time
 from .execution_observation import _name,_digest as is_digest
+from .formation_authority import project_formation_authority
 
 
 def _profile(p):
@@ -54,6 +55,8 @@ class NonClearanceAssessment:
     expires_at: int | None
     authenticated_state_bytes: bytes | None
     source_evidence_bytes: bytes | None
+    formation_contest_required: bool
+    identity_assurance_required: bool
 
     def __init__(self,*args,**kwargs):raise TypeError("non-clearance requires installed current registry validation")
 
@@ -76,17 +79,20 @@ class InstalledNonClearanceVerifier:
         if type(message_bytes) is not bytes or not _time(evaluated_at):raise ValidationError("immutable clearance projection and trusted time required")
         hb=self.hand_back_verifier;p=_profile(_parse_jcs_object(self.profile_bytes))
         op_bytes=canonical_demand_operation_bytes(actual_operation);op=_parse_jcs_object(op_bytes)
-        source=None;hand_back=None;lease=None;expiry=None
+        source=None;hand_back=None;lease=None;expiry=None;formation_authority=None
         def result(kind=None,reason="CLEARANCE_PROTOCOL_ERROR"):
             valid=kind is not None;r=object.__new__(NonClearanceAssessment)
             for k,v in dict(valid=valid,reason="CLEARANCE_"+kind.upper() if valid else reason,kind=kind,action_permitted=False,
                 hand_back=hand_back if valid else None,lease=lease if valid else None,reissue_path=p["reissue_path"] if kind=="Expired" else None,
-                human_handoff_required=valid and kind!="Expired",hysteresis_countable=False,adjudication_required_for_counting=valid and kind!="Expired",
+                human_handoff_required=valid and kind!="Expired" or formation_authority is not None and formation_authority.human_classification_required,
+                hysteresis_countable=False,adjudication_required_for_counting=valid and kind!="Expired",
                 protocol_error_record_required=not valid,defect_route_required=not valid,
                 defect_endpoint=_parse_jcs_object(hb.profile_bytes)["defect_endpoint"],profile_bytes=self.profile_bytes,operation_bytes=op_bytes,
                 evaluated_at=evaluated_at,expires_at=expiry if valid else None,
                 authenticated_state_bytes=None if source is None else source.state_bytes,
                 source_evidence_bytes=None if source is None else source.evidence_bytes).items():object.__setattr__(r,k,v)
+            object.__setattr__(r,"formation_contest_required",formation_authority is not None and formation_authority.suspend_required)
+            object.__setattr__(r,"identity_assurance_required",formation_authority is not None and formation_authority.identity_assurance_required)
             return r
         if clock_healthy is not True or len(message_bytes)>262144:return result()
         try:
@@ -125,11 +131,23 @@ class InstalledNonClearanceVerifier:
                 if adverse is not None or lease is None or lease.reason!="LEASE_EXPIRED" or message["reissue_path"]!=p["reissue_path"]:
                     return result()
                 return result("Expired")
-            if (type(adverse) is not dict or set(adverse)!={"id","kind","reason","issued_at","hand_back_digest"}
+            expected={"id","kind","reason","issued_at","hand_back_digest"}
+            if kind=="Revoked" and type(adverse) is dict and adverse.get("reason") in ("revoked_by_principal","revoked_by_counterparty"):
+                expected.add("authority")
+            if (type(adverse) is not dict or set(adverse)!=expected
                     or not _name(adverse["id"]) or adverse["kind"]!=kind or not is_digest(adverse["hand_back_digest"])
                     or _instant(adverse["issued_at"])>evaluated_at):return result()
             revoked={"revoked_by_principal","revoked_by_counterparty","demotion"}
             if (adverse["reason"] in revoked)!=(kind=="Revoked"):return result()
+            if "authority" in expected:
+                authority=adverse["authority"]
+                if (type(authority) is not dict or set(authority)!={"claimant","formation"} or lease is None):return result()
+                formation_authority=project_formation_authority(subject=s["subject"],relation_id=s["managed_relation_id"],
+                    consequence_class=s["consequence_class"],principal=s["principal"],claimant=authority["claimant"],
+                    template_digest=s["template_digest"],grant_issued_at=s["lease"]["issued_at"],
+                    evaluated_at=evaluated_at,formation=authority["formation"])
+                if (adverse["reason"]=="revoked_by_principal")!=(authority["claimant"]==s["principal"]):return result()
+                if not formation_authority.direct_revocation:return result(reason="CLEARANCE_FORMATION_CONTEST_REQUIRED")
             import rfc8785
             if _digest(message["hand_back"],hb.algorithm)!=adverse["hand_back_digest"]:return result()
             in_hand_back_verifier=True

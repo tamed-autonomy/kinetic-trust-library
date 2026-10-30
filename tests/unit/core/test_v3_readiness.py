@@ -214,6 +214,17 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(cleared.supervision,combined.supervision)
         self.assertEqual(cleared.tightened_constraints_bytes,combined.tightened_constraints_bytes)
         self.assertEqual(cleared.expires_at,1006)
+        formation=cf["state"]["formation"]
+        cf["state"]["formation"]=None
+        self.assertEqual(clearance().reason,"CLEARANCE_FORMATION_REQUIRED")
+        cf["state"]["formation"]=formation
+        formation["objection_at"]=950
+        self.assertEqual(clearance().reason,"CLEARANCE_FORMATION_CLASSIFICATION_REQUIRED")
+        formation["objection_at"]=None
+        formation["counterparty"]=""
+        self.assertEqual(clearance().reason,"CLEARANCE_FORMATION_INVALID")
+        formation["counterparty"]="person:counterparty"
+        self.assertTrue(clearance().conditional_clear)
         cf["state"]["lease"]["expires_at"]=1002
         self.assertEqual(clearance().expires_at,1002)
         cf["state"]["lease"]["expires_at"]=1000
