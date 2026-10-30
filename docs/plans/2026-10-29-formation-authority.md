@@ -31,6 +31,8 @@ assurance, human classification or persistence itself. The pure projection and
 all installed results grant no action permission. Actual operational Service
 adapters and atomic revocation/commit integration remain unproven.
 
-Remaining authority gaps include mint-request/refusal and nonresponse records,
-the missing-template bootstrap route, structural key/measurer separation and
-broader unmanaged-relation/demotion history. These are not closed by this slice.
+The subsequent `2026-10-29-mint-authority-stops.md` checkpoint adds installed
+refusal and nonresponse-record checks. Remaining authority gaps include the
+missing-template bootstrap route, full successful mint-request integration,
+structural key/measurer separation and broader unmanaged-relation/demotion
+history. These are not closed by the formation slice.
