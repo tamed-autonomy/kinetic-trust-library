@@ -6,7 +6,7 @@ ordinary authorization, epoch continuity, complete consumption or execution.
 """
 from dataclasses import dataclass
 from kinetic_trust_library.errors import ValidationError,ProofFormatError
-from kinetic_trust_library.proofs._jwt import _decode_segment
+from kinetic_trust_library._jws_encoding import _decode_segment
 from .software_decision_shape import parse_software_decision
 from .trust_proof_json import _parse_jcs_object
 from .trust_proof_signature import trust_proof_signature_valid
@@ -18,7 +18,7 @@ SOFTWARE_DECISION_PURPOSE="ktp-software-substrate-decision"
 
 
 def _software_public_key_valid(key):
-    from kinetic_trust_library.proofs._algorithms import (
+    from kinetic_trust_library._signature_shapes import (
         validate_ed25519_public_key,validate_es256_public_key,_PublicKeyShapeError)
     try:
         if key.get("alg")=="EdDSA" and (key.get("kty"),key.get("crv"))==("OKP","Ed25519"):

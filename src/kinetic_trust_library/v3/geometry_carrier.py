@@ -9,7 +9,7 @@ from functools import lru_cache
 from importlib.resources import files
 import json
 from kinetic_trust_library.errors import ValidationError, ProofFormatError
-from kinetic_trust_library.proofs._jwt import _decode_segment
+from kinetic_trust_library._jws_encoding import _decode_segment
 from .trust_proof_json import _parse_jcs_object
 from .trust_proof_framing import parse_compact_framing
 from .trust_proof_signature import trust_proof_signature_valid

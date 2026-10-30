@@ -1,7 +1,6 @@
 """Private compact Trust Proof framing."""
 
-from base64 import b64decode, urlsafe_b64encode
-from binascii import Error as Base64Error
+from base64 import urlsafe_b64encode
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -17,6 +16,7 @@ from kinetic_trust_library.errors import (
 )
 from kinetic_trust_library.models._uri import validate_absolute_uri
 from kinetic_trust_library.models.proof import ProofAlgorithm, TrustProofClaims
+from kinetic_trust_library._jws_encoding import _decode_segment
 
 
 _MAX_COMPACT_TOKEN_BYTES = 65_536
@@ -35,7 +35,6 @@ _MAX_URI_STRING_BYTES = 2_048
 _MAX_IDENTIFIER_STRING_BYTES = 256
 _MAX_OTHER_STRING_BYTES = 4_096
 _MAX_NUMERIC_LEXEME_BYTES = 128
-_BASE64URL = re.compile(r"^[A-Za-z0-9_-]+$")
 _JSON_NUMBER = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
 _HEX_DIGITS = frozenset("0123456789abcdefABCDEF")
 _HEADER_MEMBERS = frozenset({"alg", "kid", "typ"})
@@ -98,23 +97,6 @@ def _require_decoded_header_width(header: bytes, /) -> None:
 def _require_decoded_payload_width(payload: bytes, /) -> None:
     if len(payload) > _MAX_DECODED_PAYLOAD_BYTES:
         raise ProofFormatError("decoded proof payload exceeds its byte limit")
-
-
-def _decode_segment(segment: str, /, *, name: str) -> bytes:
-    if _BASE64URL.fullmatch(segment) is None or len(segment) % 4 == 1:
-        raise ProofFormatError(f"{name} segment is not strict base64url")
-    encoded = segment.encode("ascii")
-    try:
-        decoded = b64decode(
-            encoded + (b"=" * (-len(encoded) % 4)),
-            altchars=b"-_",
-            validate=True,
-        )
-    except (Base64Error, ValueError) as exc:
-        raise ProofFormatError(f"{name} segment is not strict base64url") from exc
-    if urlsafe_b64encode(decoded).rstrip(b"=") != encoded:
-        raise ProofFormatError(f"{name} segment has nonzero base64url pad bits")
-    return bytes(bytearray(decoded))
 
 
 class _JSONScanner:

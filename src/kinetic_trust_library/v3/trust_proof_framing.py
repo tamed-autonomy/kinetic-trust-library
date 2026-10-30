@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from kinetic_trust_library.errors import ProofFormatError
-from kinetic_trust_library.proofs._jwt import _decode_segment
+from kinetic_trust_library._jws_encoding import _decode_segment
 
 
 @dataclass(frozen=True, slots=True)

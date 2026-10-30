@@ -6,7 +6,7 @@ check purpose, issuer/zone, trusted strength, signature and artifact validity.
 from dataclasses import dataclass
 from .root_lifecycle import _time
 from .trust_proof_json import _parse_jcs_object
-from kinetic_trust_library.proofs._jwt import _decode_segment
+from kinetic_trust_library._jws_encoding import _decode_segment
 
 
 @dataclass(frozen=True, slots=True)

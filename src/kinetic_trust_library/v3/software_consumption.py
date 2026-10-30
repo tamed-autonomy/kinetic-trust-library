@@ -206,7 +206,7 @@ class InstalledSoftwareConsumptionVerifier:
         # they do not require re-signing an otherwise unchanged live sidecar.
         nv=self.clearance_verifier.native_verifier
         if nv.association_verifier.crosses_trust_boundary:
-            from kinetic_trust_library.proofs._jwt import _decode_segment
+            from kinetic_trust_library._jws_encoding import _decode_segment
             carrier=_parse_jcs_object(_decode_segment(native_result.association.carrier_binding.compact_carrier.split(".")[1],name="current geometry carrier"))
             geometry_expiry=carrier["expires_at"]
         else:geometry_expiry=nv.local_profile_expires_at

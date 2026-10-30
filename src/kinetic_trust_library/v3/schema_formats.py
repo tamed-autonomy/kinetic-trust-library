@@ -1,6 +1,6 @@
 """Installed schema formats, independent of jsonschema optional extras."""
 from kinetic_trust_library.errors import ValidationError
-from kinetic_trust_library.models._uri import validate_absolute_uri
+from kinetic_trust_library._uri import validate_absolute_uri
 
 
 def installed_format_checker():

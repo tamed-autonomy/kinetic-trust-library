@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from kinetic_trust_library.errors import ProofFormatError
-from kinetic_trust_library.proofs._algorithms import (
+from kinetic_trust_library._signature_shapes import (
     _PublicKeyShapeError,
     _SignatureShapeError,
     validate_ed25519_public_key,
@@ -17,7 +17,7 @@ from kinetic_trust_library.proofs._algorithms import (
     validate_es256_public_key,
     validate_es256_signature,
 )
-from kinetic_trust_library.proofs._jwt import _decode_segment
+from kinetic_trust_library._jws_encoding import _decode_segment
 
 
 def trust_proof_signature_valid(

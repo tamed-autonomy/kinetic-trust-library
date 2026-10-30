@@ -11,7 +11,7 @@ from .request_association import InstalledRequestAssociationVerifier,RequestAsso
 from .readiness_decision import InstalledReadinessDecisionVerifier,ReadinessDecisionResult
 from .geometry_verifier import InstalledGeometryVerifier
 from .trust_proof_json import _parse_jcs_object
-from kinetic_trust_library.proofs._jwt import _decode_segment
+from kinetic_trust_library._jws_encoding import _decode_segment
 from .root_lifecycle import _time
 from .adjudication import InstalledAdjudicationVerifier, AdjudicationAssessment
 from .boundary import InstalledBoundaryVerifier, BoundaryAssessment

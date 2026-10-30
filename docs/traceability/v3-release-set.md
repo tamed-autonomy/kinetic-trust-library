@@ -583,3 +583,15 @@ eligibility, operational capacity or execution. The exact person-versus-software
 prose conflict, provisional trajectory policy, multiple Root ranking and mixed
 import/local composition remain explicit source-adoption decisions; see
 `docs/plans/2026-10-30-person-standing-proof-claims.md`.
+
+## 2026-10-30 native import independence
+
+Native modules now use shared version-neutral base64url, signature-shape and URI
+helpers directly. They no longer import the legacy proof parser, claim models or
+Core packages. A minimal-root subprocess with those legacy packages blocked
+loads the native/person/software graph, and a static dependency guard catches
+deferred/relative legacy imports. Isolation also passes without optional proof
+dependencies. Legacy locations retain the same helper behavior, URI public
+identity/parser-error boundary and tested contract. The root API, package version
+and normative RFC pin remain 2.1.0 pending deliberate adoption; this prepares the
+independent v3 tree for that eventual switch without runtime fallback.
