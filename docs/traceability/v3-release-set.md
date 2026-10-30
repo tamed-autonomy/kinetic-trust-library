@@ -299,6 +299,18 @@ the historical v2 requirement/evidence map as historical documentation.
 
 ## Completion gate
 
+Later RFC-refresh checkpoint (2026-10-29): 18 exact current schema/vector
+snapshots adopt the coalesced `4ea1b6774dbe823659d305a4e5be4fa1af0e69ba`
+proposal and current hand-back/repair/L11 heads. Native units use the canonical
+URN without an old-unit alias; root/person proof composition is now supplied
+directly by the source. Sponsorship reopens at/below its published count,
+including zero. Decision Geometry reason/control-token changes are reconciled.
+Two original upstream geometry cases retain stale request preimages and are
+correctly rejected, not counted as passing. See
+`docs/plans/2026-10-29-late-rfc-refresh.md`. Source L23 explicitly records the
+remaining numeric-writing decision; settled bootstrap routing remains
+implementable independently.
+
 Management-clearance checkpoint (2026-10-29): exact installed current management
 history now composes into conditional Clear, binds the actual native credential
 and grant's current admission anchor, and blocks demoted/unmanaged requests.

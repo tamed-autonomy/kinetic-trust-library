@@ -116,7 +116,6 @@ class ReadinessTests(unittest.TestCase):
         ordinary=json.loads(base64.urlsafe_b64decode(compact.split(".")[1]+"=="))
         ordinary.update(sub=operation["actor"],aud=operation["audience"],iat=998,exp=1008,jti="readiness-proof")
         ordinary["ktp"].update(subject_kind="software_agent",root_instrument=dict(kind="none",status="none",reason="missing"))
-        ordinary["ktp"]["applicable_ceilings"].append(dict(ceiling="external_root_missing",value=70))
         ordinary["ktp"]["applicable_ceilings"].append(dict(ceiling="repair_reentry",value=75))
         ordinary_key={**key,"kid":"ordinary-key","issuer":ordinary["iss"],"zone":"zone:alpha","role":"trust-proof-oracle"}
         signing=(segment(rfc8785.dumps(dict(alg="EdDSA",kid=ordinary_key["kid"],typ="ktp-trust-proof+jwt")))+"."+segment(rfc8785.dumps(ordinary))).encode()
@@ -133,7 +132,7 @@ class ReadinessTests(unittest.TestCase):
         pv=InstalledProofVerifier(native_schema_bundle(),rfc8785.dumps({ordinary_key["kid"]:ordinary_key}),rfc8785.dumps(dict(
             issuer=ordinary["iss"],audience=operation["audience"],zone="zone:alpha",subject=operation["actor"],subject_kind="software_agent",required_ceilings={},ring_depth=0)),
             ("EdDSA",),live_root)
-        actual={**operation,"version":"request-binding-v1","demand":{"value":35,"unit":"ktp-action-risk-points"},
+        actual={**operation,"version":"request-binding-v1","demand":{"value":35,"unit":"urn:ktp:unit:action-risk-points"},
             "classification_profile":{"id":"urn:ktp:classifier:readiness-test","digest":d("classifier")}}
         actual_bytes=rfc8785.dumps(actual)
         association_bytes=rfc8785.dumps(dict(version="request-proof-association-v1",request_digest=digest_canonical_request(actual,algorithm="sha256"),
@@ -471,7 +470,7 @@ class ReadinessTests(unittest.TestCase):
         from tests.unit.core.test_v3_normative_demand import fixture as normative_fixture
         nv,ns,_,_=normative_fixture(operation,deployment,1000,"zone:alpha")
         for value in ns["inputs"]:value["demand"]=34
-        classifier=dict(id="urn:test:normative-classifier",version="test",unit="ktp-action-risk-points",formula="installed reference",
+        classifier=dict(id="urn:test:normative-classifier",version="test",unit="urn:ktp:unit:action-risk-points",formula="installed reference",
             normative_input_profile_digest=digest(json.loads(nv.profile_bytes)))
         saved_actual=actual_bytes;saved_association=association_bytes;saved_geometry=json.loads(rfc8785.dumps(geometry))
         normative_actual=json.loads(actual_bytes)

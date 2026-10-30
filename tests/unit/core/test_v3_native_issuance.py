@@ -20,7 +20,6 @@ class NativeIssuanceTests(unittest.TestCase):
         segment=clear["jws"].split(".")[1]
         payload=json.loads(base64.urlsafe_b64decode(segment+"="*(-len(segment)%4)))
         payload["ktp"].update(subject_kind="software_agent",root_instrument={"kind":"none","status":"none","reason":"missing"})
-        payload["ktp"]["applicable_ceilings"].append({"ceiling":"external_root_missing","value":70})
         context={**vectors["context"],"subject_kind":"software_agent"}
         roots=select_assessed_roots((),context_bytes=rfc8785.dumps({"subject":context["subject"],"subject_profile":"software"}),evaluated_at=context["now"],algorithm="sha256")
         verifier=InstalledProofVerifier(native_schema_bundle(),rfc8785.dumps({k["kid"]:k for k in vectors["keys"]}),

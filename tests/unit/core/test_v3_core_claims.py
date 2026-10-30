@@ -78,7 +78,7 @@ class CoreClaimsTests(unittest.TestCase):
         assessed=demand_verifier.evaluate(case["jws"].encode(),actual_operation=operation,evaluated_at=1030,clock_healthy=True)
         class Classifier:
             def classify(self,operation_bytes,*,criticality,classifier_profile_bytes): return 10+criticality*10
-        classifier_profile=rfc8785.dumps(dict(id="urn:ktp:classifier:core-test",version="test-v1",unit="ktp-action-risk-points",formula="10 + 10 * moment_criticality"))
+        classifier_profile=rfc8785.dumps(dict(id="urn:ktp:classifier:core-test",version="test-v1",unit="urn:ktp:unit:action-risk-points",formula="10 + 10 * moment_criticality"))
         demand=InstalledDemandClassifier(raw,Classifier(),"sha256",classifier_profile).classify(assessed,actual_operation=operation,evaluated_at=1030)
         context=NativeCoreContext(raw,rfc8785.dumps(operation),1030,"sha256")
         metadata=rfc8785.dumps(dict(iss="https://oracle.example.com",aud=operation["audience"],jti="native-core-proof",exp=1040,zone="zone:alpha",advancement_floor=0))
@@ -152,7 +152,7 @@ class CoreClaimsTests(unittest.TestCase):
                     for value,capacity_gate,has_margin in ((52.5,"passed",True),(60,"failed",False)):
                         class FixedClassifier:
                             def classify(self,*args,**kwargs): return value
-                        fixed_profile=rfc8785.dumps(dict(id="urn:ktp:classifier:fixed-test",version="test-v1",unit="ktp-action-risk-points",formula=str(value)))
+                        fixed_profile=rfc8785.dumps(dict(id="urn:ktp:classifier:fixed-test",version="test-v1",unit="urn:ktp:unit:action-risk-points",formula=str(value)))
                         fixed=InstalledDemandClassifier(raw,FixedClassifier(),"sha256",fixed_profile).classify(assessed,actual_operation=operation,evaluated_at=1030)
                         fixed_core=project_classified_native_core(soul,standing=standing,environment=environment,context=context,demand=fixed)
                         fixed_source=NativeCoreClaimsSource(fixed_core,standing,context,metadata)

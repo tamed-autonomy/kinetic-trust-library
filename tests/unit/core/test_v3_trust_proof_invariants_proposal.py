@@ -34,6 +34,7 @@ class ProposedTrustProofInvariants(unittest.TestCase):
                     required_ceilings=context["required_ceilings"],
                     ring_depth=context["ring_depth"],
                     ingress_verifier=None,
+                    expected_subject_kind=context.get("subject_kind","software_agent"),
                 )
                 self.assertEqual(
                     actual,

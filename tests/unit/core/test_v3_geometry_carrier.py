@@ -15,7 +15,7 @@ class GeometryCarrierTests(unittest.TestCase):
         vectors=json.loads((root/"spec/proposals/decision-geometry-v1.json").read_text())
         proofs=json.loads((root/"spec/proposals/trust-proof-v3.json").read_text())
         schemas=[json.loads((root/"src/kinetic_trust_library/v3/schemas"/n).read_text()) for n in
-                 ("trust-proof-v3.json","risk-factors-native-v3.json","soul-constraint-v2.json")]
+                 ("trust-proof-v3.json","risk-factors-native-v3.json","soul-constraint-v2.json","root-instrument-v3.json")]
         bundle=InstalledSchemaBundle(tuple(rfc8785.dumps(s) for s in schemas),schemas[0]["$id"])
         for case in vectors["carrier_cases"]:
             with self.subTest(case=case["id"]):

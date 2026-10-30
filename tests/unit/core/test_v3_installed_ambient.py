@@ -287,13 +287,13 @@ class InstalledAmbientTests(unittest.TestCase):
                 rfc8785.dumps(selected_profile),Authority(),"ambient-geometry",True)
         state["reproduction_at_idle"]=".5"
         invalid=json.loads(current_geometry(v).produce(evaluated_at=1030))
-        self.assertEqual(invalid["reason_codes"],["INPUT_UNAVAILABLE"])
+        self.assertEqual(invalid["reason_codes"],["TRUST_INSUFFICIENT"])
         self.assertFalse(next(item for item in invalid["inputs"] if item["name"]=="ambient_repair")["value"]["criticality_valid"])
         self.assertEqual(invalid["result"]["supervision"],"silent_veto")
         state["reproduction_at_idle"]=".1";profile["declared_capacity"]=0
         zero=replace(v,profile_bytes=rfc8785.dumps(profile));state["profile_digest"]=_digest(profile,"sha256")
         prohibited=json.loads(current_geometry(zero).produce(evaluated_at=1030))
-        self.assertEqual(prohibited["reason_codes"],["INPUT_UNAVAILABLE"])
+        self.assertEqual(prohibited["reason_codes"],["TRUST_INSUFFICIENT"])
         self.assertTrue(next(item for item in prohibited["inputs"] if item["name"]=="ambient_repair")["value"]["consequential_hosting_forbidden"])
         profile["declared_capacity"]=4
         profile["recovery"]=dict(margin="0.1",stock_target=1,amendment_rate_limit="0.1",nonattendance_rate_limit="0.1",
@@ -309,6 +309,6 @@ class InstalledAmbientTests(unittest.TestCase):
         state["recovery"]["rule_repair"]["patterns"][0]["amendment"]["previous_definition_digest"]=state["profile_digest"]
         incapable=replace(v,profile_bytes=rfc8785.dumps(profile))
         blocked=json.loads(current_geometry(incapable).produce(evaluated_at=1030))
-        self.assertEqual(blocked["reason_codes"],["INPUT_UNAVAILABLE"])
+        self.assertEqual(blocked["reason_codes"],["TRUST_INSUFFICIENT"])
         self.assertEqual(blocked["result"]["supervision"],"silent_veto")
         self.assertTrue(next(value for value in blocked["inputs"] if value["name"]=="ambient_repair")["value"]["rule_repair"]["records_complete"])

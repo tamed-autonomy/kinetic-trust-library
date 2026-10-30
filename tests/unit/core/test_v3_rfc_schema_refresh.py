@@ -24,10 +24,11 @@ class RFCRefreshTests(unittest.TestCase):
                     raw=files("kinetic_trust_library.v3").joinpath(path.split("/v3/",1)[1]).read_bytes()
                 else:raw=(ROOT/path).read_bytes()
                 self.assertEqual(hashlib.sha256(raw).hexdigest(),entry["sha256"])
-        self.assertEqual(len(observed),12)
+        self.assertEqual(len(observed),18)
 
     def test_native_proof_and_record_reference_the_native_risk_schema_directly(self):
         base=files("kinetic_trust_library.v3").joinpath("schemas")
+        self.assertEqual(base.joinpath("trust-proof-v3.json").read_bytes(),base.joinpath("trust-proof-composed-v3.json").read_bytes())
         for name in ("trust-proof-v3.json","trust-proof-composed-v3.json"):
             schema=json.loads(base.joinpath(name).read_text())
             self.assertEqual(schema["$defs"]["ktpClaims"]["properties"]["context"]["anyOf"][0]["$ref"],V3_RISK)

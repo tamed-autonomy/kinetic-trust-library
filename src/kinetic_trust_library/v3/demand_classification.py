@@ -64,7 +64,7 @@ class InstalledDemandClassifier:
             raise ValidationError("installed classifier profile must be immutable canonical bytes")
         classifier = _parse_jcs_object(self.classifier_profile_bytes)
         if (type(classifier.get("id")) is not str or not installed_format_checker().conforms(classifier["id"],"uri")
-                or classifier.get("unit")!="ktp-action-risk-points"
+                or classifier.get("unit")!="urn:ktp:unit:action-risk-points"
                 or type(classifier.get("version")) is not str or not classifier["version"]
                 or type(classifier.get("formula")) is not str or not classifier["formula"]):
             raise ValidationError("installed classifier profile identity/unit/formula is invalid")

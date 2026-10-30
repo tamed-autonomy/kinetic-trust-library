@@ -53,7 +53,7 @@ def fixture():
             actual_operation=operation,evaluated_at=1030,clock_healthy=True)
     class Classifier:
         def classify(self,*args,criticality,**kwargs):return 10+criticality*10
-    demand=InstalledDemandClassifier(raw,Classifier(),"sha256",rfc8785.dumps(dict(id="urn:test:classifier",version="test",unit="ktp-action-risk-points",formula="10+10*c"))).classify(
+    demand=InstalledDemandClassifier(raw,Classifier(),"sha256",rfc8785.dumps(dict(id="urn:test:classifier",version="test",unit="urn:ktp:unit:action-risk-points",formula="10+10*c"))).classify(
         verified,actual_operation=operation,evaluated_at=1030)
     enc_profile=dict(id="urn:test:outer-enclosure",version=1,formula="reference-floor-v1",zone_id="zone-1",depth=1,reach="0.5",attenuation_per_class_step="0.5",overlap_policy_id="urn:test:overlap")
     from kinetic_trust_library.v3.demand_operation import digest_demand_operation
@@ -73,7 +73,6 @@ def fixture():
     original.update(iat=1030,exp=1040)
     original["ktp"].update(subject_kind="software_agent",zone="zone-2",r=.31,e_trust=41.4,ingress_path=inner_ingress["receipts"],
         root_instrument=dict(kind="none",status="none",reason="missing"))
-    original["ktp"]["applicable_ceilings"].append(dict(ceiling="external_root_missing",value=70))
     keys={k["kid"]:dict(k,zone="zone-2",not_before=1000,not_after=1100) for k in proof_vectors["keys"]}
     incoming_context=dict(proof_vectors["context"],zone="zone-2",receiving_zone="zone-2",subject_kind="software_agent",ring_depth=2)
     incoming_verifier=InstalledProofVerifier(native_schema_bundle(),rfc8785.dumps(keys),rfc8785.dumps(incoming_context),("EdDSA",),

@@ -4,75 +4,112 @@
     {
       "path": "spec/proposals/trust-proof-schema-v3.json",
       "source_path": "schemas/trust-proof.json",
-      "source_commit": "223f4259f7441ca97a916d26476a71b6114005a6",
-      "sha256": "6a1405264fe5bf0fa01b2c03bcdad46f088784dc63b4551ffee70014375c02fe"
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
+      "sha256": "cb1cf9d02ec3a32244a48b6b35d1ed95423c401a2293cda8713292ac518f3f4f"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/trust-proof-v3.json",
       "source_path": "schemas/trust-proof.json",
-      "source_commit": "223f4259f7441ca97a916d26476a71b6114005a6",
-      "sha256": "6a1405264fe5bf0fa01b2c03bcdad46f088784dc63b4551ffee70014375c02fe"
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
+      "sha256": "cb1cf9d02ec3a32244a48b6b35d1ed95423c401a2293cda8713292ac518f3f4f"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/risk-factors-native-v3.json",
       "source_path": "schemas/risk-factors.json",
-      "source_commit": "223f4259f7441ca97a916d26476a71b6114005a6",
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
       "sha256": "e17eda845ec14627ec89f876cca96c945bb00eeb4041e567f201914467f5fdb8"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/transaction-record-v3.json",
       "source_path": "schemas/transaction-record.json",
-      "source_commit": "223f4259f7441ca97a916d26476a71b6114005a6",
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
       "sha256": "dbd17400707b5026588841f20daa7b6fa2fbef486d38775db6927928709ff87c"
     },
     {
       "path": "spec/proposals/trust-proof-v3.json",
       "source_path": "specifications/conformance/trust-proof-v3.json",
-      "source_commit": "223f4259f7441ca97a916d26476a71b6114005a6",
-      "sha256": "883513270cea4d9e6c5378301641287142b03842a71c60e5987e7dbba97182ee"
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
+      "sha256": "265dd794fb4d4604e2e1dd192b5c2187ceb3410b38d32e6bc07dec4d72d3aadb"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/request-binding-v1.json",
       "source_path": "schemas/request-binding.json",
-      "source_commit": "1ea01e4d0454d51583bd2eb7bf1e898c9252d722",
-      "sha256": "0382fe68856d35a82d8f6903db054b77fc360efc992203fdaca1392a900d94be"
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
+      "sha256": "a166b5bb5986a105bfc2a760aed806ae48627cd36e099c055ca853d90ffcbb58"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/request-proof-association-v1.json",
       "source_path": "schemas/request-proof-association.json",
-      "source_commit": "1ea01e4d0454d51583bd2eb7bf1e898c9252d722",
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
       "sha256": "531ceb1e0f561a879052281b962cd4d615147e509ee73b8370759758f7109201"
     },
     {
       "path": "spec/proposals/request-binding-v1.json",
       "source_path": "specifications/conformance/request-binding-v1.json",
-      "source_commit": "1ea01e4d0454d51583bd2eb7bf1e898c9252d722",
-      "sha256": "ed4bb1028a5d566b53894cb38ce05bd27eb4c49ddbff072eadd1bd27f8d5bcc6"
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
+      "sha256": "6c809a166e3c95155818ed12f38684b5fd1e87104ee4e6b479854291b30d5778"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/decision-geometry-v1.json",
       "source_path": "schemas/decision-geometry.json",
-      "source_commit": "5878df1fcbb50f5f45672ddaf2a13c98d666e3d7",
-      "sha256": "fbd46c076d1db19d20766ec9438f303a54977350462243a3e3fc4342b77f5ec8"
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
+      "sha256": "d1f5cd3cdd74d0182e429a10055cac987e07ec40609dda74dbfc9bd8e4ab5459"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/decision-geometry-carrier-v1.json",
       "source_path": "schemas/decision-geometry-carrier.json",
-      "source_commit": "5878df1fcbb50f5f45672ddaf2a13c98d666e3d7",
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
       "sha256": "23521e0e504da343c9bdf54630499d737b5e66f8b4315df0aa6ec4663d7092ee"
     },
     {
       "path": "spec/proposals/decision-geometry-v1.json",
       "source_path": "specifications/conformance/decision-geometry-v1.json",
-      "source_commit": "5878df1fcbb50f5f45672ddaf2a13c98d666e3d7",
-      "sha256": "3465b9e8a254c470498bc5014a958c54dc96b89f22adf8b7b7def503d4c33a63"
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
+      "sha256": "fd8c85441ea9d624836bfeb185e0899c127d0043a2f361aaa73c91dea63a301e"
     },
     {
       "path": "spec/proposals/demand-input-v1.json",
       "source_path": "specifications/conformance/demand-input-v1.json",
-      "source_commit": "40f00a02be58f8b43c31485c9ffcb021758372f6",
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
       "sha256": "9c264078f8a818a40b8d75d08365b164247a2bd2ff78ed4b9e68cc4be24a7482"
+    },
+    {
+      "path": "src/kinetic_trust_library/v3/schemas/trust-proof-composed-v3.json",
+      "source_path": "schemas/trust-proof.json",
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
+      "sha256": "cb1cf9d02ec3a32244a48b6b35d1ed95423c401a2293cda8713292ac518f3f4f"
+    },
+    {
+      "path": "src/kinetic_trust_library/v3/schemas/root-instrument-v3.json",
+      "source_path": "schemas/root-instrument.json",
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
+      "sha256": "9641a572f302e484dc09cd72ba80b2ff71b34e491aee04ad4bdb10bb0b576895"
+    },
+    {
+      "path": "spec/proposals/hand-back-v1.json",
+      "source_path": "specifications/conformance/hand-back-v1.json",
+      "source_commit": "5ea926338cb69a80fa9cf6a816334891acf9bed5",
+      "sha256": "fbf844191d50fba69f8bd65a7ce12582ab4f4dfad70e236d6997c1e74f2ed1dd"
+    },
+    {
+      "path": "spec/proposals/breach-reconciliation-v1.json",
+      "source_path": "specifications/conformance/breach-reconciliation-v1.json",
+      "source_commit": "6892c709ecdb175523e4f9d435eb5f2fce742580",
+      "sha256": "eb04c61eecbf743f9606a5c1fa85bb4ae078dde799d6747abc3f88dd94ea42cc"
+    },
+    {
+      "path": "src/kinetic_trust_library/v3/schemas/adjudication-token.json",
+      "source_path": "schemas/adjudication-token.json",
+      "source_commit": "5e3b9344780225153552fc0381faa0c8f5ac74f8",
+      "sha256": "205001af22bd6ac4e4c7e2d9520020e85ca5bf82ee527b5fd901190fe699d101"
+    },
+    {
+      "path": "spec/proposals/external-root-v1.json",
+      "source_path": "specifications/conformance/external-root-v1.json",
+      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
+      "sha256": "1c55294a550741c14eca1053dd4bb433a789efdd9742a6a287216bb38997d6c9"
     }
   ],
-  "composition_note": "Native root/person composition is separately selected; source snapshots do not establish full release conformance."
+  "composition_note": "The current proof/root/person schema is adopted byte-for-byte from the coalesced one-Core proposal. Historical snapshots remain archived; no legacy fallback or final release claim.",
+  "refresh_phase": "late-proposal-update"
 }

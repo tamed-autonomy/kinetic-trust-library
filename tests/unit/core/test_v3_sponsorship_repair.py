@@ -36,7 +36,7 @@ class SponsorshipRepairTests(unittest.TestCase):
         import rfc8785
         return v.evaluate(raw,context_bytes=rfc8785.dumps(context),evaluated_at=now,clock_healthy=True)
 
-    def test_root_lineage_limit_and_recovery_hysteresis(self):
+    def test_root_lineage_limit_and_recovery_at_declared_boundary(self):
         v,state,context,raw,body,profile=fixture()
         name="act-outside-decision"
         state["counts"][name]=2
@@ -44,7 +44,7 @@ class SponsorshipRepairTests(unittest.TestCase):
         state["counts"][name]=1
         self.assertTrue(self.evaluate(v,context,raw).eligible)
         state["blocked_classes"]=[name]
-        self.assertFalse(self.evaluate(v,context,raw).eligible)
+        self.assertTrue(self.evaluate(v,context,raw).eligible)
         state["counts"][name]=0
         self.assertTrue(self.evaluate(v,context,raw).eligible)
         state["blocked_classes"]=[]
@@ -52,7 +52,7 @@ class SponsorshipRepairTests(unittest.TestCase):
         self.assertFalse(self.evaluate(v,context,raw).eligible)
         state["counts"]["misattestation"]=0
         state["hard_blocked"]=True
-        self.assertFalse(self.evaluate(v,context,raw).eligible)
+        self.assertTrue(self.evaluate(v,context,raw).eligible)
 
     def test_profile_bounds_and_opening_binding(self):
         import rfc8785

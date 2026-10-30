@@ -53,7 +53,6 @@ class NativeProofProfileTests(unittest.TestCase):
         payload = json.loads(base64.urlsafe_b64decode(segment+"="*(-len(segment)%4)))
         payload["ktp"]["subject_kind"] = "software_agent"
         payload["ktp"]["root_instrument"] = {"kind":"none","status":"none","reason":"missing"}
-        payload["ktp"]["applicable_ceilings"].append({"ceiling":"external_root_missing","value":70})
         context = {**vectors["context"], "subject_kind":"software_agent"}
         roots = select_assessed_roots((), context_bytes=rfc8785.dumps({"subject":context["subject"], "subject_profile":"software"}),
             evaluated_at=context["now"], algorithm="sha256")
@@ -61,7 +60,7 @@ class NativeProofProfileTests(unittest.TestCase):
             rfc8785.dumps({k["kid"]: k for k in vectors["keys"]}), rfc8785.dumps(context),
             ("ES256","EdDSA"), RootProofBinding(roots, context["zone"]))
         with self.assertRaises(ValidationError):
-            replace(verifier, expected_context_bytes=rfc8785.dumps(vectors["context"]))
+            replace(verifier, expected_context_bytes=rfc8785.dumps({k:v for k,v in vectors["context"].items() if k!="subject_kind"}))
         def signed():
             enc = lambda b: base64.urlsafe_b64encode(b).rstrip(b"=")
             header = {"alg":"EdDSA","kid":"TEST-ed25519","typ":"ktp-trust-proof+jwt"}
@@ -85,7 +84,8 @@ class NativeProofProfileTests(unittest.TestCase):
         assessed = InstalledRootVerifier(Adapter(), "sha256").evaluate(
             base64.urlsafe_b64decode(raw+"="*(-len(raw)%4)), context_bytes=root_context, evaluated_at=context["now"])
         selected = select_assessed_roots((assessed,), context_bytes=root_context, evaluated_at=context["now"], algorithm="sha256")
-        active_verifier = replace(verifier, root_verifier=RootProofBinding(selected, context["zone"]))
+        active_context=dict(context,required_ceilings={k:v for k,v in context["required_ceilings"].items() if k!="external_root_missing"})
+        active_verifier = replace(verifier, root_verifier=RootProofBinding(selected, context["zone"]),expected_context_bytes=rfc8785.dumps(active_context))
         payload["ktp"]["root_instrument"] = json.loads(assessed.projection_bytes)
         self.assertEqual(active_verifier.verify(signed(), now=context["now"], clock_healthy=True).reason, "TP_CLEAR")
         payload["ktp"]["root_instrument"]["declared_exposure"] += 1

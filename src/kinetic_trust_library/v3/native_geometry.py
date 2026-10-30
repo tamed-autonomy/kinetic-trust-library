@@ -127,7 +127,7 @@ class NativeGeometrySource:
         context=self.claim_source.context
         operation=_parse_jcs_object(context.operation_bytes)
         return canonical_request_bytes({**operation,"version":"request-binding-v1",
-            "demand":{"value":_wire_number(self.demand.demand),"unit":"ktp-action-risk-points"},
+            "demand":{"value":_wire_number(self.demand.demand),"unit":"urn:ktp:unit:action-risk-points"},
             "classification_profile":{"id":self.demand.classification_profile_id,"digest":self.demand.classification_profile_digest}})
 
     def reproduce(self, *, evaluated_at: int) -> AuthenticatedGeometryReproduction:
@@ -231,7 +231,7 @@ class NativeGeometrySource:
             gates["inputs"]="failed"
             # Keep the RFC's ordered gates and closed wire reason vocabulary.
             # The bound ambient model retains the precise profile/hosting cause.
-            return finish("INPUT_UNAVAILABLE")
+            return finish("TRUST_INSUFFICIENT")
         if type(grant) is not dict or grant.get("state") not in ("observed",*_MISSING):
             raise ValidationError("geometry grant state is invalid")
         if set(grant)!=({"state","ceilings"} if grant["state"]=="observed" else {"state"}):
@@ -268,7 +268,7 @@ class NativeGeometrySource:
                 add(missing.input,missing.layer,missing.state,profile["sources"]["environment"],(environment.authenticated_body_bytes,))
         if (grant["state"]!="observed" or not core.capacity.capacity_known or proof.reason!="TP_CLEAR"):
             gates["inputs"]="undetermined"
-            return finish("INPUT_UNAVAILABLE")
+            return finish("TRUST_INSUFFICIENT")
         gates["inputs"]="passed"
         capacity=core.capacity
         if core.classified_demand is not self.demand:
@@ -278,7 +278,7 @@ class NativeGeometrySource:
             _wire_number(capacity.measured_effective_trust))
         relation="zero" if capacity.decision_effective_trust==0 else "over" if capacity.relation=="above" else "within"
         body["capacity"]={"A":_wire_number(capacity.demand),"E":_wire_number(capacity.decision_effective_trust),
-            "unit":"ktp-action-risk-points","capacityKnown":True,"relation":relation}
+            "unit":"urn:ktp:unit:action-risk-points","capacityKnown":True,"relation":relation}
         if relation!="within":
             gates["capacity"]="failed"
             return finish("TRUST_INSUFFICIENT")

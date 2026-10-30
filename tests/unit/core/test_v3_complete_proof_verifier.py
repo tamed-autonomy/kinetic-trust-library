@@ -17,7 +17,8 @@ class CompleteProofVerifierTests(unittest.TestCase):
         risk = json.loads((root / "src/kinetic_trust_library/v3/schemas/risk-factors-native-v3.json").read_text())
         # Refreshed upstream proof and native five-factor schema close directly.
         soul = json.loads((root / "src/kinetic_trust_library/v3/schemas/soul-constraint-v2.json").read_text())
-        bundle = InstalledSchemaBundle(tuple(rfc8785.dumps(s) for s in (schema, risk, soul)), schema["$id"])
+        external_root = json.loads((root / "src/kinetic_trust_library/v3/schemas/root-instrument-v3.json").read_text())
+        bundle = InstalledSchemaBundle(tuple(rfc8785.dumps(s) for s in (schema, risk, soul, external_root)), schema["$id"])
         for case in vectors["cases"]:
             with self.subTest(case=case["id"]):
                 context = {**vectors["context"], **case.get("context", {})}

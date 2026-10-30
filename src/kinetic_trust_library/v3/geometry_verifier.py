@@ -39,6 +39,8 @@ def _parse_body(raw):
     body=json.loads(raw.decode("utf-8"),object_pairs_hook=_reject_duplicate,parse_constant=_reject_constant)
     if type(body) is not dict: raise ValueError("geometry root must be an object")
     _check_tree(body,1)
+    if "evaluated_at" in body and type(body["evaluated_at"]) is not int:
+        raise ValueError("geometry time requires an integer control token")
     canonical=rfc8785.dumps(body)
     if len(canonical)>262144: raise ValueError("unbounded canonical geometry")
     return body,canonical

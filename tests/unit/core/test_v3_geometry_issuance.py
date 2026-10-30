@@ -22,7 +22,7 @@ class GeometryIssuanceTests(unittest.TestCase):
         context=vectors["contexts"]["complete"]
         body=vectors["bodies"]["complete"]
         schemas=[json.loads((root/"src/kinetic_trust_library/v3/schemas"/n).read_text()) for n in
-                 ("trust-proof-v3.json","risk-factors-native-v3.json","soul-constraint-v2.json")]
+                 ("trust-proof-v3.json","risk-factors-native-v3.json","soul-constraint-v2.json","root-instrument-v3.json")]
         bundle=InstalledSchemaBundle(tuple(rfc8785.dumps(s) for s in schemas),schemas[0]["$id"])
         pv=InstalledProofVerifier(bundle,rfc8785.dumps({k["kid"]:k for k in proofs["keys"]}),
             rfc8785.dumps(proofs["context"]),("ES256",),lambda p,n:True,fixture_software_default=True)

@@ -101,7 +101,6 @@ class IngressTests(unittest.TestCase):
         payload.update(sub=context["subject"],iat=NOW,exp=NOW+10)
         payload["ktp"].update(zone=context["zone"],subject_kind="software_agent",ingress_path=f["receipts"],
             root_instrument=dict(kind="none",status="none",reason="missing"))
-        payload["ktp"]["applicable_ceilings"].append(dict(ceiling="external_root_missing",value=70))
         keys={k["kid"]:dict(k,zone=context["zone"],not_before=NOW-10,not_after=NOW+100) for k in vectors["keys"]}
         verifier=InstalledProofVerifier(native_schema_bundle(),f["t"].canonical(keys),f["t"].canonical(context),("ES256","EdDSA"),
             lambda raw,now:True,ingress_policy=f["verifier"])

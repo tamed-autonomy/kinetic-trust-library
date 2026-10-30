@@ -42,10 +42,11 @@ def sponsorship_counts_eligible(profile,counts,blocked,aggregate_blocked,hard_bl
             or len(set(blocked))!=len(blocked) or type(aggregate_blocked) is not bool or type(hard_blocked) is not bool):
         raise ValidationError("complete root-lineage counts and prior blocking state required")
     total=sum(counts.values());hard=sum(count for name,count in counts.items() if profile["entry_classes"][name]["hard"])
-    eligible=(total<=profile["aggregate_count_limit"] and (not aggregate_blocked or total<profile["aggregate_count_limit"])
-        and hard<=1 and (not hard_blocked or hard<1) and all(count<=profile["entry_classes"][name]["count_limit"]
-        and (name not in blocked or count<profile["entry_classes"][name]["count_limit"]) for name,count in counts.items())
-    )
+    # Refreshed REPAIR lifts the bar at or below the declared count. In
+    # particular, a zero-count declaration must reopen when none remain.
+    # Prior blocked markers remain authenticated history, not an extra latch.
+    eligible=(total<=profile["aggregate_count_limit"] and hard<=1
+        and all(count<=profile["entry_classes"][name]["count_limit"] for name,count in counts.items()))
     return eligible
 
 @dataclass(frozen=True,slots=True)

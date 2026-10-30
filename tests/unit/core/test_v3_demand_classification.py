@@ -32,7 +32,7 @@ class DemandClassificationTests(unittest.TestCase):
         class Classifier:
             def classify(self, operation_bytes, *, criticality,classifier_profile_bytes):
                 return Decimal(10) + criticality * 10
-        classifier_profile=rfc8785.dumps(dict(id="urn:ktp:classifier:fixture",version="test-v1",unit="ktp-action-risk-points",formula="10 + 10 * moment_criticality"))
+        classifier_profile=rfc8785.dumps(dict(id="urn:ktp:classifier:fixture",version="test-v1",unit="urn:ktp:unit:action-risk-points",formula="10 + 10 * moment_criticality"))
         classifier = InstalledDemandClassifier(raw_profile, Classifier(), "sha256",classifier_profile)
         class SoulAdapter:
             def query(self, *, required_frameworks, **kwargs):

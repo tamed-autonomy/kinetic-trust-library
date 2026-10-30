@@ -1,7 +1,7 @@
-"""Explicit development composition of RFC PR #164/#195/#201/#203 schemas.
+"""Coalesced development schemas from the refreshed one-Core proposal.
 
 The refreshed source schemas reference the native five-factor v3 ID directly.
-Root/person overlays remain explicitly selected. Prior snapshots are archived;
+The source now supplies the exact closed root/person composition. Prior snapshots are archived;
 the released v2 registry is unchanged and is not selected as a fallback.
 """
 from dataclasses import dataclass

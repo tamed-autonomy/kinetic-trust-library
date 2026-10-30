@@ -26,7 +26,7 @@ class ProposedTrustProofSchema(unittest.TestCase):
             with self.subTest(case=case["id"]):
                 _, payload = parse_proof_json_objects(parse_compact_framing(case["jws"]))
                 self.assertFalse(trust_proof_schema_valid(payload))
-        self.assertEqual(len(observed), 22)
+        self.assertEqual(len(observed), 29)
 
     def test_refreshed_native_schema_accepts_clear_without_legacy_six_factor_context(self):
         vectors = json.loads(VECTORS.read_text())
