@@ -483,6 +483,31 @@ class ReadinessTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError,"enclosing"):
             replace(native,association_verifier=replace(av,proof_verifier=nested_pv),
                 readiness_verifier=replace(dv,proof_verifier=nested_pv),local_geometry_verifier=replace(gv,proof_verifier=nested_pv))
+        from kinetic_trust_library.v3.native_stop_resolution import InstalledNativeReadinessStopResolver,PreparedNativeStop
+        state["status"]="inactive"
+        unready=whole();self.assertEqual(unready.reason,"READINESS_INVALID")
+        ready_stop_cf=clearance_fixture(native,unready,operation,deployment)
+        ready_management,_=install_management(ready_stop_cf,operation,deployment,unready)
+        ready_management["expires_at"]=1002
+        ready_stop_policy=dict(id="native-stop:readiness",version=1,zone="zone:alpha",formula="native-readiness-return-path-v1",
+            clearance_profile_digest=digest(ready_stop_cf["profiles"]["clearance"]))
+        class ReadyStopPreparation:
+            def prepare(self,**kwargs):
+                wire=ready_stop_cf["wire"];wire["reason"]="exceeded_permit_condition"
+                ready_stop_cf["hand_back_state"].update(reason=wire["reason"],stop_origin="system")
+                ready_stop_cf["state"]["adverse_stop"]=dict(id="audit:readiness-stop",kind="Exceeded",reason=wire["reason"],
+                    issued_at=wire["issued_at"],hand_back_digest=digest(wire))
+                ready_stop_cf["records"]["hand_back"]=rfc8785.dumps(wire)
+                return PreparedNativeStop(kwargs["cause_bytes"],"audit:readiness-stop",rfc8785.dumps(wire),b"modeled original readiness failure stop")
+        ready_resolver=InstalledNativeReadinessStopResolver(ready_stop_cf["verifier"],rfc8785.dumps(ready_stop_policy),ReadyStopPreparation())
+        ready_resolved=ready_resolver.evaluate(unready,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        self.assertEqual(ready_resolved.clearance.kind,"Exceeded");self.assertEqual(ready_resolved.expires_at,1002)
+        self.assertEqual(json.loads(ready_resolved.cause_bytes)["native_reason"],"READINESS_INVALID")
+        self.assertEqual(json.loads(ready_resolved.cause_bytes)["readiness_input_digests"],[digest(decision),digest(attestation)])
+        self.assertEqual(json.loads(ready_resolved.cause_bytes)["readiness_context_digests"],[digest(request),digest(state),digest(keys)])
+        self.assertIsNone(unready.readiness.readiness.authenticated_state_bytes)
+        with self.assertRaises(ValidationError):ready_resolver.evaluate(combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
+        state["status"]="active"
         from tests.unit.core.test_v3_adjudication import fixture as adjudication_fixture
         adjudication=adjudication_fixture(operation,deployment,1000)
         no_norm=native
@@ -502,7 +527,8 @@ class ReadinessTests(unittest.TestCase):
         gate_stop=gate_cf["verifier"].evaluate(absent,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
         self.assertFalse(gate_stop.valid);self.assertTrue(gate_stop.hand_back_required)
         from kinetic_trust_library.v3.native_stop_resolution import InstalledNativeAdjudicationStopResolver,PreparedNativeStop
-        install_management(gate_cf,operation,deployment,absent)
+        gate_management,_=install_management(gate_cf,operation,deployment,absent)
+        gate_management["expires_at"]=1002
         stop_policy=dict(id="native-stop:adjudication",version=1,zone="zone:alpha",formula="native-adjudication-return-path-v1",
             clearance_profile_digest=digest(gate_cf["profiles"]["clearance"]))
         prepared=[]
@@ -518,6 +544,7 @@ class ReadinessTests(unittest.TestCase):
         resolver=InstalledNativeAdjudicationStopResolver(gate_cf["verifier"],rfc8785.dumps(stop_policy),StopPreparation())
         resolved=resolver.evaluate(absent,actual_operation=operation,evaluated_at=1000,clock_healthy=True)
         self.assertEqual(resolved.clearance.kind,"Exceeded");self.assertFalse(resolved.action_permitted)
+        self.assertEqual(resolved.clearance.expires_at,1002);self.assertEqual(resolved.expires_at,1002)
         self.assertEqual(resolved.clearance.non_clearance.hand_back.delivery_state,"parked")
         self.assertTrue(resolved.clearance.non_clearance.hand_back.delivery_effort_required)
         self.assertEqual(json.loads(resolved.cause_bytes)["native_reason"],"ADJ_GATE_UNSATISFIED")

@@ -1,4 +1,4 @@
-"""Registered return-path resolution for a required native adjudication stop.
+"""Registered return paths for actual native adjudication/readiness stops.
 
 The preparation Source owns genuine sealing, durable stop/cause registration
 and delivery work. Revalidation of the existing current clearance graph, not a
@@ -39,7 +39,7 @@ class NativeStopResolution:
 
 
 @dataclass(frozen=True,slots=True)
-class InstalledNativeAdjudicationStopResolver:
+class _InstalledNativeStopResolver:
     clearance_verifier: InstalledClearanceVerifier
     profile_bytes: bytes
     preparation_source: object
@@ -52,16 +52,16 @@ class InstalledNativeAdjudicationStopResolver:
         hb=cv.template_verifier.hand_back_verifier;cp=_parse_jcs_object(cv.profile_bytes)
         if (set(p)!={"id","version","zone","formula","clearance_profile_digest"}
                 or not _name(p["id"]) or not _time(p["version"]) or p["version"]==0 or p["zone"]!=cp["zone"]
-                or p["formula"]!="native-adjudication-return-path-v1"
+                or p["formula"]!=self._FORMULA
                 or p["clearance_profile_digest"]!=_digest(cp,hb.algorithm)):
             raise ValidationError("native stop resolution differs from selected current clearance/zone policy")
 
     def evaluate(self,native_result,*,actual_operation,evaluated_at,clock_healthy):
         cv=self.clearance_verifier;hb=cv.template_verifier.hand_back_verifier
         if (type(native_result) is not NativeEvaluationResult or native_result.verifier is not cv.native_verifier
-                or native_result.reason!="ADJ_GATE_UNSATISFIED" or not _time(evaluated_at)
+                or native_result.reason not in self._FAILURES or not _time(evaluated_at)
                 or native_result.checked_at!=evaluated_at or clock_healthy is not True):
-            raise ValidationError("selected resolver requires an actual current required adjudication failure")
+            raise ValidationError("selected resolver requires its actual current native failure family")
         op_bytes=canonical_demand_operation_bytes(actual_operation)
         initial=cv.evaluate(native_result,actual_operation=actual_operation,evaluated_at=evaluated_at,clock_healthy=True)
         if (initial.reason!="CLEARANCE_NATIVE_NOT_CLEAR" or initial.kind is not None or not initial.hand_back_required
@@ -86,7 +86,11 @@ class InstalledNativeAdjudicationStopResolver:
             evaluated_at=evaluated_at,reason="exceeded_permit_condition",template_digest=template.template_digest,
             proof_digest=digest_complete_proof(native_result.association.compact_proof,algorithm=hb.algorithm),
             geometry_digest=None if native_result.canonical_geometry_bytes is None else _digest(_parse_jcs_object(native_result.canonical_geometry_bytes),hb.algorithm),
-            clearance_state_digest=_digest(state,hb.algorithm),gate_profile_digests=[_digest(_parse_jcs_object(p.profile_bytes),hb.algorithm) for p in policies]))
+            clearance_state_digest=_digest(state,hb.algorithm),gate_profile_digests=[_digest(_parse_jcs_object(p.profile_bytes),hb.algorithm) for p in policies],
+            readiness_profile_digest=_digest(_parse_jcs_object(cv.native_verifier.readiness_verifier.readiness_verifier.readiness_profile_bytes),hb.algorithm),
+            readiness_input_digests=native_result.readiness_input_digests,
+            readiness_context_digests=(None if native_result.readiness is None or native_result.readiness.readiness is None
+                else native_result.readiness.readiness.observed_context_digests)))
         prepared=self.preparation_source.prepare(profile_bytes=self.profile_bytes,cause_bytes=cause,
             template_bytes=template.template_bytes,operation_bytes=op_bytes,evaluated_at=evaluated_at)
         if (type(prepared) is not PreparedNativeStop or type(prepared.cause_bytes) is not bytes
@@ -114,3 +118,24 @@ class InstalledNativeAdjudicationStopResolver:
         for k,v in dict(clearance=current,template=template,cause_bytes=cause,preparation=prepared,evaluated_at=evaluated_at,
                 expires_at=min(current.expires_at,template.expires_at),action_permitted=False).items():object.__setattr__(result,k,v)
         return result
+
+
+@dataclass(frozen=True,slots=True)
+class InstalledNativeAdjudicationStopResolver(_InstalledNativeStopResolver):
+    _FORMULA="native-adjudication-return-path-v1"
+    _FAILURES=frozenset(("ADJ_GATE_UNSATISFIED",))
+
+
+@dataclass(frozen=True,slots=True)
+class InstalledNativeReadinessStopResolver(_InstalledNativeStopResolver):
+    _FORMULA="native-readiness-return-path-v1"
+    _FAILURES=frozenset(("READINESS_UNAVAILABLE","READINESS_INVALID","READINESS_PROOF_INVALID","READINESS_DECISION_INVALID"))
+
+    def evaluate(self,native_result,*,actual_operation,evaluated_at,clock_healthy):
+        if (type(native_result) is not NativeEvaluationResult or native_result.association.reason!="RB_BOUND"
+                or native_result.readiness is None or native_result.readiness.valid
+                or native_result.readiness_input_digests is None
+                or native_result.readiness.reason!=native_result.reason):
+            raise ValidationError("readiness stop requires the actual failed current readiness assessment")
+        return super(InstalledNativeReadinessStopResolver,self).evaluate(native_result,actual_operation=actual_operation,
+            evaluated_at=evaluated_at,clock_healthy=clock_healthy)

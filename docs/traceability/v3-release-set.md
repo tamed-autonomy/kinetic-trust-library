@@ -425,6 +425,14 @@ causes fail. Parked delivery remains owed. See
 `docs/plans/2026-10-30-native-stop-resolution.md` for bounded reason scope and
 actual durable preparation/sealing/delivery obligations.
 
+Readiness stop-resolution checkpoint (2026-10-30): a distinct selected profile
+resolves an actual failed current readiness assessment through its registered
+return path. Cause records bind original input and observed-context hashes,
+without labeling failed state as accepted authority. All expiring clearance
+variants now respect current management validity, including adverse results.
+See `docs/plans/2026-10-30-readiness-stop-resolution.md` for exact supported
+failures, unavailable-state and production preparation boundaries.
+
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
 contract recorded as such. External ownership must be justified by actual I/O,

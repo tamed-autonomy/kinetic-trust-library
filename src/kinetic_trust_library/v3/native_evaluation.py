@@ -43,6 +43,7 @@ class NativeEvaluationResult:
     ambient: AmbientRepairAssessment | None
     federation: FederationAssessment | None
     normative_demand: NormativeDemandAssessment | None
+    readiness_input_digests: tuple[str,str] | None
 
     def __init__(self,*args,**kwargs):
         raise TypeError("native evaluation results are derived by an installed verifier")
@@ -157,12 +158,18 @@ class InstalledNativeEvaluationVerifier:
         federation=None
         normative_demand=None
         def result(reason,supervision="silent_veto",expiry=None):
+            readiness_input_digests=None
+            if readiness is not None:
+                import hashlib
+                algorithm=self.association_verifier.algorithm
+                readiness_input_digests=tuple(algorithm+":"+hashlib.new(algorithm,b).hexdigest()
+                    for b in (decision_bytes,attestation_bytes))
             value=object.__new__(NativeEvaluationResult)
             for name,member in (("verifier",self),("reason",reason),("checked_at",now),("supervision",supervision),
                 ("tightened_constraints_bytes",constraints),("canonical_geometry_bytes",raw),
                 ("association",association),("readiness",readiness),("expires_at",expiry),("adjudication",adjudication),
                 ("adjudications",adjudications),("boundary",boundary),("repair",repair),("ambient",ambient),("federation",federation),
-                ("normative_demand",normative_demand)):
+                ("normative_demand",normative_demand),("readiness_input_digests",readiness_input_digests)):
                 object.__setattr__(value,name,member)
             return value
         if association.reason!="RB_BOUND":return result(association.reason)

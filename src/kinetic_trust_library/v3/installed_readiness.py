@@ -27,6 +27,7 @@ class AuthenticatedReadinessContext:
 
 @dataclass(frozen=True, slots=True, init=False)
 class ReadinessVerificationResult:
+    observed_context_digests: tuple[str,str,str] | None
     reason: str
     conformance_level: int
     checked_at: int
@@ -83,7 +84,7 @@ class InstalledReadinessVerifier:
             raise ValidationError("readiness evaluation requires immutable evidence and trusted time")
         operation_bytes=canonical_demand_operation_bytes(actual_operation)
         operation=_parse_jcs_object(operation_bytes)
-        values=dict(reason="READINESS_UNAVAILABLE",conformance_level=self.conformance_level,checked_at=evaluated_at,operation_bytes=operation_bytes,
+        values=dict(reason="READINESS_UNAVAILABLE",observed_context_digests=None,conformance_level=self.conformance_level,checked_at=evaluated_at,operation_bytes=operation_bytes,
             attestation_bytes=None,actual_request_bytes=None,authenticated_state_bytes=None,trusted_keys_bytes=None,
             attestation_digest=None,request_digest=None,readiness_profile_digest=None,deployment_profile_digest=None,
             readiness_epoch=None,expires_at=None)
@@ -103,6 +104,10 @@ class InstalledReadinessVerifier:
                 or any(type(raw) is not bytes for raw in
                        (context.actual_request_bytes,context.current_state_bytes,context.trusted_keys_bytes))):
             raise ValidationError("readiness adapter returned invalid authenticated context")
+        # Preserve audit identity even when subsequent scope/policy validation
+        # fails. These hashes neither authenticate a decision nor grant use.
+        values["observed_context_digests"]=tuple(r.digest_bytes(raw,self.conformance_level)
+            for raw in (context.actual_request_bytes,context.current_state_bytes,context.trusted_keys_bytes))
         try:
             if len(attestation_bytes)>262144:
                 raise r.InvalidRecord("unbounded readiness attestation")

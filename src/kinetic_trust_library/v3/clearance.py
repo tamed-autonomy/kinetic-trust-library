@@ -149,6 +149,8 @@ class InstalledClearanceVerifier:
         op_bytes=canonical_demand_operation_bytes(actual_operation);op=_parse_jcs_object(op_bytes)
         source=None;lease=None;template=None;non_clearance=None;reissue=None;relational_commit=None;authority_separation=None;management=None;proof_expiry=None
         def result(reason,kind=None,expiry=None,hand_back_required=False):
+            if expiry is not None and management is not None and management.expires_at is not None:
+                expiry=min(expiry,management.expires_at)
             r=object.__new__(ClearanceAssessment)
             for k,v in dict(valid=kind is not None,kind=kind,reason=reason,conditional_clear=kind=="Clear",action_permitted=False,
                     hand_back_required=hand_back_required,native_result=native_result,lease=lease,template=template,non_clearance=non_clearance,
