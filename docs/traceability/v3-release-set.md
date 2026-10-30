@@ -569,3 +569,17 @@ intent/relation/admission and system recourse; acknowledgment without append,
 substituted cause and revocation during preparation are rejected. Readiness stops
 also support fresh unexpired `RB_CURRENT`. Actual genuine sealing, durable cause/
 stop registration, delivery, retry and interruption remain provider/Service work.
+
+## 2026-10-30 provisional person standing proof production
+
+`person_claims.NativePersonClaimsSource` now binds current person signed-act/
+institutional standing, Soul, Root, actual operation, five-factor environment and
+any declared boundary. It derives exact R and E_trust, rejects an unrelated
+standing risk, preserves unknown/veto states and original support expiry, and
+omits all software generation/lineage/sponsor/advancement fields. Real Ed25519
+person proofs traverse the existing installed issuer/verifier in clear, unknown,
+veto and unanswered states. This supplies standing assertions only, not human
+eligibility, operational capacity or execution. The exact person-versus-software
+prose conflict, provisional trajectory policy, multiple Root ranking and mixed
+import/local composition remain explicit source-adoption decisions; see
+`docs/plans/2026-10-30-person-standing-proof-claims.md`.

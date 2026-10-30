@@ -5,7 +5,7 @@ from importlib.util import find_spec
 from kinetic_trust_library.errors import ValidationError
 
 
-def fixture():
+def fixture(deployment=None):
     import rfc8785
     from kinetic_trust_library.v3.installed_person_standing import InstalledPersonStandingVerifier,AuthenticatedPersonStandingContext
     from kinetic_trust_library.v3.installed_root import InstalledRootVerifier,AuthenticatedRootInstrument
@@ -14,7 +14,7 @@ def fixture():
     from kinetic_trust_library.v3.demand_operation import digest_demand_operation
     from tests.unit.core.test_v3_person_standing import acts
     subject="person:acct:z1:0417";now=1800000004
-    dp={"external_root":{"hop_bound":4},"peer_share":0}
+    dp=deployment if deployment is not None else {"external_root":{"hop_bound":4},"peer_share":0}
     p=dict(id="person-standing:a",version=1,zone="zone:blue",formula="signed-act-single-root-person-standing-v1",
         contribution_policy="policy:signed-stress-assessment",trajectory_ceiling_policy="policy:provisional-person-trajectory")
     op=dict(subject="subject:a",actor=subject,audience="service:a",operation="action:review",resource="resource:a",
