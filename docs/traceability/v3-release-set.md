@@ -446,6 +446,16 @@ preserves the claimed level, and rejects missing or uncarried profiles. Accepted
 metadata explicitly leaves evidence and runtime conformance unverified and
 enables no execution profile. See `docs/plans/2026-10-30-claim-substrate.md`.
 
+Forward amendment checkpoint (2026-10-30): a pure authenticated-record helper
+checks breach/constant measurement citations, exact predecessor, approved
+measurement sources, full established council denominator, actual stricter
+charter terms, immutable classified effects and the governor capacity veto.
+Forward version selection preserves in-flight evaluations; equal coarse
+timestamps provide no version until ordering is established. This supplies no
+adoption authority or governance workflow. See
+`docs/plans/2026-10-30-charter-amendment.md` for exact proposal source, source-copy
+discrepancy, recurrence wording and remaining petition/ledger scope.
+
 Pre-tag readiness is unproven until every applicable Library-owned row is
 implemented and evidenced, or the source itself leaves a precise unresolved
 contract recorded as such. External ownership must be justified by actual I/O,
