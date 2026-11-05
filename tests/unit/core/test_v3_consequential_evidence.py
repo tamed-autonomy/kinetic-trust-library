@@ -132,3 +132,7 @@ class ConsequentialEvidenceTests(unittest.TestCase):
             with self.assertRaises(ValidationError):self.evaluate(f)
         f=fixture();f['source'].update(checked_at=111,expires_at=115)
         with self.assertRaises(ValidationError):f['v'].evaluate(f['sign'](),actual_operation=f['op'],consumption_decision_bytes=f['decision'],evaluated_at=111,clock_healthy=True)
+
+    def test_verified_evidence_cannot_outlive_current_signing_key(self):
+        f=fixture();f['key']['not_after']=103
+        result=self.evaluate(f);self.assertTrue(result.verified);self.assertEqual(result.expires_at,103)

@@ -248,3 +248,64 @@ and `unknown` retain reservations. Target evidence must come from the installed
 trusted target observer, not HTTP status, timeout, denial or signature alone.
 The Service owns durable recorder/ledger changes, observation authentication,
 atomic reservation release and actual target effects.
+
+
+## Optional cumulative effect budget and release checks
+
+`InstalledEffectBudgetVerifier` installs the private
+`cumulative-effect-budget-v1` policy. This selected adapter uses one shared
+aggregate scope covering every actor, resource and replica declared by its
+Source. Units and maximum consequences are independent from the #131 scale.
+It has cumulative accounting, no automatic resets and no automatic charge
+expiry. Other accounting policies need their own installed adapter; no expiry
+or reset is inferred. Its declaration requires replay domain, retention covering
+the longest queued/retry/reconciliation/recovery window, recovery boundary,
+tested target contract digest, bounded checkpoints/safe transition, abandonment
+bound, recorder requirement and the exact evidence-verifier profile.
+
+`AuthenticatedEffectBudgetContext` must authenticate the complete live persistent
+inventory and protected checkpoint, including each reservation attempt, original
+fingerprint and decision history, original reservation digest, accountable
+evidence/disposition and protected interval. It supplies independently established
+maximum requested effects and a conservative reservation, actual target revision
+and current recorder availability. A candidate or scoped subset is not a complete
+inventory. Backends must authenticate every released entry's non-dispatch record;
+a `released` flag or a copied evidence digest does not supply that proof.
+
+The verifier checks the exact actual request/fingerprint, sums every held/charged
+reservation, preserves unresolved entries across recovery and returns restrictive
+atomic conditions. A duplicate unresolved identity cannot dispatch again; a new
+transport identity or refreshed proof cannot clear it. Every attempt keeps the
+same canonical fingerprint. A retry after withheld requires the actual fresh
+sealed evidence assessment, complete path/interval coverage, original reservation
+and a decision digest retained in that attempt's history. Prior attempts remain
+in the inventory. A deadline, reset, restart, no-effect result or Trust Score never
+replenishes this selected cumulative budget.
+
+`InstalledConsequentialReleaseVerifier` pins the exact budget and software
+checkpoint graph. Every evaluation refreshes the actual existing native
+association, readiness/authority/prerequisites and signed software decision before
+checking the current budget/target/recorder. It preserves the prior budget
+assessment across an intervening native denial for later continuity checks.
+Positive results contain the complete native/software conditions and budget
+compare/reserve/commit conditions, including protected ledger head/digest,
+identity, fingerprint, consumed decision, exact destination, target revision and
+contract, next attempt, units and shortest deadline. They never change E or the
+profile result.
+
+The caller must atomically compare the protected head, reject duplicate identity,
+append the durable reservation and enforce all target/version/authority conditions
+within the declared tested commit boundary. The SDK performs none of those writes,
+returns `action_permitted = false` and never claims commit-time authorization was
+established. Targets without the selected conditional-commit capability are
+withheld. Actual queueing, scoped shared-state completeness, idempotency windows,
+replica atomicity, target effects, observation and abandonment/reconciliation
+scheduling remain consuming Service responsibilities.
+
+
+A release preflight's `evidence_state` is always `unknown`, with
+`observation_record_required = true`: approval or denial supplies no execution
+observation. A retry's earlier non-dispatch assessment cannot be reused as the
+new attempt's observation. The independent evidence verifier determines an
+observed state; the Service must retain that original evidence and perform the
+required recording. An emitted recording obligation is not a completed write.

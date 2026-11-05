@@ -34,6 +34,9 @@ from .software_consumption import InstalledSoftwareConsumptionVerifier,SoftwareC
 from .software_checkpoint import InstalledSoftwareCheckpointVerifier,SoftwareCheckpointAssessment
 from .software_issuance import InstalledSoftwareDecisionIssuer,IssuedSoftwareDecision
 from .software_stop_resolution import InstalledSoftwareStopResolver,SoftwareStopResolution,PreparedSoftwareStop
+from .consequential_evidence import InstalledConsequentialEvidenceVerifier,ConsequentialEvidenceAssessment
+from .effect_budget import InstalledEffectBudgetVerifier,EffectBudgetAssessment
+from .consequential_release import InstalledConsequentialReleaseVerifier,ConsequentialReleaseAssessment
 from .installed_person_standing import InstalledPersonStandingVerifier
 from .person_federation import InstalledPersonFederationVerifier
 from .human_eligibility import InstalledHumanEligibilityVerifier
@@ -54,5 +57,7 @@ __all__=(
     "InstalledSoftwareEvidenceVerifier","InstalledSoftwareDecisionSignatureVerifier","InstalledSoftwareConsumptionVerifier",
     "SoftwareConsumptionAssessment","InstalledSoftwareCheckpointVerifier","SoftwareCheckpointAssessment",
     "InstalledSoftwareDecisionIssuer","IssuedSoftwareDecision","InstalledSoftwareStopResolver","SoftwareStopResolution","PreparedSoftwareStop",
+    "InstalledConsequentialEvidenceVerifier","ConsequentialEvidenceAssessment","InstalledEffectBudgetVerifier","EffectBudgetAssessment",
+    "InstalledConsequentialReleaseVerifier","ConsequentialReleaseAssessment",
     "InstalledPersonStandingVerifier","InstalledPersonFederationVerifier","InstalledHumanEligibilityVerifier","InstalledHumanCapacityVerifier",
 )

@@ -39,3 +39,24 @@ Python/JCS/JSON Schema and existing ES256/Ed25519 primitives only.
 Review focus: forged/mis-scoped signed evidence; unsupported observation claims;
 held vs charged effects and no_effect retention; changed identity/body/replica
 replay; stale/incomplete restored ledger and atomic race conditions.
+
+Checkpoint fa07a67 pushed after 1,396 full-suite tests and 13 wheel checks.
+Task 2 implemented the declared cumulative-only budget and release composition.
+Ruling: no reset/charge expiry adapter is invented; the selected policy declares
+cumulative accounting with neither automatic operation. Cost: deployments needing
+other policies require an explicit additional adapter, not an inferred formula.
+Ruling: each retry appends a new attempt and retains all prior reservations;
+only genuine sealed non-dispatch evidence admits a retry candidate. A positive
+budget/release result carries atomic obligations, never executed authority.
+Readonly review found evidence result lifetime beyond signing-key validity;
+fixed after genuine red/green regression, plus transitive non-dispatch deadline
+coverage. Final readonly follow-up: 18 focused tests passed, no remaining
+important defect demonstrated in the reviewed scope.
+
+Final code gate: 1,407 required tests passed without skips (103.437 seconds),
+42 final wheel tests passed, 36 cryptography and eight provider tests passed.
+Catalog reproduction, exact proposal/package hashes, isolated native imports and
+git diff --check passed. Native API exports all six new verifiers/assessment
+classes. Preflight explicitly returns unknown observation plus recording obligation.
+Final qualification report will pin this code checkpoint and suite immutably;
+no conformance or actual Service enforcement claim is inferred.

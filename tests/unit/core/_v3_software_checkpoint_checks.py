@@ -26,6 +26,8 @@ def check_software_checkpoint(test,consumer,f,cf,management,authority,good,body,
         frame=json.loads(current.commit_conditions_bytes)
         test.assertEqual(frame["checkpoint_profile_digest"],_digest(p,"sha256"))
         test.assertEqual(frame["current_reservation"]["reservation_anchor"],"audit:original-reservation")
+        from tests.unit.core._v3_consequential_release_checks import check_consequential_release
+        check_consequential_release(test,verifier,current,raw,operation,readiness)
         readiness["readiness_epoch"]+=1
         denied=verifier.evaluate(raw,current,actual_operation=operation,invocation_evidence=b"fixture-actual-invocation",evaluated_at=1001,clock_healthy=True)
         test.assertFalse(denied.conditional_consumption)

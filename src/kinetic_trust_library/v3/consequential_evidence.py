@@ -105,7 +105,7 @@ class InstalledConsequentialEvidenceVerifier:
                 or body.get('reservation_reference')!=reservation['reference'] or body.get('reservation_digest')!=reservation['digest']):
             raise ValidationError('evidence reservation differs from actual original reservation')
         if body.get('recorder_evidence_digest')!=s['recorder_evidence_digest']:raise ValidationError('recorder evidence correlation differs')
-        verified=False
+        verified=False;key_expiry=s['expires_at']
         try:
             pieces=body['signature'].split('.')
             if len(pieces)!=3:raise ValidationError('invalid evidence JWS framing')
@@ -120,11 +120,12 @@ class InstalledConsequentialEvidenceVerifier:
                     or _decode_segment(pieces[1],name='evidence payload')!=rfc8785.dumps({k:v for k,v in body.items() if k!='signature'})):
                 raise ValidationError('evidence signature differs from installed issuer, role, source, purpose or canonical payload')
             verified=trust_proof_signature_valid(body['signature'],algorithm=key['alg'],trusted_key=key)
+            if verified:key_expiry=key['not_after']
         except (ValidationError,ProofFormatError,ValueError,TypeError,KeyError):pass
         result=object.__new__(ConsequentialEvidenceAssessment)
         for k,v in dict(verifier=self,verified=verified,evidence_state=body['evidence_state'] if verified else 'unknown',
                 reservation_release_candidate=verified and body['evidence_state']=='withheld' and reservation is not None,
-                action_permitted=False,checked_at=evaluated_at,expires_at=min(s['expires_at'],obs['interval_end']+p['max_observation_age_seconds']),
+                action_permitted=False,checked_at=evaluated_at,expires_at=min(s['expires_at'],key_expiry,obs['interval_end']+p['max_observation_age_seconds']),
                 record_bytes=record_bytes,operation_bytes=operation_bytes,source_state_bytes=context.state_bytes,
                 source_evidence_bytes=context.original_observation_bytes).items():object.__setattr__(result,k,v)
         return result
