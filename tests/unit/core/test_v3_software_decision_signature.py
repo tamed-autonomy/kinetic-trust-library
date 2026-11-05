@@ -12,8 +12,8 @@ def fixture(algorithm="EdDSA"):
     from cryptography.hazmat.primitives.serialization import Encoding,PublicFormat
     from kinetic_trust_library.v3.software_decision_signature import InstalledSoftwareDecisionSignatureVerifier
     from kinetic_trust_library.v3.native_issuance import _segment
-    body=json.loads((Path(__file__).parents[3]/"spec/proposals/software-substrate-execution.json").read_text())["schemaFixture"]
-    key=dict(kid="software:key",subject=body["issuer_id"],zone_id="zone:software",purpose="ktp-software-substrate-decision",
+    body=json.loads((Path(__file__).parents[3]/"spec/proposals/software-substrate-execution-v1.json").read_text())["schemaFixture"]
+    key=dict(kid="software:key",subject=body["issuer_id"],zone_id="zone:software",purpose="ktp-software-substrate-decision-v1",
         alg=algorithm,not_before=90,not_after=150,revoked=False)
     if algorithm=="EdDSA":
         private=ed25519.Ed25519PrivateKey.from_private_bytes(bytes(range(32)))
@@ -24,7 +24,7 @@ def fixture(algorithm="EdDSA"):
     profile=dict(id="software-signature:a",version=1,zone="zone:software",formula="software-decision-es256-ed25519-v1",
         execution_profile_digest=body["request_binding"]["execution_profile_digest"],policy_digest=body["request_binding"]["policy_digest"],
         issuer_ids=[body["issuer_id"]],algorithms=["ES256","EdDSA"])
-    def sign(typ="ktp-software-substrate-decision",high_s=False):
+    def sign(typ="ktp-software-substrate-decision-v1",high_s=False):
         raw=rfc8785.dumps({k:v for k,v in body.items() if k!="signature"})
         head=_segment(rfc8785.dumps(dict(alg=algorithm,kid=key["kid"],typ=typ)))
         message=(head+"."+_segment(raw)).encode("ascii")
@@ -57,6 +57,10 @@ class SoftwareDecisionSignatureTests(unittest.TestCase):
         body["result"]["autonomyDemand"]=0.3
         self.assertFalse(v.verify(rfc8785.dumps(body),now=100,clock_healthy=True).verified)
         self.assertFalse(v.verify(sign("ktp-trust-proof+jwt"),now=100,clock_healthy=True).verified)
+
+    def test_unversioned_jws_type_cannot_alias_the_revised_artifact(self):
+        v,_,_,_,sign=fixture()
+        self.assertFalse(v.verify(sign("ktp-software-substrate-decision"),now=100,clock_healthy=True).verified)
 
     def test_current_key_role_revocation_zone_and_lifetime_are_bound(self):
         import rfc8785

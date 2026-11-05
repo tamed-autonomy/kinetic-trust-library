@@ -755,3 +755,17 @@ authorized root/API/version/pin cutover. Current package/root/pin remain 2.1.0;
 there is no v2 runtime/wire/API fallback in native modules. A fresh RFC fetch still
 shows origin/main 9612f7955d88e25d193dab2a17d51d0c9d9075d0 and no 3.0.0 tag.
 No PR, merge or release is authorized by these checkpoints.
+
+### Revised #131 wire checkpoint (2026-11-04)
+
+Pinned the exact still-unmerged #131 head
+652c06b68af7f6ee0785ab14399be68bc458843e. Original schema/vector bytes from
+8dda717 remain archived under spec/proposals/archive/2026-11-04-pre-131-refresh.
+The new exact specification, schema and 53 contract/31 shape vectors have a
+source/hash manifest. Runtime shape and signing use the versioned artifact/type
+ktp-software-substrate-decision-v1 and result profile software-substrate-execution-v1;
+unversioned candidate artifacts have no fallback. All 31 source shape mutations,
+including multi-field cases, are exercised. Conditional unknown-capacity and
+unavailable-supervision shape constraints and optional policyCode are retained.
+This checkpoint does not yet claim the remaining revised availability semantics;
+the next work updates repair classes and current supervision composition.

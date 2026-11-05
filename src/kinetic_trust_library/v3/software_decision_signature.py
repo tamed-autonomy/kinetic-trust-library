@@ -14,7 +14,7 @@ from .root_lifecycle import _time
 from .execution_observation import _name,_digest as is_digest
 
 
-SOFTWARE_DECISION_PURPOSE="ktp-software-substrate-decision"
+SOFTWARE_DECISION_PURPOSE="ktp-software-substrate-decision-v1"
 
 
 def _software_public_key_valid(key):

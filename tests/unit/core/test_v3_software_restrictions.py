@@ -39,8 +39,8 @@ class SoftwareRestrictionTests(unittest.TestCase):
         self.assertFalse(r.capacity_known);self.assertFalse(r.action_permitted)
 
     def test_source_restriction_subset_not_trusted_fixture_authorization(self):
-        original=(Path(__file__).parents[3]/"spec/proposals/software-substrate-execution.json").read_bytes()
-        self.assertEqual(hashlib.sha256(original).hexdigest(),"2bc1ac15ba1608658dabd392ed60a114dfd6ca9778593a55c11d757a62cf0ebd")
+        original=(Path(__file__).parents[3]/"spec/proposals/software-substrate-execution-v1.json").read_bytes()
+        self.assertEqual(hashlib.sha256(original).hexdigest(),"f9fe44b3bc3cf5cbffb387ce246a2af04707ec8d7f67de0f882efef9aca944a3")
         raw=json.loads(original)
         selected={"S01-current-bound-action","S02-existing-supervision-floor","S03-existing-ceiling","S04-earlier-veto",
             "S28-capacity-unknown-conservative","S29-capacity-veto","S35-repair-path-unverified","S36-supervision-unavailable"}
@@ -52,9 +52,11 @@ class SoftwareRestrictionTests(unittest.TestCase):
                 capacity=e["environmentalCapacity"],capacity_known=e["capacityKnown"],
                 # Translate the vector's modeled authenticated establishment;
                 # a candidate's true assertion cannot replace that source fact.
-                repair_path_verified=c["conditions"]["repairPathVerified"] and c["trustedFixtures"]["repairPathVerified"],
-                supervision_available=c["conditions"]["supervisionAvailable"] and c["trustedFixtures"]["supervisionAvailable"])
+                repair_path_verified=c["conditions"]["repairPathVerified"],
+                supervision_available=c["conditions"]["supervisionAvailable"])
             with self.subTest(case=case["id"]):
-                self.assertEqual(r.supervision,case["expect"]["supervision"])
+                if "supervision" in case["expect"]:self.assertEqual(r.supervision,case["expect"]["supervision"])
+                if case["expect"].get("decision")=="deny":
+                    self.assertFalse(r.conditional_candidate and all(c["magnitudes"][k]<=bound for k,bound in r.ceilings))
                 for name,bound in case["expect"].get("tightenedAtMost",{}).items():self.assertLessEqual(dict(r.ceilings)[name],bound)
                 self.assertFalse(r.action_permitted)

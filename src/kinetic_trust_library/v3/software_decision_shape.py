@@ -12,7 +12,7 @@ from .trust_proof_json import _parse_jcs_object
 from .root_lifecycle import _time
 
 
-SOFTWARE_SCHEMA_SHA256="32af0e975fe6c37aa26452bc7d7c9d365eb552ed702a1cf763d7e2a88836a8f2"
+SOFTWARE_SCHEMA_SHA256="6f593dde44ae7a70ef93b0ea9e15bc214887e8b6d71d77dc0b086f4e2cb1b78f"
 
 
 @lru_cache(maxsize=1)

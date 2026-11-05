@@ -51,7 +51,7 @@ def check_consumption(test,native,combined,operation,deployment,checkpoint_input
             (combined.readiness.decision_bytes,*carrier,*(a.artifact_bytes for a in f["prerequisites"]),*adjudication_tokens)])
     body["result"]=dict(autonomyDemand=36,environmentalCapacity=40,capacityKnown=True,
         repairPathVerified=True,supervisionAvailable=True,supervision="stable",margin=0.1,rationale=["current calibrated software assessment"],
-        tightenedConstraints=dict(profile="software-substrate-execution",ceilings=[dict(magnitude=k,max=n) for k,n in f["state"]["requested_magnitudes"].items()]))
+        tightenedConstraints=dict(profile="software-substrate-execution-v1",ceilings=[dict(magnitude=k,max=n) for k,n in f["state"]["requested_magnitudes"].items()]))
     def evaluate(previous=None):return v.evaluate(sign(),combined,actual_operation=operation,evaluated_at=1000,clock_healthy=True,previous_assessment=previous)
     good=evaluate()
     test.assertTrue(good.verified,good.reason);test.assertTrue(good.conditional_consumption,good.reason);test.assertFalse(good.action_permitted)

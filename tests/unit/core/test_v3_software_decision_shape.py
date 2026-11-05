@@ -8,14 +8,14 @@ from kinetic_trust_library.errors import ValidationError,ProofFormatError
 
 @unittest.skipUnless(find_spec("rfc8785") and find_spec("jsonschema"),"install v3-proofs")
 class SoftwareDecisionShapeTests(unittest.TestCase):
-    def test_all_26_exact_published_shape_vectors(self):
+    def test_all_31_exact_published_shape_vectors(self):
         import rfc8785
         from kinetic_trust_library.v3.software_decision_shape import parse_software_decision,software_decision_validator
-        vectors=json.loads((Path(__file__).parents[3]/"spec/proposals/software-substrate-execution.json").read_text())
+        vectors=json.loads((Path(__file__).parents[3]/"spec/proposals/software-substrate-execution-v1.json").read_text())
         for case in vectors["schemaVectors"]:
             candidate=deepcopy(vectors["schemaFixture"])
-            mutation=case.get("mutation")
-            if mutation:
+            mutations=case.get("mutations",[case["mutation"]] if "mutation" in case else [])
+            for mutation in mutations:
                 parent=candidate
                 for part in mutation["path"][:-1]:parent=parent[part]
                 if mutation["operation"]=="remove":del parent[mutation["path"][-1]]
@@ -27,10 +27,22 @@ class SoftwareDecisionShapeTests(unittest.TestCase):
                     raw=json.dumps(candidate,sort_keys=True,separators=(",",":")).encode("utf-8")
                     with self.assertRaises((ValidationError,ProofFormatError)):parse_software_decision(raw)
 
+    def test_revised_versioned_artifact_and_conditional_shape(self):
+        import rfc8785
+        from kinetic_trust_library.v3.software_decision_shape import parse_software_decision
+        candidate=json.loads((Path(__file__).parents[3]/'spec/proposals/software-substrate-execution-v1.json').read_text())["schemaFixture"]
+        self.assertEqual(parse_software_decision(rfc8785.dumps(candidate))["artifact_type"],"ktp-software-substrate-decision-v1")
+        for result in (dict(capacityKnown=False,supervision="stable"),dict(supervisionAvailable=False,supervision="assisted"),
+                       dict(supervisionAvailable=False,supervision="regulated")):
+            body=deepcopy(candidate);body["result"].update(result)
+            with self.subTest(result=result),self.assertRaises(ValidationError):parse_software_decision(rfc8785.dumps(body))
+        candidate["artifact_type"]="ktp-software-substrate-decision"
+        with self.assertRaises(ValidationError):parse_software_decision(rfc8785.dumps(candidate))
+
     def test_representation_checks_exceed_schema_only_integer_semantics(self):
         import rfc8785
         from kinetic_trust_library.v3.software_decision_shape import parse_software_decision
-        vectors=json.loads((Path(__file__).parents[3]/"spec/proposals/software-substrate-execution.json").read_text())
+        vectors=json.loads((Path(__file__).parents[3]/"spec/proposals/software-substrate-execution-v1.json").read_text())
         raw=rfc8785.dumps(vectors["schemaFixture"])
         for malformed in (raw.replace(b'"consumption_epoch":1',b'"consumption_epoch":1.0'),
                 raw.replace(b'"evaluated_at":100',b'"evaluated_at":100.0'),raw.replace(b'"max":1024',b'"max":1024.0'),
@@ -40,6 +52,6 @@ class SoftwareDecisionShapeTests(unittest.TestCase):
     def test_false_availability_remains_shape_valid_and_never_proves_permission(self):
         import rfc8785
         from kinetic_trust_library.v3.software_decision_shape import parse_software_decision
-        vectors=json.loads((Path(__file__).parents[3]/"spec/proposals/software-substrate-execution.json").read_text())
+        vectors=json.loads((Path(__file__).parents[3]/"spec/proposals/software-substrate-execution-v1.json").read_text())
         candidate=vectors["schemaFixture"];candidate["result"].update(repairPathVerified=False,supervisionAvailable=False)
         self.assertFalse(parse_software_decision(rfc8785.dumps(candidate))["result"]["repairPathVerified"])
