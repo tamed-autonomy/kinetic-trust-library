@@ -191,10 +191,10 @@ The private installed evidence profile now requires:
   declaration makes that level unavailable.
 
 The authenticated current Source context must include `requesting_principal`.
-The request binding's `actor_id` names that requester; `workload_id` names the
-actual executing operation's actor. This selected native-duration adapter also
-requires the requester to match the native grant principal. Other caller versus
-principal authorization arrangements need a separate installed adapter.
+The request binding's `actor_id` names that requester and must equal the
+authenticated operation's `subject`; `workload_id` must equal its executing
+`actor`. The grant's delegating principal remains a separate role, checked by
+the installed native grant and authority paths.
 
 The authenticated supervision observation includes `available_supervision_levels`,
 a distinct list drawn from installed nonempty participant declarations. A false

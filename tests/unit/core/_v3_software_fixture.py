@@ -1,5 +1,5 @@
 """Modeled authenticated current sources; not real measurements or storage."""
-def evidence_fixture(operation=None,deployment=None,now=1000,zone="zone:software",repair_dependent=True,requesting_principal="person:delegator"):
+def evidence_fixture(operation=None,deployment=None,now=1000,zone="zone:software",repair_dependent=True,requesting_principal=None):
     import json,rfc8785
     from kinetic_trust_library.v3.software_evidence import (
         InstalledSoftwareEvidenceVerifier,AuthenticatedSoftwareContext,AuthenticatedSoftwareObservation)
@@ -9,6 +9,7 @@ def evidence_fixture(operation=None,deployment=None,now=1000,zone="zone:software
     _,key,_,_,_=signature_fixture()
     op=operation or dict(subject="subject:a",actor="agent:guarantor:7gen:optimized:a1b2c3d4",audience="service:a",operation="action:write",
         resource="resource:a",parameters={},request_id="request:a",replay_domain="domain:a")
+    if requesting_principal is None:requesting_principal=op["subject"]
     dp=deployment or {"profile_id":"deployment:software"}
     units={"resource_pressure":"ratio","control_latency":"milliseconds","operation_assessment":"ratio-pair",
         "repair_path":"boolean","supervision_availability":"boolean","invalidation":"status"}

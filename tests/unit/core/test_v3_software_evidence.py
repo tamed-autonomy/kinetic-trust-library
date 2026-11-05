@@ -96,6 +96,12 @@ class SoftwareEvidenceTests(unittest.TestCase):
     def test_requesting_principal_and_executing_workload_are_distinct(self):
         f=evidence_fixture();self.assertNotEqual(f["state"]["requesting_principal"],f["op"]["actor"])
         self.assertTrue(self.evaluate(f).valid)
+        f["state"]["requesting_principal"]="person:other-requester"
+        f["state"]["request_binding"]["actor_id"]="person:other-requester"
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        for record in f["records"]:record["scope"]["request_digest"]=_digest(f["state"]["request_binding"],"sha256")
+        f["refresh"]()
+        with self.assertRaises(ValidationError):self.evaluate(f)
         for field in ("actor_id","workload_id"):
             f=evidence_fixture();f["state"]["request_binding"][field]="identity:substituted"
             with self.subTest(field=field),self.assertRaises(ValidationError):self.evaluate(f)

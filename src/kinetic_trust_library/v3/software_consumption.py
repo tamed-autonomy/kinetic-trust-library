@@ -191,8 +191,6 @@ class InstalledSoftwareConsumptionVerifier:
             key_expiry=key["not_after"]
         s=_parse_jcs_object(e.source_state_bytes)
         binding=_parse_jcs_object(e.request_binding_bytes)
-        if binding["actor_id"]!=state["principal"]:
-            return result("SOFTWARE_REQUESTING_PRINCIPAL_MISMATCH")
         a=_parse_jcs_object(e.assessment_bytes);out=body["result"]
         def raw_digest(raw):return algorithm+":"+hashlib.new(algorithm,raw).hexdigest()
         prerequisites=e.prerequisites

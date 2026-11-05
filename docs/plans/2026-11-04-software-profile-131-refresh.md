@@ -29,3 +29,15 @@ Source owns real measurement/calibration, registered authority, source signature
 exercised repair, eligible participant identity/authorization/reachability,
 protected complete state and actual atomic execution/delivery/safe transitions.
 No shared-load scalar, E budget, #139 runtime or stronger signing profile is added.
+
+Progress: wire checkpoint f7ca682 and semantics checkpoint 60954b3 pushed.
+Final review identified and corrected a requester/operation-subject binding gap;
+removed an unnecessary requester/grant-principal equality so those roles remain
+separate. Regression first reproduced a self-consistent substituted requester.
+Source qualification now exercises 13 restriction cases, five signature/binding
+cases and three freshness cases through runtime components; all 31 shape cases
+remain covered. Review found no remaining important defect in the revised delta.
+Final verification: 1,390 full-suite tests passed (100.201 seconds); 34 focused
+tests passed against the built wheel; two isolated import-boundary checks passed.
+Exact source hashes and runtime schema bytes match; git diff --check passed.
+No PR, merge, release or normative-tag promotion was performed.

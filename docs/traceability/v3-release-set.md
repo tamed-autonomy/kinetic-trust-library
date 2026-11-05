@@ -769,3 +769,43 @@ including multi-field cases, are exercised. Conditional unknown-capacity and
 unavailable-supervision shape constraints and optional policyCode are retained.
 This checkpoint does not yet claim the remaining revised availability semantics;
 the next work updates repair classes and current supervision composition.
+
+
+### Revised #131 semantic and qualification checkpoint (2026-11-04)
+
+Supersedes the wire-only checkpoint's pending semantic status. Installed
+operation-class repair dependency, novelty-domain declarations, one-second
+observation resolution and per-level supervision participants are now required.
+The authenticated requester must match the actual operation subject; the workload
+must match its executing actor. The delegating grant principal is a separate
+native authorization role. Capacity vetoes require the envelope policy code in
+both issuer preflight and consumer verification.
+
+Unavailable repair only forces withholding for declared repair-dependent classes.
+Unavailable external supervision preserves stable/metacognitive eligibility where
+all independent gates pass, but withholds effective assisted/regulated operations.
+Current native floors, unknown-capacity assisted floors, earlier vetoes and tighter
+ceilings remain binding. Typed continuing-stop checks use current actual condition
+loss. Real consumer tests exercise both permissive and restrictive boundaries;
+existing issuer, checkpoint, authority and hand-back tests remain active.
+
+Qualification of the exact 53-case source suite is deliberately bounded:
+
+- All 31 schema cases, including compound mutations, run against the exact pinned
+  packaged schema. Old artifact and signing-type aliases are rejected.
+- Restriction arithmetic exercises 13 source cases: S01–S04, S28–S29,
+  S35–S38 and S40–S42. Supplied modeled A/E values are not calibration evidence.
+- All five signature/binding-stage cases (S05, S07, S08, S12, S53) use the actual
+  installed software signature verifier and runtime raw signature primitive.
+  Cryptographic validity, request binding and original proof digest are checked
+  independently. The opaque synthetic ordinary proof is never ordinary permission.
+- S22, S51 and S52 run through the installed evidence freshness checks, translating
+  only exactly aligned milliseconds to the declared one-second resolution.
+  Freshness alone never authorizes an operation.
+
+These are component/substage checks, not a claim that all 53 modeled consumption
+cases establish end-to-end provider conformance. Independent composed native tests
+cover original prerequisite binding, actual issuer signing/recheck, continuing
+checkpoints, protected restrictions, revocation, expiry and typed stop resolution.
+The optional selected duration adapter and Source/Service boundaries are unchanged;
+no shared-load seventh condition, downstream budget or speculative formula is added.

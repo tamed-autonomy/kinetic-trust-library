@@ -61,7 +61,8 @@ class SoftwareRestrictionTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(original).hexdigest(),"f9fe44b3bc3cf5cbffb387ce246a2af04707ec8d7f67de0f882efef9aca944a3")
         raw=json.loads(original)
         selected={"S01-current-bound-action","S02-existing-supervision-floor","S03-existing-ceiling","S04-earlier-veto",
-            "S28-capacity-unknown-conservative","S29-capacity-veto","S35-repair-path-unverified","S36-supervision-unavailable"}
+            "S28-capacity-unknown-conservative","S29-capacity-veto","S35-repair-path-unverified","S36-supervision-unavailable-stable","S37-repair-capacity-monotonic",
+            "S38-supervision-capacity-monotonic","S40-repair-path-verified","S41-assisted-supervision-baseline","S42-assisted-supervision-unavailable"}
         for case in raw["vectors"]:
             if case["id"] not in selected:continue
             c=case["request"]["softwareContext"];e=c["candidateEnvelope"]
@@ -71,7 +72,8 @@ class SoftwareRestrictionTests(unittest.TestCase):
                 # Translate the vector's modeled authenticated establishment;
                 # a candidate's true assertion cannot replace that source fact.
                 repair_path_verified=c["conditions"]["repairPathVerified"],
-                supervision_available=c["conditions"]["supervisionAvailable"])
+                supervision_available=c["conditions"]["supervisionAvailable"],
+                repair_dependent=case["request"]["action"]=="repair")
             with self.subTest(case=case["id"]):
                 if "supervision" in case["expect"]:self.assertEqual(r.supervision,case["expect"]["supervision"])
                 if case["expect"].get("decision")=="deny":

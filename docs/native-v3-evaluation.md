@@ -1608,3 +1608,17 @@ single-use composition. Complete deployment activation, actual signature/registr
 adapters and all broader hand-back families remain separate requirements. Tests
 combine real signed native/readiness results with modeled grant and ledger facts;
 no production epoch durability or append-protocol claim is made.
+
+
+## Revised optional software profile #131 (2026-11-04)
+
+The selected native-duration software adapter now follows proposal commit
+`652c06b68af7f6ee0785ab14399be68bc458843e`. Its private installed Source policy,
+requester/executor binding, class-dependent repair, level-dependent supervision,
+unknown novelty domains and capacity-veto code are described in
+[native-v3-usage.md](native-v3-usage.md). Exact source snapshots and bounded
+component coverage are recorded in
+[traceability/v3-release-set.md](traceability/v3-release-set.md).
+The artifact/profile identifiers are versioned with no earlier-wire fallback.
+The implementation remains provisional; the official package/released RFC pin
+stays at 2.1.0 until final adoption.

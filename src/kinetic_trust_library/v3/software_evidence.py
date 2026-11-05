@@ -198,7 +198,7 @@ class InstalledSoftwareEvidenceVerifier:
                 or s["signing_keys_digest"]!=_digest(keys,self.algorithm) or s["existing_supervision"] not in LEVELS):
             raise ValidationError("software Source differs from actual current deployment/profile/request/registry scope")
         b=software_binding(s["request_binding"])
-        if (not _name(s["requesting_principal"]) or b["actor_id"]!=s["requesting_principal"] or b["workload_id"]!=op["actor"]
+        if (not _name(s["requesting_principal"]) or b["actor_id"]!=s["requesting_principal"] or b["actor_id"]!=op["subject"] or b["workload_id"]!=op["actor"]
                 or b["operation_id"] not in p["operation_classes"] or b["request_id"]!=op["request_id"] or b["operation_id"]!=op["operation"] or b["resource_id"]!=op["resource"]
                 or b["parameters_digest"]!=_digest(op["parameters"],self.algorithm) or b["execution_profile_digest"]!=p["execution_profile_digest"]
                 or b["policy_digest"]!=p["policy_digest"] or b["authority_class"] not in p["authority_classes"]):
