@@ -1,5 +1,5 @@
 """Modeled authenticated current sources; not real measurements or storage."""
-def evidence_fixture(operation=None,deployment=None,now=1000,zone="zone:software"):
+def evidence_fixture(operation=None,deployment=None,now=1000,zone="zone:software",repair_dependent=True,requesting_principal="person:delegator"):
     import json,rfc8785
     from kinetic_trust_library.v3.software_evidence import (
         InstalledSoftwareEvidenceVerifier,AuthenticatedSoftwareContext,AuthenticatedSoftwareObservation)
@@ -17,13 +17,17 @@ def evidence_fixture(operation=None,deployment=None,now=1000,zone="zone:software
         mapping_digest="sha256:"+"c"*64,assessment_profile_digest="sha256:"+"d"*64,
         authority_classes={"class:coordination":"Coordination"},sources=[dict(kind=k,source="source:"+k,unit=u,max_age_seconds=5) for k,u in units.items()],
         state_registry="registry:software-state",key_registry="registry:software-keys",restriction_authority="authority:software-hold",
-        checkpoint_seconds=1,maximum_control_latency_ms=50,allow_conservative_capacity=True,envelope_thresholds=None)
-    binding=dict(request_id=op["request_id"],actor_id=op["actor"],workload_id="workload:actual",authority_class="class:coordination",
+        checkpoint_seconds=1,maximum_control_latency_ms=50,allow_conservative_capacity=True,envelope_thresholds=None,
+        observation_time_resolution_ms=1000,operation_classes={op["operation"]:"write"},
+        repair_dependent_classes=["write"] if repair_dependent else [],novelty_domains={"write":"domain:validated-operation"},
+        supervision_participants={"assisted":[dict(id="peer:consensus",kind="automated",capability="consensus")],
+                                 "regulated":[dict(id="human:approval",kind="human",capability="approval")]})
+    binding=dict(request_id=op["request_id"],actor_id=requesting_principal,workload_id=op["actor"],authority_class="class:coordination",
         operation_id=op["operation"],resource_id=op["resource"],enforcement_destination="destination:service-tenant-route",
         parameters_digest=_digest(op["parameters"],"sha256"),identity_session_digest=_digest({"actual_session":"session:a"},"sha256"),
         execution_profile_digest=p["execution_profile_digest"],policy_digest=p["policy_digest"])
     scope=dict(request_digest=_digest(binding,"sha256"),target_revision="revision:target:a",recovery_boundary="recovery:actual")
-    values={"resource_pressure":0.1,"control_latency":10,"operation_assessment":{"irreversibility":0.1,"novelty":0},
+    values={"resource_pressure":0.1,"control_latency":10,"operation_assessment":{"irreversibility":0.1,"novelty":0,"novelty_domain":"domain:validated-operation"},
         "repair_path":True,"supervision_availability":True,"invalidation":{"status":"active","consumption_epoch":1}}
     records=[];originals=[];heads={}
     for declaration in p["sources"]:
@@ -31,12 +35,13 @@ def evidence_fixture(operation=None,deployment=None,now=1000,zone="zone:software
         import hashlib
         record=dict(kind=kind,source=declaration["source"],scope=scope,epoch=1,sequence=1,observed_at=now-1,max_age_seconds=5,
             value=values[kind],unit=declaration["unit"],evidence_digest="sha256:"+hashlib.sha256(original).hexdigest())
+        if kind=="supervision_availability":record["available_supervision_levels"]=["assisted","regulated"]
         records.append(record);originals.append(original)
         heads[kind]=dict(source=declaration["source"],epoch=1,sequence=1,record_digest=_digest(record,"sha256"),
             health_anchor="audit:health:"+kind,checked_at=now,health_expires_at=now+5,status="healthy")
     key.update(zone_id=zone,not_before=now-50,not_after=now+100)
     state=dict(deployment_digest=_digest(dp,"sha256"),profile_digest=_digest(p,"sha256"),operation_digest=digest_demand_operation(op,algorithm="sha256"),
-        subject=op["actor"],zone=zone,checked_at=now,expires_at=now+7,request_binding=binding,
+        subject=op["actor"],requesting_principal=requesting_principal,zone=zone,checked_at=now,expires_at=now+7,request_binding=binding,
         target_revision=scope["target_revision"],recovery_boundary=scope["recovery_boundary"],mapping_digest=p["mapping_digest"],
         requested_magnitudes={"effectBytes":1024,"affectedObjects":1,"fanoutTargets":1},existing_ceilings={"effectBytes":1024,"affectedObjects":1,"fanoutTargets":1},
         consumption_epoch=1,state_revision=1,existing_supervision="stable",state_registry=p["state_registry"],key_registry=p["key_registry"],key_registry_anchor="audit:keys",
@@ -46,7 +51,8 @@ def evidence_fixture(operation=None,deployment=None,now=1000,zone="zone:software
     prerequisites=[]
     def refresh():
         for i,r in enumerate(records):
-            originals[i]=rfc8785.dumps({"modeled_authenticated_source":r["kind"],"actual_value":r["value"],"observed_at":r["observed_at"]})
+            originals[i]=rfc8785.dumps({"modeled_authenticated_source":r["kind"],"actual_value":r["value"],"observed_at":r["observed_at"],
+                **({"available_supervision_levels":r["available_supervision_levels"]} if r["kind"]=="supervision_availability" else {})})
             r["evidence_digest"]="sha256:"+hashlib.sha256(originals[i]).hexdigest()
             heads[r["kind"]]["record_digest"]=_digest(r,"sha256")
         counters={k:{n:v[n] for n in ("source","epoch","sequence","record_digest")} for k,v in heads.items()}

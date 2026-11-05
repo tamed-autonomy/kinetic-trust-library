@@ -32,14 +32,16 @@ def _gate_profiles(native,algorithm):
         required=_parse_jcs_object(v.profile_bytes)["gate_required"]) for v in policies]
 
 
-def _current_conditions_withhold(e):
+def _current_conditions_withhold(e,native_supervision="stable"):
     """Derive actual local condition loss independently of a stale candidate."""
-    if not e.valid or not e.repair_path_verified or not e.supervision_available:return True
+    if not e.valid:return True
     s=_parse_jcs_object(e.source_state_bytes);a=_parse_jcs_object(e.assessment_bytes);p=_parse_jcs_object(e.profile_bytes)
+    floor=max((s["existing_supervision"],native_supervision),key=LEVELS.index)
     projection=project_software_restrictions(requested=s["requested_magnitudes"],candidate_ceilings=s["existing_ceilings"],
-        prior_ceilings=s["existing_ceilings"],candidate_supervision=s["existing_supervision"],prior_supervision=s["existing_supervision"],
+        prior_ceilings=s["existing_ceilings"],candidate_supervision=floor,prior_supervision=floor,
         demand=a["autonomyDemand"],capacity=a["environmentalCapacity"],capacity_known=a["capacityKnown"],
         repair_path_verified=e.repair_path_verified,supervision_available=e.supervision_available,
+            repair_dependent=e.repair_dependent,available_supervision_levels=e.available_supervision_levels,
         thresholds=software_thresholds(p["envelope_thresholds"]))
     return not projection.conditional_candidate or any(s["requested_magnitudes"][k]>limit for k,limit in projection.ceilings)
 
@@ -155,7 +157,7 @@ class InstalledSoftwareConsumptionVerifier:
             r=object.__new__(SoftwareConsumptionAssessment)
             signed=issuance_selection is None
             permit_lost=(c.conditional_clear and e is not None and e.checked_at==evaluated_at
-                and (_current_conditions_withhold(e)
+                and (_current_conditions_withhold(e,c.supervision)
                     or reason in ("SOFTWARE_RESTRICTED","SOFTWARE_REVISED_OPERATION_REQUIRED")))
             for k,v in dict(verifier=self,verified=verified and signed,issuance_prepared=verified and not signed,
                     reason=reason,conditional_consumption=conditional and signed,action_permitted=False,
@@ -188,7 +190,10 @@ class InstalledSoftwareConsumptionVerifier:
                 return result("SOFTWARE_ISSUANCE_KEY_INVALID")
             key_expiry=key["not_after"]
         s=_parse_jcs_object(e.source_state_bytes)
-        binding=_parse_jcs_object(e.request_binding_bytes);a=_parse_jcs_object(e.assessment_bytes);out=body["result"]
+        binding=_parse_jcs_object(e.request_binding_bytes)
+        if binding["actor_id"]!=state["principal"]:
+            return result("SOFTWARE_REQUESTING_PRINCIPAL_MISMATCH")
+        a=_parse_jcs_object(e.assessment_bytes);out=body["result"]
         def raw_digest(raw):return algorithm+":"+hashlib.new(algorithm,raw).hexdigest()
         prerequisites=e.prerequisites
         if (len(prerequisites)!=2 or tuple(p.kind for p in prerequisites)!=("lease","intent")
@@ -254,6 +259,11 @@ class InstalledSoftwareConsumptionVerifier:
                 or _number(out["environmentalCapacity"])>_number(geometry["E"])
                 or out["repairPathVerified"]!=e.repair_path_verified or out["supervisionAvailable"]!=e.supervision_available):
             return result("SOFTWARE_ASSESSMENT_WIDENED_OR_SUBSTITUTED")
+        from .native_envelope import project_comparable_envelope
+        envelope=project_comparable_envelope(demand=out["autonomyDemand"],decision_capacity=out["environmentalCapacity"],
+            capacity_known=out["capacityKnown"],thresholds=software_thresholds(ep["envelope_thresholds"]))
+        if envelope.supervision=="silent_veto" and out.get("policyCode")!="KINETIC_CAPACITY_EXCEEDED":
+            return result("SOFTWARE_CAPACITY_POLICY_CODE_REQUIRED")
         maxima={v["magnitude"]:v["max"] for v in out["tightenedConstraints"]["ceilings"]}
         if any(maxima[k]>min(s["requested_magnitudes"][k],s["existing_ceilings"][k]) for k in maxima):
             return result("SOFTWARE_CEILINGS_WIDENED")
@@ -262,6 +272,7 @@ class InstalledSoftwareConsumptionVerifier:
             prior_ceilings=s["existing_ceilings"],candidate_supervision=out["supervision"],prior_supervision=floor,
             demand=out["autonomyDemand"],capacity=out["environmentalCapacity"],capacity_known=out["capacityKnown"],
             repair_path_verified=e.repair_path_verified,supervision_available=e.supervision_available,
+            repair_dependent=e.repair_dependent,available_supervision_levels=e.available_supervision_levels,
             thresholds=software_thresholds(ep["envelope_thresholds"]))
         if LEVELS.index(out["supervision"])<LEVELS.index(projection.supervision):return result("SOFTWARE_SUPERVISION_LOWERED")
         if "margin" in out:

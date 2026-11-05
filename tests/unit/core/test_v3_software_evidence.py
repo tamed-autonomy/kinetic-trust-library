@@ -9,6 +9,13 @@ from tests.unit.core._v3_software_fixture import evidence_fixture
 class SoftwareEvidenceTests(unittest.TestCase):
     def evaluate(self,f,previous=None):return f["v"].evaluate(actual_operation=f["op"],evaluated_at=f["now"],clock_healthy=True,previous_assessment=previous)
 
+    def test_revised_declaration_requires_time_operation_and_participant_policies(self):
+        import rfc8785
+        for field in ('observation_time_resolution_ms','operation_classes','repair_dependent_classes','novelty_domains','supervision_participants'):
+            f=evidence_fixture();profile=dict(f['profile']);profile.pop(field,None)
+            with self.subTest(field=field),self.assertRaises(ValidationError):
+                replace(f['v'],profile_bytes=rfc8785.dumps(profile))
+
     def test_complete_current_scope_original_evidence_and_heads_are_retained(self):
         f=evidence_fixture();r=self.evaluate(f)
         self.assertTrue(r.valid);self.assertEqual(r.expires_at,1001)
@@ -85,3 +92,32 @@ class SoftwareEvidenceTests(unittest.TestCase):
             def resolve(self,**kwargs):raise OSError("protected state unavailable")
         f["v"]=replace(f["v"],context_source=Offline())
         with self.assertRaises(OSError):self.evaluate(f)
+
+    def test_requesting_principal_and_executing_workload_are_distinct(self):
+        f=evidence_fixture();self.assertNotEqual(f["state"]["requesting_principal"],f["op"]["actor"])
+        self.assertTrue(self.evaluate(f).valid)
+        for field in ("actor_id","workload_id"):
+            f=evidence_fixture();f["state"]["request_binding"][field]="identity:substituted"
+            with self.subTest(field=field),self.assertRaises(ValidationError):self.evaluate(f)
+
+    def test_novelty_outside_installed_domain_is_unknown_not_zero(self):
+        f=evidence_fixture()
+        record=next(r for r in f["records"] if r["kind"]=="operation_assessment")
+        record["value"]["novelty_domain"]="domain:unvalidated";f["refresh"]()
+        result=self.evaluate(f);self.assertFalse(result.valid)
+        self.assertIn("operation_assessment",result.undefined_classes)
+        f["state"]["assessment"]["capacityKnown"]=False
+        result=self.evaluate(f);self.assertTrue(result.valid);self.assertIn("operation_assessment",result.undefined_classes)
+
+    def test_supervision_level_capability_must_be_declared_and_authenticated(self):
+        import rfc8785
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        f=evidence_fixture();f["profile"]["supervision_participants"]["regulated"]=[]
+        f["state"]["profile_digest"]=_digest(f["profile"],"sha256")
+        f["v"]=replace(f["v"],profile_bytes=rfc8785.dumps(f["profile"]))
+        with self.assertRaises(ValidationError):self.evaluate(f)
+        record=next(r for r in f["records"] if r["kind"]=="supervision_availability")
+        record["available_supervision_levels"]=["assisted"];f["refresh"]()
+        self.assertEqual(self.evaluate(f).available_supervision_levels,("assisted",))
+        record["value"]=False;f["refresh"]()
+        with self.assertRaises(ValidationError):self.evaluate(f)

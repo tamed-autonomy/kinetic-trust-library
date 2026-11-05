@@ -62,7 +62,7 @@ class InstalledSoftwareStopResolver:
         if (current.conditional_consumption or not current.hand_back_required or not initial.conditional_clear
                 or initial.lease is None or not initial.lease.active or e is None or e.checked_at!=evaluated_at
                 or initial.management is None or not initial.management.valid or initial.management.management.regime!="managed"
-                or not (_current_conditions_withhold(e)
+                or not (_current_conditions_withhold(e,initial.supervision)
                     or current.verified and current.reason in ("SOFTWARE_RESTRICTED","SOFTWARE_REVISED_OPERATION_REQUIRED"))):
             raise ValidationError("software stop condition is no longer current or belongs to another native return path")
         import rfc8785
@@ -78,6 +78,7 @@ class InstalledSoftwareStopResolver:
             operation_digest=_digest(_parse_jcs_object(current.operation_bytes),algorithm),evaluated_at=evaluated_at,
             reason="exceeded_permit_condition",software_reason=current.reason,evidence_reason=e.reason,
             repair_path_verified=e.repair_path_verified,supervision_available=e.supervision_available,
+            repair_dependent=e.repair_dependent,available_supervision_levels=list(e.available_supervision_levels),
             unresolved_restrictions=list(e.unresolved_restrictions),template_digest=template.template_digest,
             grant_digest=_digest(state["lease"],algorithm),clearance_state_digest=_digest(state,algorithm),
             proof_digest=digest_complete_proof(native.association.compact_proof,algorithm=algorithm),

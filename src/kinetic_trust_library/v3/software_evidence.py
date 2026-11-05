@@ -82,6 +82,8 @@ class SoftwareEvidenceAssessment:
     assessment_bytes: bytes
     undefined_classes: tuple
     repair_path_verified: bool
+    repair_dependent: bool
+    available_supervision_levels: tuple[str, ...]
     supervision_available: bool
     consumption_epoch: int
     state_revision: int
@@ -112,6 +114,29 @@ def _history(events,authority,now):
     return tuple(active)
 
 
+def _installed_semantics(p):
+    if type(p['observation_time_resolution_ms']) is not int or p['observation_time_resolution_ms']!=1000:
+        raise ValidationError('selected software evidence profile requires declared one-second observation ticks')
+    operations=p['operation_classes'];repair=p['repair_dependent_classes'];domains=p['novelty_domains'];participants=p['supervision_participants']
+    if (type(operations) is not dict or not operations or any(not _name(k) or not _name(v) for k,v in operations.items())
+            or type(repair) is not list or any(not _name(v) for v in repair) or len(set(repair))!=len(repair)
+            or not set(repair)<=set(operations.values()) or type(domains) is not dict
+            or not set(domains)<=set(operations.values()) or any(not _name(v) for v in domains.values())
+            or type(participants) is not dict or set(participants)!={'assisted','regulated'}):
+        raise ValidationError('software operation, repair, novelty and participant policies must be installed explicitly')
+    for level,required in participants.items():
+        if type(required) is not list or len(required)>64:
+            raise ValidationError('bounded required supervision participants must be declared')
+        ids=[]
+        for participant in required:
+            if (type(participant) is not dict or set(participant)!={'id','kind','capability'} or not _name(participant['id'])
+                    or participant['kind'] not in ('human','automated')
+                    or participant['capability']!=('consensus' if level=='assisted' else 'approval')):
+                raise ValidationError('each supervisor requires its eligible identity, kind and level capability')
+            ids.append(participant['id'])
+        if len(ids)!=len(set(ids)):raise ValidationError('required supervision participants must be distinct')
+
+
 @dataclass(frozen=True,slots=True)
 class InstalledSoftwareEvidenceVerifier:
     deployment_profile_bytes: bytes
@@ -126,7 +151,8 @@ class InstalledSoftwareEvidenceVerifier:
         p=_parse_jcs_object(self.profile_bytes);dp=_parse_jcs_object(self.deployment_profile_bytes)
         if (set(p)!={"id","version","zone","formula","deployment_digest","execution_profile_digest","policy_digest","scale",
                 "mapping_digest","assessment_profile_digest","authority_classes","sources","state_registry","key_registry","restriction_authority",
-                "checkpoint_seconds","maximum_control_latency_ms","allow_conservative_capacity","envelope_thresholds"}
+                "checkpoint_seconds","maximum_control_latency_ms","allow_conservative_capacity","envelope_thresholds",
+                "observation_time_resolution_ms","operation_classes","repair_dependent_classes","novelty_domains","supervision_participants"}
                 or any(not _name(p[n]) for n in ("id","zone","state_registry","key_registry","restriction_authority"))
                 or not _time(p["version"]) or p["version"]==0 or p["formula"]!="native-software-current-evidence-v1"
                 or p["deployment_digest"]!=_digest(dp,self.algorithm) or p["scale"]!="urn:ktp:unit:action-risk-points"
@@ -136,6 +162,7 @@ class InstalledSoftwareEvidenceVerifier:
                 or any(not _name(k) or v not in ("Logistics","Coordination","Relational") for k,v in p["authority_classes"].items())
                 or type(p["sources"]) is not list or len(p["sources"])!=6):
             raise ValidationError("software evidence requires exact installed declaration and native comparable scale")
+        _installed_semantics(p)
         kinds=[]
         for d in p["sources"]:
             if (type(d) is not dict or set(d)!={"kind","source","unit","max_age_seconds"}
@@ -161,7 +188,7 @@ class InstalledSoftwareEvidenceVerifier:
         s=_parse_jcs_object(source.state_bytes);keys=_parse_jcs_object(source.signing_keys_bytes)
         expected={"deployment_digest","profile_digest","operation_digest","subject","zone","checked_at","expires_at","request_binding",
             "target_revision","recovery_boundary","mapping_digest","requested_magnitudes","existing_ceilings","consumption_epoch","state_revision",
-            "state_registry","key_registry","key_registry_anchor","signing_keys_digest","heads","restriction_history","assessment","continuity_checkpoint","existing_supervision"}
+            "state_registry","key_registry","key_registry_anchor","signing_keys_digest","heads","restriction_history","assessment","continuity_checkpoint","existing_supervision","requesting_principal"}
         if (set(s)!=expected or s["deployment_digest"]!=p["deployment_digest"] or s["profile_digest"]!=_digest(p,self.algorithm)
                 or s["operation_digest"]!=digest_demand_operation(op,algorithm=self.algorithm) or s["subject"]!=op["actor"] or s["zone"]!=p["zone"]
                 or not _time(s["checked_at"]) or s["checked_at"]!=evaluated_at or not _time(s["expires_at"]) or s["expires_at"]<=evaluated_at
@@ -171,10 +198,12 @@ class InstalledSoftwareEvidenceVerifier:
                 or s["signing_keys_digest"]!=_digest(keys,self.algorithm) or s["existing_supervision"] not in LEVELS):
             raise ValidationError("software Source differs from actual current deployment/profile/request/registry scope")
         b=software_binding(s["request_binding"])
-        if (b["actor_id"]!=op["actor"] or b["request_id"]!=op["request_id"] or b["operation_id"]!=op["operation"] or b["resource_id"]!=op["resource"]
+        if (not _name(s["requesting_principal"]) or b["actor_id"]!=s["requesting_principal"] or b["workload_id"]!=op["actor"]
+                or b["operation_id"] not in p["operation_classes"] or b["request_id"]!=op["request_id"] or b["operation_id"]!=op["operation"] or b["resource_id"]!=op["resource"]
                 or b["parameters_digest"]!=_digest(op["parameters"],self.algorithm) or b["execution_profile_digest"]!=p["execution_profile_digest"]
                 or b["policy_digest"]!=p["policy_digest"] or b["authority_class"] not in p["authority_classes"]):
             raise ValidationError("software request binding differs from actual authenticated executing operation")
+        operation_class=p["operation_classes"][b["operation_id"]]
         software_magnitudes(s["requested_magnitudes"]);software_magnitudes(s["existing_ceilings"])
         active=_history(s["restriction_history"],p["restriction_authority"],evaluated_at)
         scope=dict(request_digest=_digest(b,self.algorithm),target_revision=s["target_revision"],recovery_boundary=s["recovery_boundary"])
@@ -188,7 +217,7 @@ class InstalledSoftwareEvidenceVerifier:
                     or type(a.original_evidence_bytes) is not bytes or not 0<len(a.original_evidence_bytes)<=1048576):
                 raise ValidationError("actual original authenticated software observation/evidence bytes required")
             r=_parse_jcs_object(a.record_bytes);kind=d["kind"];h=heads[kind]
-            if (set(r)!={"kind","source","scope","epoch","sequence","observed_at","max_age_seconds","value","unit","evidence_digest"}
+            if (set(r)!=({"kind","source","scope","epoch","sequence","observed_at","max_age_seconds","value","unit","evidence_digest"}|({"available_supervision_levels"} if kind=="supervision_availability" else set()))
                     or r["kind"]!=kind or r["source"]!=d["source"] or r["scope"]!=scope or r["unit"]!=d["unit"]
                     or not _time(r["epoch"]) or r["epoch"]==0 or not _time(r["sequence"]) or not _time(r["observed_at"])
                     or type(r["max_age_seconds"]) is not int or r["max_age_seconds"]!=d["max_age_seconds"]
@@ -214,13 +243,23 @@ class InstalledSoftwareEvidenceVerifier:
                 if not _time(value):raise ValidationError("software control latency requires safe integer milliseconds")
                 if value>p["maximum_control_latency_ms"]:valid=False;reason="SOFTWARE_CONTROL_LATENCY"
             elif kind=="operation_assessment":
-                if type(value) is not dict or set(value)!={"irreversibility","novelty"}:raise ValidationError("complete current operation assessment required")
-                for n in value:as_decimal(value[n],name="software "+n,minimum=0,maximum=1)
+                if type(value) is not dict or set(value)!={"irreversibility","novelty","novelty_domain"}:raise ValidationError("complete current operation assessment required")
+                for n in ("irreversibility","novelty"):as_decimal(value[n],name="software "+n,minimum=0,maximum=1)
+                expected_domain=p["novelty_domains"].get(operation_class)
+                if expected_domain is None or value["novelty_domain"]!=expected_domain:
+                    undefined.append(kind)
             elif kind in ("repair_path","supervision_availability"):
                 if type(value) is not bool:raise ValidationError("software availability requires actual boolean observation")
             elif (type(value) is not dict or set(value)!={"status","consumption_epoch"} or value["status"] not in ("active","revoked","unavailable")
                     or type(value["consumption_epoch"]) is not int or value["consumption_epoch"]!=s["consumption_epoch"]):
                 raise ValidationError("fresh actual invalidation status must name the current consumption epoch")
+        supervisor_record=next(r for r in records if r['kind']=='supervision_availability')
+        available=supervisor_record['available_supervision_levels']
+        if (type(available) is not list or any(type(v) is not str or v not in ('assisted','regulated') for v in available)
+                or len(set(available))!=len(available)
+                or any(not p['supervision_participants'][v] for v in available)
+                or (values['supervision_availability'] is True)!=bool(available)):
+            raise ValidationError('authenticated supervisor reachability must name installed eligible level capabilities')
         checkpoint=s["continuity_checkpoint"]
         if (type(checkpoint) is not dict or set(checkpoint)!={"anchor","registry","epoch","revision","counter_heads_digest","restriction_history_digest"}
                 or not _name(checkpoint["anchor"]) or checkpoint["registry"]!=p["state_registry"] or type(checkpoint["epoch"]) is not int
@@ -283,6 +322,7 @@ class InstalledSoftwareEvidenceVerifier:
                 source_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes,signing_keys_bytes=source.signing_keys_bytes,
                 prerequisites=source.prerequisites,assessment_bytes=rfc8785.dumps(assessment),undefined_classes=unknown,
                 repair_path_verified=values["repair_path"] is True,supervision_available=values["supervision_availability"] is True,
+                repair_dependent=operation_class in p["repair_dependent_classes"],available_supervision_levels=tuple(available),
                 consumption_epoch=s["consumption_epoch"],state_revision=s["state_revision"],frame_bytes=rfc8785.dumps(frame),frame_digest=_digest(frame,self.algorithm),
                 unresolved_restrictions=active,action_permitted=False).items():object.__setattr__(result,k,v)
         return result

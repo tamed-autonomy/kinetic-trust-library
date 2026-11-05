@@ -33,25 +33,32 @@ class SoftwareRestrictionProjection:
 
 
 def project_software_restrictions(*,requested,candidate_ceilings,prior_ceilings,candidate_supervision,prior_supervision,
-        demand,capacity,capacity_known,repair_path_verified,supervision_available,thresholds=None):
+        demand,capacity,capacity_known,repair_path_verified,supervision_available,repair_dependent,available_supervision_levels,thresholds=None):
     """Preserve every floor and maximum on the selected native 0..100 scale.
 
-    Availability loss withholds all effect magnitudes. A caller must evaluate a
+    Repair dependency and reachable supervision levels are installed/scoped facts.
+    A caller must evaluate a
     changed actual scope afresh; attaching lower numbers cannot authorize the
     original operation. No fixture authentication/compliance flag is accepted.
     """
     requested=software_magnitudes(requested);candidate=software_magnitudes(candidate_ceilings);prior=software_magnitudes(prior_ceilings)
     if (candidate_supervision not in LEVELS or prior_supervision not in LEVELS
-            or any(type(v) is not bool for v in (capacity_known,repair_path_verified,supervision_available))
+            or any(type(v) is not bool for v in (capacity_known,repair_path_verified,supervision_available,repair_dependent))
+            or type(available_supervision_levels) is not tuple
+            or any(type(v) is not str or v not in ("assisted","regulated") for v in available_supervision_levels)
+            or len(set(available_supervision_levels))!=len(available_supervision_levels)
+            or not supervision_available and available_supervision_levels
             or thresholds is not None and type(thresholds) is not NativeEnvelopeThresholds):
         raise ValidationError("explicit software availability/capacity state and installed supervision policy required")
     margin=None;level="silent_veto"
     ceilings={k:min(requested[k],candidate[k],prior[k]) for k in MAGNITUDES}
-    if (candidate_supervision!="silent_veto" and prior_supervision!="silent_veto" and repair_path_verified and supervision_available):
+    if (candidate_supervision!="silent_veto" and prior_supervision!="silent_veto" and (repair_path_verified or not repair_dependent)):
         envelope=project_comparable_envelope(demand=demand,decision_capacity=capacity,capacity_known=capacity_known,thresholds=thresholds)
         margin=envelope.margin
         level=max((candidate_supervision,prior_supervision,envelope.supervision),key=LEVELS.index)
         if not capacity_known and LEVELS.index(level)<LEVELS.index("assisted"):level="assisted"
+        if level in ("assisted","regulated") and (not supervision_available or level not in available_supervision_levels):
+            level="silent_veto"
     if level=="silent_veto":ceilings=dict.fromkeys(MAGNITUDES,0)
     result=object.__new__(SoftwareRestrictionProjection)
     for k,v in dict(supervision=level,ceilings=tuple((k,ceilings[k]) for k in MAGNITUDES),capacity_known=capacity_known,

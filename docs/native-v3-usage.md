@@ -167,3 +167,52 @@ delivery obligation; it contains no delivery-success assertion. Service must
 perform and record delivery separately. Primary full context and the closed
 hand-back wire remain unchanged. This profile requires an original registered
 grant; it provides no bootstrap/fallback disclosure rule.
+
+## Revised software profile declaration (2026-11-04)
+
+The optional software adapter follows the pinned #131 proposal at
+`652c06b68af7f6ee0785ab14399be68bc458843e`; it remains provisional.
+It accepts only `ktp-software-substrate-decision-v1` and
+`software-substrate-execution-v1`. Earlier unversioned artifacts are rejected.
+A kinematic capacity veto requires `policyCode: KINETIC_CAPACITY_EXCEEDED`.
+Issuance preflight and consumption use the same policy-code check.
+
+The private installed evidence profile now requires:
+
+- `observation_time_resolution_ms: 1000`: this adapter selects whole-second
+  observation ticks and safe integer Unix seconds, including artifact deadlines.
+  Other resolutions are explicitly unsupported; timestamps are never truncated.
+- `operation_classes`: a literal operation-ID to class mapping;
+  `repair_dependent_classes`: the declared subset requiring an exercised repair
+  path; `novelty_domains`: validated domain IDs by operation class.
+- `supervision_participants`: required participant declarations for `assisted`
+  and `regulated`. Each participant names `id`, `kind` (`human` or `automated`)
+  and level `capability` (`consensus` or `approval`, respectively). An empty
+  declaration makes that level unavailable.
+
+The authenticated current Source context must include `requesting_principal`.
+The request binding's `actor_id` names that requester; `workload_id` names the
+actual executing operation's actor. This selected native-duration adapter also
+requires the requester to match the native grant principal. Other caller versus
+principal authorization arrangements need a separate installed adapter.
+
+The authenticated supervision observation includes `available_supervision_levels`,
+a distinct list drawn from installed nonempty participant declarations. A false
+availability observation requires an empty list; a true observation requires at
+least one reachable level. The Source must establish every required participant's
+actual identity, authority, capability and current reachability; these declarations
+and lists are scoped facts, not proof of live participants.
+
+An operation assessment includes `novelty_domain` alongside `irreversibility`
+and `novelty`. A missing or unmatched installed domain records an undefined
+assessment. A declared conservative estimate may proceed only with capacity
+marked unknown; it does not invent zero novelty or a known capacity.
+
+False repair availability withholds repair-dependent classes. Stable and
+metacognitive operations can remain conditionally eligible with unavailable
+external supervision; assisted and regulated require their corresponding
+installed reachable participants. Unknown capacity still imposes an assisted
+floor. Native restrictions, prior vetoes and magnitude ceilings continue to bind.
+Actual current condition loss, rather than a generic false availability bit,
+determines whether the continuing invocation requires the software stop path.
+These outcomes never independently authorize effects.

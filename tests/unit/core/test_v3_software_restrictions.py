@@ -10,8 +10,26 @@ class SoftwareRestrictionTests(unittest.TestCase):
         from kinetic_trust_library.v3.software_restrictions import project_software_restrictions
         args=dict(requested={"effectBytes":1024,"affectedObjects":1,"fanoutTargets":1},candidate_ceilings={"effectBytes":1024,"affectedObjects":1,"fanoutTargets":1},
             prior_ceilings={"effectBytes":1024,"affectedObjects":1,"fanoutTargets":1},candidate_supervision="stable",prior_supervision="stable",
-            demand="0.2",capacity=1,capacity_known=True,repair_path_verified=True,supervision_available=True)
-        return project_software_restrictions(**dict(args,**kw))
+            demand="0.2",capacity=1,capacity_known=True,repair_path_verified=True,supervision_available=True,repair_dependent=True,available_supervision_levels=("assisted","regulated"))
+        args.update(kw)
+        if not args["supervision_available"] and "available_supervision_levels" not in kw:args["available_supervision_levels"]=()
+        return project_software_restrictions(**args)
+
+    def test_revised_availability_depends_on_operation_and_effective_supervision(self):
+        for level in ('stable','metacognitive'):
+            r=self.project(candidate_supervision=level,supervision_available=False,repair_path_verified=False,
+                repair_dependent=False,available_supervision_levels=())
+            self.assertEqual(r.supervision,level);self.assertTrue(r.conditional_candidate)
+        for level in ('assisted','regulated'):
+            r=self.project(candidate_supervision=level,supervision_available=False,
+                repair_dependent=False,available_supervision_levels=())
+            self.assertEqual(r.supervision,'silent_veto');self.assertFalse(r.conditional_candidate)
+        r=self.project(repair_dependent=True,repair_path_verified=False,available_supervision_levels=('assisted','regulated'))
+        self.assertFalse(r.conditional_candidate)
+        r=self.project(prior_supervision='regulated',repair_dependent=False,available_supervision_levels=('assisted',))
+        self.assertFalse(r.conditional_candidate)
+        r=self.project(capacity_known=False,supervision_available=False,repair_dependent=False,available_supervision_levels=())
+        self.assertEqual(r.supervision,'silent_veto')
 
     def test_existing_supervision_and_all_magnitude_ceilings_only_tighten(self):
         r=self.project(prior_supervision="regulated",prior_ceilings={"effectBytes":256,"affectedObjects":1,"fanoutTargets":1})
@@ -19,7 +37,7 @@ class SoftwareRestrictionTests(unittest.TestCase):
         self.assertFalse(r.action_permitted)
 
     def test_missing_repair_or_supervision_withholds_every_magnitude(self):
-        for kw in (dict(repair_path_verified=False),dict(supervision_available=False)):
+        for kw in (dict(repair_path_verified=False),dict(supervision_available=False,candidate_supervision="assisted")):
             r=self.project(**kw);self.assertEqual(r.supervision,"silent_veto")
             self.assertEqual(set(dict(r.ceilings).values()),{0});self.assertFalse(r.conditional_candidate)
 

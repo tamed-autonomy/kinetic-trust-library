@@ -60,7 +60,55 @@ def check_consumption(test,native,combined,operation,deployment,checkpoint_input
     test.assertEqual(str(good.restriction_projection.margin),"0.1")
     from tests.unit.core._v3_software_checkpoint_checks import check_software_checkpoint
     check_software_checkpoint(test,v,f,cf,management_state,authority,good,body,sign,operation,checkpoint_inputs)
+    # Private installed operation policy, rather than a candidate assertion,
+    # determines whether a repair path is required. Exercise the real consumer.
+    original_v=v
+    f["profile"]["repair_dependent_classes"]=[]
+    f["state"]["profile_digest"]=_digest(f["profile"],"sha256")
+    alternate_evidence=replace(f["v"],profile_bytes=rfc8785.dumps(f["profile"]))
+    alternate_policy=dict(p,evidence_profile_digest=_digest(f["profile"],"sha256"))
+    v=replace(v,evidence_verifier=alternate_evidence,profile_bytes=rfc8785.dumps(alternate_policy))
+    repair=next(r for r in f["records"] if r["kind"]=="repair_path")
+    supervisors=next(r for r in f["records"] if r["kind"]=="supervision_availability")
+    repair["value"]=False;supervisors["value"]=False;supervisors["available_supervision_levels"]=[]
+    f["refresh"]();body["evidence_digest"]=_digest(f["records"],"sha256")
+    body["result"].update(repairPathVerified=False,supervisionAvailable=False)
+    for level in ("stable","metacognitive"):
+        body["result"]["supervision"]=level
+        available=evaluate();test.assertTrue(available.conditional_consumption,available.reason)
+        test.assertFalse(available.hand_back_required);test.assertEqual(available.supervision,level)
+    body["result"]["supervision"]="silent_veto"
+    f["state"]["existing_supervision"]="assisted"
+    for ceiling in body["result"]["tightenedConstraints"]["ceilings"]:ceiling["max"]=0
+    test.assertFalse(evaluate().conditional_consumption)
+    f["state"]["existing_supervision"]="stable"
+    for ceiling in body["result"]["tightenedConstraints"]["ceilings"]:ceiling["max"]=f["state"]["requested_magnitudes"][ceiling["magnitude"]]
+    repair["value"]=True;supervisors["value"]=True;supervisors["available_supervision_levels"]=["assisted","regulated"]
+    f["profile"]["repair_dependent_classes"]=["write"]
+    f["state"]["profile_digest"]=_digest(f["profile"],"sha256")
+    f["refresh"]();v=original_v
+    body["evidence_digest"]=_digest(f["records"],"sha256")
+    body["result"].update(repairPathVerified=True,supervisionAvailable=True,supervision="stable")
     baseline=json.loads(rfc8785.dumps(body))
+    # Capacity vetoes have a required envelope policy code, independently of
+    # signature validity. This same check runs before issuer signing.
+    f["state"]["assessment"]["environmentalCapacity"]=30
+    body["result"].update(environmentalCapacity=30,supervision="silent_veto")
+    body["result"].pop("margin",None)
+    for ceiling in body["result"]["tightenedConstraints"]["ceilings"]:ceiling["max"]=0
+    for code in (None,"OTHER_POLICY"):
+        if code is None:body["result"].pop("policyCode",None)
+        else:body["result"]["policyCode"]=code
+        rejected=evaluate();test.assertFalse(rejected.verified)
+        test.assertEqual(rejected.reason,"SOFTWARE_CAPACITY_POLICY_CODE_REQUIRED")
+        pending=v.prepare_issuance(rfc8785.dumps({k:x for k,x in body.items() if k!="signature"}),combined,
+            actual_operation=operation,evaluated_at=1000,clock_healthy=True,algorithm="EdDSA",kid=key["kid"])
+        test.assertFalse(pending.issuance_prepared)
+    body["result"]["policyCode"]="KINETIC_CAPACITY_EXCEEDED"
+    rejected=evaluate();test.assertTrue(rejected.verified,rejected.reason)
+    test.assertFalse(rejected.conditional_consumption)
+    f["state"]["assessment"]["environmentalCapacity"]=40
+    body.clear();body.update(json.loads(rfc8785.dumps(baseline)))
     mutations=[("epoch",lambda:body.update(consumption_epoch=2)),
         ("proof",lambda:body.update(proof_digest="sha256:"+"0"*64)),
         ("prerequisites",lambda:body.update(prerequisite_digests=body["prerequisite_digests"][:-1])),
@@ -157,7 +205,11 @@ def check_consumption(test,native,combined,operation,deployment,checkpoint_input
     f["prerequisites"][0]=original
     for kind in ("repair_path","supervision_availability"):
         index=next(i for i,r in enumerate(f["records"]) if r["kind"]==kind)
-        f["records"][index]["value"]=False;f["refresh"]()
+        f["records"][index]["value"]=False
+        if kind=="supervision_availability":
+            f["records"][index]["available_supervision_levels"]=[]
+            f["state"]["existing_supervision"]="assisted"
+        f["refresh"]()
         body["evidence_digest"]=_digest(f["records"],"sha256")
         # A still-true signed availability assertion is not authenticated truth.
         test.assertFalse(evaluate().conditional_consumption)
@@ -168,7 +220,11 @@ def check_consumption(test,native,combined,operation,deployment,checkpoint_input
         test.assertTrue(unavailable.hand_back_required)
         from tests.unit.core._v3_software_stop_checks import check_software_stop
         check_software_stop(test,v,cf,unavailable,operation,checkpoint_inputs[0])
-        f["records"][index]["value"]=True;f["refresh"]()
+        f["records"][index]["value"]=True
+        if kind=="supervision_availability":
+            f["records"][index]["available_supervision_levels"]=["assisted","regulated"]
+            f["state"]["existing_supervision"]="stable"
+        f["refresh"]()
         body.clear();body.update(json.loads(rfc8785.dumps(baseline)))
     old_assessment=dict(f["state"]["assessment"])
     f["state"]["assessment"].update(environmentalCapacity=30,basis_anchor="audit:capacity-loss")
