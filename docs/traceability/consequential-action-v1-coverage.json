@@ -1,0 +1,437 @@
+{
+  "status": "provisional component evidence; no runtime/deployment certification",
+  "implementation_repository": "https://github.com/tamed-autonomy/kinetic-trust-library",
+  "implementation_commit": "05cfd9f9dfff2f2163d5553b86c4a33ba24fc7a5",
+  "source_repository": "https://github.com/gatekeeper454/ktp-rfc",
+  "source_commit": "0e40c31305cc80779949c8a6fef5eb2cf3ca49f9",
+  "suite_sha256": "7013f7533e67ec82410d3639fcdce12a5e3572151e85f08d869e81d04e57d8e2",
+  "boundary": "Installed Source facts are modeled; real signatures run. Only E08/E27 direct source numeric component expectations and 24 shape properties are asserted. Other source cases require separate applicable qualification; null actual is not a pass.",
+  "verification": {
+    "required_tests": 1407,
+    "required_tests_skipped": 0,
+    "wheel_checks": 42,
+    "cryptography_checks": 36,
+    "provider_checks": 8,
+    "independent_review": "No remaining important defect demonstrated after lifetime fixes."
+  },
+  "contract_cases": [
+    {
+      "id": "E01",
+      "expected": {
+        "releaseAllowed": true,
+        "evidenceState": "dispatched",
+        "reservationRetained": true
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E02",
+      "expected": {
+        "releaseAllowed": false,
+        "evidenceState": "withheld"
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E03",
+      "expected": {
+        "releaseAllowed": false,
+        "evidenceState": "withheld"
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E04",
+      "expected": {
+        "releaseAllowed": false,
+        "evidenceState": "withheld"
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E05",
+      "expected": {
+        "releaseAllowed": false,
+        "evidenceState": "unknown"
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E06",
+      "expected": {
+        "additionalInvocationAllowed": false,
+        "reservationRetained": true
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E07",
+      "expected": {
+        "additionalInvocationAllowed": false,
+        "identityCollision": true
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E08",
+      "expected": {
+        "secondReleaseAllowed": false,
+        "remainingBudgetUnitsAtMost": 4
+      },
+      "actual": {
+        "secondReleaseAllowed": false,
+        "remainingBudgetUnitsAtMost": 4
+      },
+      "status": "component-properties-pass"
+    },
+    {
+      "id": "E09",
+      "expected": {
+        "releaseAllowed": false,
+        "evidenceState": "withheld"
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E10",
+      "expected": {
+        "releaseAllowed": false,
+        "evidenceState": "unknown"
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E11",
+      "expected": {
+        "evidenceState": "unknown",
+        "retryAllowed": false,
+        "reservationRetained": true
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E12",
+      "expected": {
+        "evidenceState": "dispatched",
+        "retryAllowed": false,
+        "reservationRetained": true
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E13",
+      "expected": {
+        "evidenceState": "effect_confirmed",
+        "retryAllowed": false
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E14",
+      "expected": {
+        "evidenceState": "unknown",
+        "retryAllowed": false,
+        "reservationRetained": true
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E15",
+      "expected": {
+        "releaseAllowed": false,
+        "retryAllowed": false,
+        "reservationRetained": true,
+        "evidenceState": "unknown"
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E16",
+      "expected": {
+        "evidenceState": "unknown",
+        "releaseAllowed": false
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E17",
+      "expected": {
+        "evidenceState": "withheld",
+        "releaseAllowed": false
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E18",
+      "expected": {
+        "evidenceState": "unknown"
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E19",
+      "expected": {
+        "retryAllowed": false,
+        "reservationRetained": true
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E20",
+      "expected": {
+        "continueOriginalAllowed": false,
+        "safeTransitionRequired": true
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E21",
+      "expected": {
+        "additionalInvocationAllowed": false,
+        "reservationRetained": true
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E22",
+      "expected": {
+        "releaseAllowed": false,
+        "evidenceState": "unknown"
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E23",
+      "expected": {
+        "retryAllowed": true
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E24",
+      "expected": {
+        "commitTimeAuthorizationGuarantee": false
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E25",
+      "expected": {
+        "evidenceState": "unknown",
+        "reservationRetained": true
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E26",
+      "expected": {
+        "evidenceState": "no_effect",
+        "reservationRetained": true
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E27",
+      "expected": {
+        "secondBudgetEligible": true,
+        "profileDecisionUnchanged": true,
+        "remainingBudgetUnits": 4
+      },
+      "actual": {
+        "secondBudgetEligible": true,
+        "profileDecisionUnchanged": true,
+        "remainingBudgetUnits": 4
+      },
+      "status": "component-properties-pass"
+    },
+    {
+      "id": "E28",
+      "expected": {
+        "releaseAllowed": false,
+        "evidenceState": "unknown"
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    },
+    {
+      "id": "E29",
+      "expected": {
+        "releaseAllowed": false,
+        "evidenceState": "unknown"
+      },
+      "actual": null,
+      "status": "not-fully-qualified-by-this-component-run"
+    }
+  ],
+  "schema_cases": [
+    {
+      "id": "J01-shape",
+      "expected": true,
+      "actual": true,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J02-missing-evidence-state",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J03-invalid-evidence-state",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J04-missing-observation-source",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J05-extra-root",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J06-marker-wrong-type",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J07-malformed-signature",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J08-no-reservation",
+      "expected": true,
+      "actual": true,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J09-dispatched-shape",
+      "expected": true,
+      "actual": true,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J10-effect-confirmed-shape",
+      "expected": true,
+      "actual": true,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J11-unknown-shape",
+      "expected": true,
+      "actual": true,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J-invalid-withheld-marker",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J-invalid-dispatched-marker",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J-invalid-effect_confirmed-marker",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J-invalid-no_effect-marker",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J-unknown-effect-marker",
+      "expected": true,
+      "actual": true,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J-uppercase-digest",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J-reservation-pair",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J-no-marker",
+      "expected": true,
+      "actual": true,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J-no-effect",
+      "expected": true,
+      "actual": true,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J-http-status-marker-value-shape-only",
+      "expected": true,
+      "actual": true,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J-withheld-requires-coverage",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J-unknown-no-coverage",
+      "expected": true,
+      "actual": true,
+      "status": "schema-properties-pass"
+    },
+    {
+      "id": "J-reservation-reference-missing",
+      "expected": false,
+      "actual": false,
+      "status": "schema-properties-pass"
+    }
+  ]
+}

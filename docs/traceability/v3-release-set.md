@@ -845,3 +845,10 @@ mapped to this profile. Ordinary native execution does not enable this opt-in
 adapter. Remaining source decision gates from #213–#218 remain open with no
 responses when checked live on 2026-11-04; #131/#139 still have their exact reviewed
 heads and remain unmerged. No final v3 adoption or package-version change occurs.
+
+
+Current consolidated status: [v3-pretag-frontier.md](v3-pretag-frontier.md).
+The immutable #139 component outcome record is
+[consequential-action-v1-coverage.json](consequential-action-v1-coverage.json),
+pinned to the exact verified implementation and source suite. Null outcomes are
+unqualified, never inferred passes or withheld-effect claims.
