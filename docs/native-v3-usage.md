@@ -216,3 +216,35 @@ floor. Native restrictions, prior vetoes and magnitude ceilings continue to bind
 Actual current condition loss, rather than a generic false availability bit,
 determines whether the continuing invocation requires the software stop path.
 These outcomes never independently authorize effects.
+
+
+## Optional consequential evidence #139
+
+`InstalledConsequentialEvidenceVerifier` follows exact draft
+`0e40c31305cc80779949c8a6fef5eb2cf3ca49f9`, with its retained schema and
+29 contract/24 shape fixtures. It is a separate evidence assessment, never
+ordinary authorization or target execution. Its installed private policy pins
+zone, issuer/algorithm allowlists, source IDs and the states each may attest,
+protected path, recovery boundary and maximum observation age.
+
+`AuthenticatedConsequentialEvidenceContext` is an installed Source boundary.
+It must supply independently authenticated actual request binding, original
+observation/provenance bytes, scoped current signing keys, exact observed state
+and marker, required protected interval, actual reservation correlation and
+recorder evidence. The Source must authenticate the real observation and its
+source; echoing a candidate into this context does not establish a fact.
+
+The verifier binds the canonical complete signed consumption decision and actual
+operation, requester/executor, parameters, destination and request fingerprint.
+It checks safe integer Unix seconds, interval order, current Source validity,
+observation freshness, exact canonical JWS payload/header and real ES256 or
+Ed25519 signature under the installed evidence role. Historical correlation does
+not claim the consumed authorization is still valid.
+
+A verified `withheld` record covering the complete protected path and required
+interval may produce `reservation_release_candidate`; this is a reconciliation
+condition, not a completed release. `dispatched`, `effect_confirmed`, `no_effect`
+and `unknown` retain reservations. Target evidence must come from the installed
+trusted target observer, not HTTP status, timeout, denial or signature alone.
+The Service owns durable recorder/ledger changes, observation authentication,
+atomic reservation release and actual target effects.
