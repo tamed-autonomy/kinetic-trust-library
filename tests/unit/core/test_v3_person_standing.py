@@ -16,7 +16,7 @@ def acts():
 class PersonStandingTests(unittest.TestCase):
     def test_exact_published_source_and_composition_cases(self):
         raw=(Path(__file__).parents[3]/"spec/proposals/person-standing-v1.json").read_bytes()
-        self.assertEqual(hashlib.sha256(raw).hexdigest(),"c2fa8debf133e883f6fabf3ed62a464251608d461d7853e1f72a988547bd9217")
+        self.assertEqual(hashlib.sha256(raw).hexdigest(),"728d49aed24be8ba395f0200848730fb0b476b3a078867ed69e16ffe663c0a04")
         cases={c["id"]:c for c in json.loads(raw)["vectors"]}
         source=cases["PS01-signed-acts-compose"]
         given=source["given"];expected=source["expect"]

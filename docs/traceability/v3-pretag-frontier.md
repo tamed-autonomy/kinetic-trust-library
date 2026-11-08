@@ -71,3 +71,22 @@ adopted tag, reconcile the gates above, run the applicable chosen capability and
 source-case qualification, then perform the separately authorized root/API/version/
 pin cutover and consuming-Service validation. A final tag alone does not perform
 those steps or supply operational evidence.
+
+
+## November 7 refresh superseding earlier issue status
+
+The November 4 table above is historical. Current main is
+`f510f7e85a36503a76450217f815a21ef87b2956`, with no advertised 3.x tag.
+#213 is closed after upstream fixture correction. Maintainer replies on #214,
+#215, #217 and #218 are reflected in the current person, federation and governance
+drafts and this refresh; these are no longer unanswered Library reading blockers.
+The issues themselves may remain open while the coordinated PRs are unreleased.
+
+Concurrent person Root selection and current scoring-fact binding are implemented;
+corrected geometry fixtures need no workaround; FD27's active-bond case is retained
+and exercised at the selected measure boundary; recurrence count/window changes
+remain void. #216's new mixed-standing join is explicitly deferred beyond the
+intended 3.0 tag and remains outside the selected adapter. Closed-bond/L21,
+wire-number precision, final trajectory/stronger signing profiles, exact tagged
+adoption and independent Service qualification retain their existing boundaries.
+No PR, merge, release or package/root cutover is performed.

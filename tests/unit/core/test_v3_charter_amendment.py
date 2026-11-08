@@ -66,7 +66,7 @@ class CharterAmendmentTests(unittest.TestCase):
 
     def test_published_record_and_capacity_boundaries(self):
         raw=(Path(__file__).parents[3]/"spec/proposals/charter-amendment-v1.json").read_bytes()
-        self.assertEqual(hashlib.sha256(raw).hexdigest(),"27173e2e3c94ce62a15e53d97e1d22234192f3dae53d3e546f5ae8852ed7391b")
+        self.assertEqual(hashlib.sha256(raw).hexdigest(),"513592d36cc37659a5ee0112d2d2b53e639a29596aff7303031f88435afa4650")
         source=json.loads(raw)
         cases={c["id"]:c for c in source["vectors"]}
         for name in ("AM07-amendment-cites-no-record-invalid","AM08-constant-change-cites-no-measurement-invalid","AM09-constant-change-cites-measurement-valid","AM11-amendment-exceeds-governor-E-not-made"):
@@ -78,3 +78,17 @@ class CharterAmendmentTests(unittest.TestCase):
             expected=c["expect"].get("valid",c["expect"].get("made",False))
             if name.startswith("AM11"):expected=False
             with self.subTest(case=name):self.assertEqual(self.evaluate(record).valid,expected)
+
+    def test_current_source_raise_and_easing_of_recurrence_are_both_void(self):
+        cases=json.loads((Path(__file__).parents[3]/'spec/proposals/charter-amendment-v1.json').read_bytes())['vectors']
+        selected=[c for c in cases if c['id'].startswith(('AM17-','AM18-'))]
+        self.assertEqual(len(selected),2)
+        for case in selected:
+            amendment=case['given']['amendment'];record=fixture()
+            self.assertNotEqual(amendment['from']['records'],amendment['to']['records'])
+            record.update(effects=('change-declared-recurrence',),approvers=tuple('council:'+str(i) for i in range(1,6)),
+                measurements_cited=tuple(dict(m,anchor='audit:'+m['id']) for m in amendment['measurementsCited']))
+            result=self.evaluate(record)
+            with self.subTest(case=case['id']):
+                self.assertEqual(result.void,case['expect']['void']);self.assertFalse(result.valid)
+                self.assertEqual(result.version_for_evaluation,record['from_version'])

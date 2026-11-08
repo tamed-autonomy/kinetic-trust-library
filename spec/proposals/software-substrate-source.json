@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/gatekeeper454/ktp-rfc",
   "pull_request": "https://github.com/nmcitra/ktp-rfc/pull/131",
-  "commit": "652c06b68af7f6ee0785ab14399be68bc458843e",
+  "commit": "57d4ddb5ac65be4a9cbbff4cd4615517588de37c",
   "status": "unreleased normative companion; not a final tag",
   "sha256": {
     "software-substrate-decision.json": "6f593dde44ae7a70ef93b0ea9e15bc214887e8b6d71d77dc0b086f4e2cb1b78f",
@@ -9,5 +9,10 @@
     "software-substrate-execution-profile.md": "0ddd617f015cc7b3a074449af01566f462b0c375c778125157a89fe36a910d2c"
   },
   "previous_source_commit": "8dda717a51818a5e9ef00e36898ddae6af890230",
-  "previous_archive": "archive/2026-11-04-pre-131-refresh"
+  "previous_archive": "archive/2026-11-04-pre-131-refresh",
+  "revision_refresh": {
+    "date": "2026-11-07",
+    "previous_verified_commit": "652c06b68af7f6ee0785ab14399be68bc458843e",
+    "contract_content_unchanged": true
+  }
 }

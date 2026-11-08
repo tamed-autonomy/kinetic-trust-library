@@ -1,3 +1,4 @@
+from kinetic_trust_library.v3.demand_supplier import _digest
 import json
 import unittest
 from pathlib import Path
@@ -15,14 +16,18 @@ def fixture(deployment=None):
     from tests.unit.core.test_v3_person_standing import acts
     subject="person:acct:z1:0417";now=1800000004
     dp=deployment if deployment is not None else {"external_root":{"hop_bound":4},"peer_share":0}
-    p=dict(id="person-standing:a",version=1,zone="zone:blue",formula="signed-act-single-root-person-standing-v1",
+    p=dict(id="person-standing:a",version=1,zone="zone:blue",formula="signed-act-strongest-root-person-standing-v1",
         contribution_policy="policy:signed-stress-assessment",trajectory_ceiling_policy="policy:provisional-person-trajectory")
     op=dict(subject="subject:a",actor=subject,audience="service:a",operation="action:review",resource="resource:a",
         parameters={},request_id="request:a",replay_domain="replay:a")
     body=json.loads((Path(__file__).parents[3]/"spec/proposals/external-root-v1.json").read_text())["instruments"]["attestation"]["body"]
     body.update(subject=subject,root_person=subject)
     class RootSource:
-        def verify(self,*args,**kwargs):return AuthenticatedRootInstrument(rfc8785.dumps(body),(),issuer_zone="zone:blue")
+        def verify(self,evidence,**kwargs):
+            import hashlib
+            facts=dict(instrument_digest="sha256:"+hashlib.sha256(evidence).hexdigest(),context_digest=_digest(json.loads(kwargs["context_bytes"]),"sha256"),subject=subject,terminator=body["terminator"],
+                standing=80,anchor="audit:institution",as_of=now,expires_at=body["end_time"])
+            return AuthenticatedRootInstrument(rfc8785.dumps(body),(),issuer_zone="zone:blue",person_standing_bytes=rfc8785.dumps(facts))
     context=rfc8785.dumps(dict(subject=subject,subject_profile="person",hop_bound=4,receiving_zone="zone:blue",deployment_digest=_digest(dp,"sha256")))
     root=InstalledRootVerifier(RootSource(),"sha256").evaluate(b"modeled authenticated person attestation",context_bytes=context,evaluated_at=now)
     roots=select_assessed_roots((root,),context_bytes=context,evaluated_at=now,algorithm="sha256")
@@ -84,7 +89,7 @@ class InstalledPersonStandingTests(unittest.TestCase):
         f["state"]["ceilings"].pop("trajectory")
         with self.assertRaises(ValidationError):f["v"].evaluate(roots=f["roots"],actual_operation=f["op"],evaluated_at=f["now"],clock_healthy=True)
 
-    def test_multiple_root_instruments_do_not_reuse_software_ranking(self):
+    def test_factless_person_instrument_cannot_reuse_software_ranking(self):
         import rfc8785
         from kinetic_trust_library.v3.installed_root import InstalledRootVerifier,AuthenticatedRootInstrument
         from kinetic_trust_library.v3.assessed_root_selection import select_assessed_roots
@@ -95,5 +100,92 @@ class InstalledPersonStandingTests(unittest.TestCase):
         other=InstalledRootVerifier(Source(),"sha256").evaluate(b"second authenticated person instrument",
             context_bytes=f["roots"].context_bytes,evaluated_at=f["now"])
         roots=select_assessed_roots((old,other),context_bytes=f["roots"].context_bytes,evaluated_at=f["now"],algorithm="sha256")
-        with self.assertRaisesRegex(ValidationError,"multiple current Root"):
-            f["v"].evaluate(roots=roots,actual_operation=f["op"],evaluated_at=f["now"],clock_healthy=True)
+        self.assertEqual(other.score,0)
+        self.assertEqual(json.loads(other.projection_bytes)["kind"],"none")
+        self.assertIs(roots.selected,old)
+        self.assertEqual(f["v"].evaluate(roots=roots,actual_operation=f["op"],evaluated_at=f["now"],clock_healthy=True).standing.base_trust,66)
+
+    def test_person_concurrent_roots_use_institution_not_exposure(self):
+        import rfc8785,hashlib
+        from kinetic_trust_library.v3.installed_root import InstalledRootVerifier,AuthenticatedRootInstrument
+        from kinetic_trust_library.v3.assessed_root_selection import select_assessed_roots
+        f=fixture();base=json.loads(f['roots'].selected.authenticated_body_bytes)
+        cases=json.loads((Path(__file__).parents[3]/'spec/proposals/person-standing-v1.json').read_bytes())['vectors']
+        case=next(c for c in cases if c['id']=='PS13-concurrent-instruments-strongest-single')
+        f['state']['por_contribution']=case['given']['PoR_contribution']
+        scores=[i['terminator']['standing'] for i in case['given']['root_instruments']]
+
+        def assess(label,standing,exposure,expires=None):
+            body=json.loads(json.dumps(base));body['id']='attestation:'+label
+            body['terminator']['reference']='org:'+label
+            body['inputs'].update(declared_exposure=exposure,anchored_capacity=100)
+            raw=('complete signed instrument '+label).encode()
+            facts=dict(instrument_digest='sha256:'+hashlib.sha256(raw).hexdigest(),context_digest=_digest(json.loads(f['roots'].context_bytes),'sha256'),subject=body['subject'],terminator=body['terminator'],
+                standing=standing,as_of=f['now'],expires_at=expires or f['now']+2,anchor='audit:institution:'+label)
+            class Source:
+                def verify(self,*args,**kwargs):return AuthenticatedRootInstrument(rfc8785.dumps(body),(),issuer_zone='zone:blue',person_standing_bytes=rfc8785.dumps(facts))
+            result=InstalledRootVerifier(Source(),'sha256').evaluate(raw,context_bytes=f['roots'].context_bytes,evaluated_at=f['now'])
+            return result,facts
+        weaker,_=assess('high-exposure',scores[0],100)
+        stronger,facts=assess('low-exposure',scores[1],1)
+        for candidates in ((weaker,stronger),(stronger,weaker)):
+            roots=select_assessed_roots(candidates,context_bytes=f['roots'].context_bytes,evaluated_at=f['now'],algorithm='sha256')
+            self.assertIs(roots.selected,stronger)
+            f['state'].update(root_digest=facts['instrument_digest'],terminator={k:facts[k] for k in ('standing','anchor','as_of','expires_at')})
+            f['state']['terminator']['identity']=facts['terminator']
+            result=f['v'].evaluate(roots=roots,actual_operation=f['op'],evaluated_at=f['now'],clock_healthy=True)
+            self.assertEqual(stronger.score,case['expect']['Root_score'])
+            self.assertEqual(result.standing.root_term,case['expect']['root_term']);self.assertEqual(result.standing.base_trust,case['expect']['E_base'])
+            self.assertEqual(result.expires_at,f['now']+2);self.assertFalse(result.action_permitted)
+            from kinetic_trust_library.v3.native_proof_profile import RootProofBinding
+            bound=RootProofBinding(roots,"zone:blue")
+            payload=dict(sub=f['op']['actor'],exp=f['now']+3,ktp=dict(zone="zone:blue",subject_kind="person",root_instrument=json.loads(stronger.projection_bytes)))
+            self.assertFalse(bound(rfc8785.dumps(payload),f['now']))
+        tied,_=assess('tie',90,99)
+        expected=min((tied,stronger),key=lambda c:hashlib.sha256(c.complete_instrument_bytes).hexdigest())
+        for ordered in ((tied,stronger),(stronger,tied)):
+            self.assertIs(select_assessed_roots(ordered,context_bytes=f['roots'].context_bytes,evaluated_at=f['now'],algorithm='sha256').selected,expected)
+        # Every competing current score must remain fresh, including a weaker one.
+        fleeting,_=assess('expires-first',80,100,expires=f['now']+1)
+        roots=select_assessed_roots((stronger,fleeting),context_bytes=f['roots'].context_bytes,evaluated_at=f['now'],algorithm='sha256')
+        result=f['v'].evaluate(roots=roots,actual_operation=f['op'],evaluated_at=f['now'],clock_healthy=True)
+        self.assertEqual(result.expires_at,f['now']+1)
+        f['state']['terminator']['standing']=100
+        with self.assertRaises(ValidationError):f['v'].evaluate(roots=roots,actual_operation=f['op'],evaluated_at=f['now'],clock_healthy=True)
+
+    def test_person_scoring_facts_must_bind_the_actual_current_instrument(self):
+        import rfc8785,hashlib
+        from kinetic_trust_library.v3.installed_root import InstalledRootVerifier,AuthenticatedRootInstrument
+        f=fixture();body=f['roots'].selected.authenticated_body_bytes;raw=b'complete signed person root'
+        facts=dict(instrument_digest='sha256:'+hashlib.sha256(raw).hexdigest(),context_digest=_digest(json.loads(f['roots'].context_bytes),'sha256'),subject=f['op']['actor'],
+            terminator=json.loads(body)['terminator'],standing=90,as_of=f['now'],expires_at=f['now']+1,anchor='audit:institution')
+        class Source:
+            def verify(self,*args,**kwargs):return AuthenticatedRootInstrument(body,(),issuer_zone='zone:blue',person_standing_bytes=rfc8785.dumps(facts))
+        def evaluate():return InstalledRootVerifier(Source(),'sha256').evaluate(raw,context_bytes=f['roots'].context_bytes,evaluated_at=f['now'])
+        self.assertEqual(evaluate().score,90)
+        for field,value in [('instrument_digest','sha256:'+'0'*64),('context_digest','sha256:'+'0'*64),('subject','person:other'),('terminator',dict(kind='board',reference='org:other')),
+            ('as_of',f['now']-1),('expires_at',f['now']),('standing',True),('standing',101),('anchor','')]:
+            before=facts[field];facts[field]=value
+            with self.subTest(field=field):self.assertEqual(evaluate().score,0)
+            facts[field]=before
+
+    def test_current_zero_standing_person_root_is_not_missing(self):
+        import rfc8785,hashlib
+        from kinetic_trust_library.v3.installed_root import InstalledRootVerifier,AuthenticatedRootInstrument
+        from kinetic_trust_library.v3.assessed_root_selection import select_assessed_roots
+        from kinetic_trust_library.v3.native_proof_profile import RootProofBinding
+        f=fixture();body=f['roots'].selected.authenticated_body_bytes;raw=b'current person instrument zero institutional standing'
+        facts=dict(instrument_digest='sha256:'+hashlib.sha256(raw).hexdigest(),context_digest=_digest(json.loads(f['roots'].context_bytes),'sha256'),
+            subject=f['op']['actor'],terminator=json.loads(body)['terminator'],standing=0,as_of=f['now'],expires_at=f['now']+2,anchor='audit:zero-institution')
+        class Source:
+            def verify(self,*args,**kwargs):return AuthenticatedRootInstrument(body,(),issuer_zone='zone:blue',person_standing_bytes=rfc8785.dumps(facts))
+        root=InstalledRootVerifier(Source(),'sha256').evaluate(raw,context_bytes=f['roots'].context_bytes,evaluated_at=f['now'])
+        self.assertEqual(json.loads(root.projection_bytes)['kind'],'external_attestation');self.assertEqual(root.score,0)
+        roots=select_assessed_roots((root,),context_bytes=f['roots'].context_bytes,evaluated_at=f['now'],algorithm='sha256')
+        self.assertIs(roots.selected,root)
+        f['state'].update(root_digest=facts['instrument_digest'],terminator=dict(identity=facts['terminator'],standing=0,
+            anchor=facts['anchor'],as_of=f['now'],expires_at=f['now']+2))
+        result=f['v'].evaluate(roots=roots,actual_operation=f['op'],evaluated_at=f['now'],clock_healthy=True)
+        self.assertEqual(result.standing.root_term,0);self.assertEqual(result.standing.base_trust,42)
+        binding=RootProofBinding(roots,'zone:blue')
+        self.assertTrue(binding(rfc8785.dumps(dict(sub=f['op']['actor'],exp=f['now']+1,ktp=dict(zone='zone:blue',subject_kind='person',root_instrument=json.loads(root.projection_bytes)))),f['now']))

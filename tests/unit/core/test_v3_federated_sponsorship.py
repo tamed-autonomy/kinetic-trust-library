@@ -227,4 +227,29 @@ class FederatedSponsorshipTests(unittest.TestCase):
         with self.assertRaises(ValidationError):verifier.evaluate(b"same",roots=roots,actual_operation=operation,evaluated_at=1000)
 
 
+    def test_current_fd27_active_bond_and_receiver_measure(self):
+        import json,rfc8785
+        from pathlib import Path
+        from dataclasses import replace
+        from kinetic_trust_library.v3.demand_supplier import _digest
+        case=next(c for c in json.loads((Path(__file__).parents[3]/'spec/proposals/federation-v1.json').read_bytes())['vectors'] if c['id'].startswith('FD27-'))
+        given=case['given'];v,state,body,instrument,context=fixture(subject=given['subject']['id'])
+        profile=json.loads(v.profile_bytes)
+        # The vector presupposes an admissible live bond. The test's named
+        # private admission floor permits that declared receiver measure.
+        profile['sponsor_admission_floor']=40
+        current=state['current'];current['home_base']=given['sponsor']['attestedE_base']
+        current['sponsor_admission']['attestation'].update(attested_base=50,exportable_base=50)
+        current['subject_intrinsic_base']=given['subject']['earnedInB']
+        next(b for b in current['commitments'] if b['bond_id']==body['id'])['intrinsic_base']=given['subject']['earnedInB']
+        ctx=json.loads(context);ctx.update(generation=given['subject']['generation'],federated_sponsorship_profile_digest=_digest(profile,'sha256'))
+        state.update(profile_digest=_digest(profile,'sha256'),context_digest=_digest(ctx,'sha256'))
+        v=replace(v,profile_bytes=rfc8785.dumps(profile))
+        result=self.evaluate(v,instrument,rfc8785.dumps(ctx))
+        self.assertTrue(result.active)
+        self.assertEqual(result.sponsor_measure,case['expect']['sponsorMeasureInB'])
+        self.assertEqual(result.root_sponsor_basis,case['expect']['sponsorMeasureInB'])
+        self.assertLess(result.sponsor_measure,given['subject']['earnedInB'])
+
+
 if __name__=="__main__":unittest.main()

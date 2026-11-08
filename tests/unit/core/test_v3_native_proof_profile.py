@@ -78,7 +78,13 @@ class NativeProofProfileTests(unittest.TestCase):
         instrument = root_vectors["instruments"]["attestation"]
         class Adapter:
             def verify(self, *args, **kwargs):
-                return AuthenticatedRootInstrument(rfc8785.dumps(instrument["body"]), (), issuer_zone=context["zone"])
+                facts=None
+                if instrument["body"]["subject"].startswith("person:"):
+                    import hashlib
+                    from kinetic_trust_library.v3.demand_supplier import _digest
+                    facts=rfc8785.dumps(dict(instrument_digest="sha256:"+hashlib.sha256(args[0]).hexdigest(),context_digest=_digest(json.loads(kwargs["context_bytes"]),"sha256"),subject=instrument["body"]["subject"],
+                        terminator=instrument["body"]["terminator"],standing=80,anchor="audit:institution",as_of=kwargs["evaluated_at"],expires_at=instrument["body"]["end_time"]))
+                return AuthenticatedRootInstrument(rfc8785.dumps(instrument["body"]), (), issuer_zone=context["zone"],person_standing_bytes=facts)
         root_context = rfc8785.dumps(dict(subject=context["subject"], subject_profile="software", lineage="guarantor", generation=7, hop_bound=4))
         raw = instrument["complete_bytes_base64url"]
         assessed = InstalledRootVerifier(Adapter(), "sha256").evaluate(
@@ -108,7 +114,7 @@ class NativeProofProfileTests(unittest.TestCase):
         person = "person:acct:zone:1234"
         instrument = json.loads(json.dumps(root_vectors["instruments"]["attestation"]))
         instrument["body"].update(subject=person, root_person=person)
-        root_context = rfc8785.dumps(dict(subject=person, subject_profile="person", hop_bound=4))
+        root_context = rfc8785.dumps(dict(subject=person, subject_profile="person", hop_bound=4,receiving_zone=context["zone"]))
         assessed = InstalledRootVerifier(Adapter(), "sha256").evaluate(
             b"authenticated person instrument fixture", context_bytes=root_context, evaluated_at=context["now"])
         selected = select_assessed_roots((assessed,), context_bytes=root_context, evaluated_at=context["now"], algorithm="sha256")

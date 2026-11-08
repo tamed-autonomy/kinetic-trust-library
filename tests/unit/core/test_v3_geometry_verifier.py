@@ -8,7 +8,7 @@ from kinetic_trust_library.v3.complete_proof_verifier import InstalledProofVerif
 
 @unittest.skipUnless(all(find_spec(m) for m in ("rfc8785","jsonschema","cryptography")), "install v3-proofs")
 class GeometryVerifierTests(unittest.TestCase):
-    def test_published_bodies_and_explicitly_recorded_source_preimage_defects(self):
+    def test_all_current_published_bodies_without_preimage_workarounds(self):
         import rfc8785
         root=Path(__file__).parents[3]
         vectors=json.loads((root/"spec/proposals/decision-geometry-v1.json").read_text())
@@ -40,22 +40,6 @@ class GeometryVerifierTests(unittest.TestCase):
                     else: target[key]=mutation["value"]
                 raw=case.get("raw_json",json.dumps(body)).encode()
                 result=verifier.verify(raw,evaluated_at=context["identity"]["evaluated_at"])
-                if case["id"] in ("over-capacity","equality"):
-                    # These exact upstream records still bind the old unit's
-                    # request preimage. Never weaken verification to pass them.
-                    import hashlib
-                    from kinetic_trust_library.v3.request_binding import digest_canonical_request
-                    old_request=json.loads(json.dumps(context["request"]))
-                    old_request["demand"]["unit"]="ktp-action-risk-points"
-                    old_digest="sha256:"+hashlib.sha256(b"KTP/request-binding-v1\0"+rfc8785.dumps(old_request)).hexdigest()
-                    self.assertEqual(body["association"]["request_digest"],old_digest)
-                    self.assertEqual(result.reason,"DG_BINDING")
-                    # Separately exercise a locally corrected unsigned body;
-                    # retained source bytes and manifest hashes stay untouched.
-                    corrected=digest_canonical_request(context["request"],algorithm=context["digest_algorithm"])
-                    body["association"]["request_digest"]=expected["association"]["request_digest"]=corrected
-                    self.assertEqual(verifier.verify(rfc8785.dumps(body),evaluated_at=context["identity"]["evaluated_at"]).reason,"DG_VALID")
-                    continue
                 self.assertEqual(result.reason,case["expected"])
 
 

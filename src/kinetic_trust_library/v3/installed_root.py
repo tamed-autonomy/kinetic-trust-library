@@ -17,6 +17,7 @@ from .trust_proof_json import _parse_jcs_object
 from .sponsorship_repair import InstalledSponsorshipRepairVerifier,SponsorshipRepairAssessment
 from .federated_sponsorship import InstalledFederatedSponsorshipVerifier,FederatedSponsorshipAssessment
 from .demand_supplier import _digest
+from .execution_observation import _name
 
 
 class RootVerificationFailure(Exception):
@@ -28,6 +29,7 @@ class AuthenticatedRootInstrument:
     body_bytes: bytes
     events: tuple[RootLifecycleEvent, ...]
     issuer_zone: str | None = None
+    person_standing_bytes: bytes | None = None
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -44,6 +46,7 @@ class RootAssessment:
     sponsorship_repair: SponsorshipRepairAssessment | None
     federated_sponsorship: FederatedSponsorshipAssessment | None
     issuer_zone: str | None
+    person_standing_bytes: bytes | None
 
     def __init__(self, *args, **kwargs):
         raise TypeError("RootAssessment is derived by an installed root verifier")
@@ -76,6 +79,7 @@ class InstalledRootVerifier:
         score = Decimal(0)
         exact_score = Fraction(0)
         authenticated = None
+        person_standing_bytes=None
         sponsorship_repair=None
         federated_sponsorship=None
         in_adapter = False
@@ -113,7 +117,7 @@ class InstalledRootVerifier:
             subject_kind = context.get("subject_profile")
             if subject_kind not in ("software", "person"):
                 raise RootVerificationFailure("invalid_instrument")
-            if subject_kind == "person" and body.get("root_person") != body["subject"]:
+            if subject_kind == "person" and (body.get("root_person") != body["subject"] or not _name(context.get("receiving_zone"))):
                 raise RootVerificationFailure("invalid_instrument")
             projection = {"kind": kind, "status": state, "end_time": body["end_time"],
                           "terminator": body["terminator"], "root_person": body["root_person"], "chain_length": chain}
@@ -174,7 +178,21 @@ class InstalledRootVerifier:
                         raise RootVerificationFailure("invalid_instrument")
                     if exposure == 0:
                         raise RootVerificationFailure("no_exposure")
-                    exact_score = min(Fraction(100), 100 * Fraction(exposure) / Fraction(capacity))
+                    if subject_kind == "person":
+                        facts_raw=authenticated.person_standing_bytes
+                        if type(facts_raw) is not bytes or len(facts_raw)>65536:
+                            raise RootVerificationFailure("unverifiable")
+                        facts=_parse_jcs_object(facts_raw)
+                        if (set(facts)!={"instrument_digest","context_digest","subject","terminator","standing","as_of","expires_at","anchor"}
+                                or facts["instrument_digest"]!=digest or facts["context_digest"]!=_digest(context,self.algorithm) or facts["subject"]!=body["subject"]
+                                or facts["terminator"]!=body["terminator"] or not _name(facts["anchor"])
+                                or not _time(facts["as_of"]) or facts["as_of"]!=evaluated_at
+                                or not _time(facts["expires_at"]) or facts["expires_at"]<=evaluated_at):
+                            raise RootVerificationFailure("invalid_instrument")
+                        exact_score=Fraction(as_decimal(facts["standing"],name="person terminator standing",minimum=0,maximum=100))
+                        person_standing_bytes=facts_raw
+                    else:
+                        exact_score = min(Fraction(100), 100 * Fraction(exposure) / Fraction(capacity))
                     score = Decimal(exact_score.numerator) / Decimal(exact_score.denominator)
                     projection.update(attestation_id=body["id"], attestation_digest=digest, attestor_id=body["issuer"], **inputs)
                 else:
@@ -184,6 +202,7 @@ class InstalledRootVerifier:
             if "candidate_projection" in context and context["candidate_projection"] != projection:
                 raise RootVerificationFailure("invalid_instrument")
         except RootVerificationFailure as exc:
+            person_standing_bytes=None
             reason = str(exc)
             projection = {"kind": "none", "status": "none", "reason": reason}
             if not validate_root_projection(projection):
@@ -191,6 +210,7 @@ class InstalledRootVerifier:
             score = Decimal(0)
             exact_score = Fraction(0)
         except (ValidationError, ProofFormatError, KeyError, TypeError, ValueError):
+            person_standing_bytes=None
             if in_adapter:
                 raise
             projection = {"kind": "none", "status": "none", "reason": "invalid_instrument"}
@@ -203,6 +223,6 @@ class InstalledRootVerifier:
                             ("score_numerator", exact_score.numerator), ("score_denominator", exact_score.denominator),
                             ("authenticated_body_bytes", None if authenticated is None else authenticated.body_bytes),
                             ("events", () if authenticated is None else authenticated.events),("sponsorship_repair",sponsorship_repair),
-                            ("federated_sponsorship",federated_sponsorship),("issuer_zone",None if authenticated is None else authenticated.issuer_zone)):
+                            ("federated_sponsorship",federated_sponsorship),("issuer_zone",None if authenticated is None else authenticated.issuer_zone),("person_standing_bytes",person_standing_bytes)):
             object.__setattr__(result, name, value)
         return result

@@ -5,7 +5,9 @@ contribution assessment and current standing of the exact Root terminator.
 This is a provisional zero-peer profile, not a human-capacity evaluation.
 """
 from dataclasses import dataclass
+from fractions import Fraction
 from kinetic_trust_library.errors import ValidationError
+from kinetic_trust_library._decimal import as_decimal
 from .assessed_root_selection import AssessedRootSelection
 from .person_standing import calculate_person_standing
 from .trust_proof_json import _parse_jcs_object
@@ -50,7 +52,7 @@ class InstalledPersonStandingVerifier:
         dp=_parse_jcs_object(self.deployment_profile_bytes);p=_parse_jcs_object(self.profile_bytes)
         if (set(p)!={"id","version","zone","formula","contribution_policy","trajectory_ceiling_policy"}
                 or any(not _name(p[k]) for k in ("id","zone","contribution_policy","trajectory_ceiling_policy"))
-                or not _time(p["version"]) or p["version"]==0 or p["formula"]!="signed-act-single-root-person-standing-v1"
+                or not _time(p["version"]) or p["version"]==0 or p["formula"]!="signed-act-strongest-root-person-standing-v1"
                 or type(dp.get("peer_share")) is not int or dp["peer_share"]!=0
                 or type(dp.get("external_root")) is not dict or type(dp["external_root"].get("hop_bound")) is not int
                 or not 1<=dp["external_root"]["hop_bound"]<=12):
@@ -62,8 +64,6 @@ class InstalledPersonStandingVerifier:
         dp=_parse_jcs_object(self.deployment_profile_bytes);p=_parse_jcs_object(self.profile_bytes)
         op_bytes=canonical_demand_operation_bytes(actual_operation);op=_parse_jcs_object(op_bytes)
         context=_parse_jcs_object(roots.context_bytes)
-        if sum(_parse_jcs_object(c.projection_bytes)["kind"]!="none" for c in roots.candidates)>1:
-            raise ValidationError("selected person profile does not support multiple current Root instruments")
         if (roots.evaluated_at!=evaluated_at or roots.algorithm!=self.algorithm
                 or context.get("deployment_digest")!=_digest(dp,self.algorithm) or context.get("subject")!=op["actor"]
                 or context.get("subject_profile")!="person" or context.get("receiving_zone")!=p["zone"]
@@ -87,6 +87,11 @@ class InstalledPersonStandingVerifier:
                 or type(s["signed_acts"]) is not list or type(s["ceilings"]) is not dict or "trajectory" not in s["ceilings"]):
             raise ValidationError("person standing evidence differs from actual current request and declared policies")
         expiry=s["expires_at"];institutional_standing=0
+        for candidate in roots.candidates:
+            if candidate.person_standing_bytes is not None:
+                facts=_parse_jcs_object(candidate.person_standing_bytes)
+                expiry=min(expiry,facts["expires_at"],_parse_jcs_object(candidate.projection_bytes)["end_time"])
+
         if roots.selected is None:
             if s["root_digest"] is not None or s["terminator"] is not None:
                 raise ValidationError("missing current person Root cannot retain institutional credit")
@@ -100,6 +105,9 @@ class InstalledPersonStandingVerifier:
                     or not _time(institution["expires_at"]) or institution["expires_at"]<=evaluated_at
                     or root["end_time"]<=evaluated_at):
                 raise ValidationError("person institutional standing differs from actual current accountable Root")
+            measured=as_decimal(institution["standing"],name="selected person institution",minimum=0,maximum=100)
+            if Fraction(measured)!=Fraction(roots.selected.score_numerator,roots.selected.score_denominator):
+                raise ValidationError("selected person institution differs from authenticated Root ranking standing")
             institutional_standing=institution["standing"]
             expiry=min(expiry,institution["expires_at"],root["end_time"])
         standing=calculate_person_standing(subject=op["actor"],zone=p["zone"],signed_acts=tuple(s["signed_acts"]),

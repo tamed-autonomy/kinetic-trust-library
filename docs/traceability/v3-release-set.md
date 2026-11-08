@@ -852,3 +852,40 @@ The immutable #139 component outcome record is
 [consequential-action-v1-coverage.json](consequential-action-v1-coverage.json),
 pinned to the exact verified implementation and source suite. Null outcomes are
 unqualified, never inferred passes or withheld-effect claims.
+
+
+### November 7 revision reconciliation
+
+Current sources and exact changed hashes are recorded in
+`spec/proposals/revision-source-2026-11-07.json`; replaced bytes and prior
+software/evidence provenance are archived under
+`spec/proposals/archive/2026-11-07-before-refresh/`.
+
+- #165/#201: PS13 fixes person Root score as terminator standing. Installed Root
+  authentication now binds current institution facts to complete instrument and
+  context digests, subject/terminator and time. Concurrent selection uses one
+  exact maximum and digest tie; standing and proof validity retain all scoring
+  fact deadlines. A valid zero score preserves its current person attestation.
+  Software scoring and invalid/no-exposure handling remain unchanged.
+- #213/#197: the two bad request digests are fixed upstream and #213 is closed.
+  All published body cases now run without a locally corrected-body exception.
+- #217/#178: retain the corrected active FD27 (generation 2, earned 44, sponsor
+  receiver measure 40) and FD38 with the disputed pre-composed total removed.
+  The active-bond/current-measure component passes; mixed standing is not inferred.
+- #218/#176: retain both new recurrence vectors AM17/AM18 and exercise their void
+  result under the existing protected-change classifier. Count and window remain
+  immutable even when an amendment would ease access.
+- #214: person standing/eligibility wording is corrected in #165; no fallback
+  human authorization or software fields are added by the Library.
+- #216: the proposed mixed-standing join is a separate MAJOR decision after the
+  intended 3.0 tag. Distinct local/import routes remain; this is no longer treated
+  as a missing default to invent for the current selected 3.0 path.
+- #131/#139: new heads 57d4ddb5 and 17fbc0f3 have byte-identical specification,
+  schema and vector contracts to their prior pins. Active provenance is refreshed;
+  historical immutable code/suite coverage records retain their original pins.
+- Current #198 Soul clarification already matches the installed per-action query
+  of all declared frameworks and restrictive unanswered/veto behavior. Main's
+  tooling and threat-model changes do not introduce a new calculation formula.
+
+The changes remain provisional. Maintainer comments resolve the cited reading
+questions in the current drafts; they do not publish a tag or lift PR holds.

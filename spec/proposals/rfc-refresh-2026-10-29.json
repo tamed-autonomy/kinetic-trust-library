@@ -64,14 +64,14 @@
     {
       "path": "spec/proposals/decision-geometry-v1.json",
       "source_path": "specifications/conformance/decision-geometry-v1.json",
-      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
-      "sha256": "fd8c85441ea9d624836bfeb185e0899c127d0043a2f361aaa73c91dea63a301e"
+      "source_commit": "3e8db334b2c6ec008d3c5f961f7b311948079ad8",
+      "sha256": "7581775468657793626fa2061a3f6007261da50fe8411e5dee498a039110ccc1"
     },
     {
       "path": "spec/proposals/demand-input-v1.json",
       "source_path": "specifications/conformance/demand-input-v1.json",
-      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
-      "sha256": "9c264078f8a818a40b8d75d08365b164247a2bd2ff78ed4b9e68cc4be24a7482"
+      "source_commit": "a3a507aa7953e9a2c71ee43d5e8c03b1339bae3e",
+      "sha256": "ce4f78f4a123d4daa545abf6c63ce37353a8397a2a6e46177e201d250093fb0f"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/trust-proof-composed-v3.json",
@@ -111,5 +111,6 @@
     }
   ],
   "composition_note": "The current proof/root/person schema is adopted byte-for-byte from the coalesced one-Core proposal. Historical snapshots remain archived; no legacy fallback or final release claim.",
-  "refresh_phase": "late-proposal-update"
+  "refresh_phase": "late-proposal-update",
+  "last_verified_refresh": "2026-11-07"
 }

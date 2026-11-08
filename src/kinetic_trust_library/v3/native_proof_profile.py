@@ -63,6 +63,11 @@ class RootProofBinding:
         if any(name in source and ktp.get(name) != source[name] for name in ("generation", "lineage")):
             return False
         selected = self.selection.selected
+        if person:
+            if source.get("receiving_zone")!=self.expected_zone:return False
+            if selected is not None and selected.person_standing_bytes is None:return False
+            if any(candidate.person_standing_bytes is not None and payload["exp"]>_parse_jcs_object(candidate.person_standing_bytes)["expires_at"]
+                   for candidate in self.selection.candidates):return False
         cross=None if selected is None else selected.federated_sponsorship
         credits=[item for item in ktp.get("applicable_ceilings",[]) if item["ceiling"].startswith(SPONSOR_CREDIT_PREFIX)]
         caps=[item for item in ktp.get("applicable_ceilings",[]) if item["ceiling"]=="federated_sponsor"]

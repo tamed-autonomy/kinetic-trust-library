@@ -1622,3 +1622,18 @@ component coverage are recorded in
 The artifact/profile identifiers are versioned with no earlier-wire fallback.
 The implementation remains provisional; the official package/released RFC pin
 stays at 2.1.0 until final adoption.
+
+
+## November 7 source reconciliation
+
+The current #165/#201 person rules and PS13 now drive installed concurrent Root
+selection; see the usage guide for the authenticated per-instrument institution
+facts and validity boundaries. Corrected geometry boundary cases are exercised
+unchanged from upstream without local request-digest repairs. The current FD27
+uses an active second-generation bond with earned standing 44 and sponsor
+receiver measure 40, resolving the earlier fixture's threshold ambiguity. Its
+selected live-bond/measure component is tested; the separate closed-bond/L21
+question remains deferred. Governance AM17/AM18 confirm that both increasing and
+easing recurrence count are void under the existing protected effect rule.
+Latest #131/#139 heads are rebases with identical contract/schema/vector bytes.
+No root version, normative pin, final tag or RFC hold is changed.

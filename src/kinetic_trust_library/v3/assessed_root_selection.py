@@ -31,7 +31,7 @@ def select_assessed_roots(candidates: tuple[RootAssessment, ...], *, context_byt
     if (type(candidates) is not tuple or type(context_bytes) is not bytes
             or not _time(evaluated_at) or algorithm not in ("sha256", "sha384")):
         raise ValidationError("root selection context is invalid")
-    _parse_jcs_object(context_bytes)
+    context=_parse_jcs_object(context_bytes)
     eligible = []
     identities = set()
     for candidate in candidates:
@@ -59,7 +59,7 @@ def select_assessed_roots(candidates: tuple[RootAssessment, ...], *, context_byt
         if identity in identities:
             raise ValidationError("duplicate root instrument in candidate set")
         identities.add(identity)
-        if score == 0:
+        if score == 0 and context.get("subject_profile")!="person":
             continue
         eligible.append((score, digest, candidate))
     selected = min(eligible, key=lambda item: (-item[0], item[1]))[2] if eligible else None

@@ -97,7 +97,7 @@ change package/spec metadata together, update the adoption examples and verify
 the consuming Service's independently owned source/fencing integration. Publish
 only after deliberate release approval. This branch has no PR or merge.
 
-Wire-number precision, final person trajectory/multiple-Root/import composition,
+Wire-number precision, final person trajectory and imported/local composition,
 person-proof prose reconciliation and stronger named crypto/receipt profiles
 remain exact source decisions. Optional emergency/Oracle-mesh/downstream-effect
 profiles are explicitly unsupported by the ordinary native path. Local fixtures
@@ -309,3 +309,38 @@ observation. A retry's earlier non-dispatch assessment cannot be reused as the
 new attempt's observation. The independent evidence verifier determines an
 observed state; the Service must retain that original evidence and perform the
 required recording. An emitted recording obligation is not a completed write.
+
+
+## Person Root clarification refresh (2026-11-07)
+
+The current #165/#201 drafts select the strongest single person instrument by
+its terminator's standing. `InstalledRootVerifier` now requires the installed
+Root authenticator to return `AuthenticatedRootInstrument.person_standing_bytes`
+for an otherwise eligible person attestation. This private canonical Source
+projection contains `instrument_digest`, `context_digest`, `subject`, `terminator`,
+`standing`, `as_of`, `expires_at` and `anchor`. The digests bind the complete
+original instrument and complete actual Root context, including receiving zone
+and deployment. The Source must authenticate the actual institution standing
+under that scope at the evaluation time, with its original evidence and anchor.
+These fields are not additions to the signed Root/Trust Proof wire schemas.
+
+Person scores use that standing directly; exposure and capacity still establish
+applicable instrument validity but do not rank person instruments. Invalid,
+expired, unavailable and zero-exposure instruments give no credit. A valid
+institution standing of zero retains the current attestation and its zero Root
+contribution; it is not relabeled missing. Exact ties use the complete instrument
+digest and never candidate order. Software Root scoring remains unchanged.
+
+`InstalledPersonStandingVerifier` now uses the private formula identifier
+`signed-act-strongest-root-person-standing-v1` and supports concurrent current
+person instruments. It independently matches the selected institution and score,
+without summing instruments. Standing and person proof validity are bounded by
+every current scoring fact, including a weaker competitor's expiry. Missing
+person Root facts never fall back to exposure/capacity scoring or software
+lineage fields. Source completeness, institution authority and measurements,
+original signatures and actual ledger truth remain external responsibilities.
+
+The retained PS13 case and a real signed person-proof regression exercise
+terminator standings 80/90 with reversed exposure strengths, selecting 90 and
+producing base standing 69. Mixed local/imported composition is a separate MAJOR
+decision deferred beyond 3.0; no max/sum rule is inferred here.

@@ -1,4 +1,5 @@
 """Person claims preserve signed-act standing and do not become human capacity."""
+from kinetic_trust_library.v3.demand_supplier import _digest
 import json,unittest
 from pathlib import Path
 from dataclasses import replace
@@ -118,3 +119,39 @@ class PersonClaimsTests(unittest.TestCase):
         for patch in (dict(exp=f["now"]+4),dict(advancement_floor=0),dict(zone="zone:other")):
             f=fixture();f["metadata"].update(patch)
             with self.subTest(patch=patch),self.assertRaises(ValidationError):f["source"]().produce(evaluated_at=f["now"])
+
+    def test_real_person_proof_carries_strongest_concurrent_institution(self):
+        import rfc8785,hashlib
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from cryptography.hazmat.primitives.serialization import Encoding,PublicFormat
+        from kinetic_trust_library.v3.installed_root import InstalledRootVerifier,AuthenticatedRootInstrument
+        from kinetic_trust_library.v3.assessed_root_selection import select_assessed_roots
+        from kinetic_trust_library.v3.native_proof_profile import RootProofBinding,native_schema_bundle
+        from kinetic_trust_library.v3.native_issuance import InstalledProofIssuer,_segment
+        from kinetic_trust_library.v3.complete_proof_verifier import InstalledProofVerifier
+        f=fixture();now=f['now'];old=f['roots'].selected;body=json.loads(old.authenticated_body_bytes)
+        body.update(id='attestation:stronger');body['terminator']['reference']='org:stronger'
+        body['inputs'].update(declared_exposure=1,anchored_capacity=100)
+        raw=b'complete authenticated stronger person instrument'
+        facts=dict(instrument_digest='sha256:'+hashlib.sha256(raw).hexdigest(),context_digest=_digest(json.loads(f['roots'].context_bytes),'sha256'),subject=f['op']['actor'],terminator=body['terminator'],
+            standing=90,as_of=now,expires_at=now+2,anchor='audit:stronger-institution')
+        class RootSource:
+            def verify(self,*args,**kwargs):return AuthenticatedRootInstrument(rfc8785.dumps(body),(),issuer_zone='zone:blue',person_standing_bytes=rfc8785.dumps(facts))
+        stronger=InstalledRootVerifier(RootSource(),'sha256').evaluate(raw,context_bytes=f['roots'].context_bytes,evaluated_at=now)
+        roots=select_assessed_roots((old,stronger),context_bytes=f['roots'].context_bytes,evaluated_at=now,algorithm='sha256')
+        f['state'].update(root_digest=facts['instrument_digest'],terminator=dict(identity=facts['terminator'],standing=90,
+            anchor=facts['anchor'],as_of=now,expires_at=now+2))
+        standing=f['v'].evaluate(roots=roots,actual_operation=f['op'],evaluated_at=now,clock_healthy=True)
+        source=replace(f['source'](),standing=standing);private=Ed25519PrivateKey.from_private_bytes(bytes(range(32)));m=f['metadata']
+        key=dict(kid='person:concurrent-key',alg='EdDSA',kty='OKP',crv='Ed25519',issuer=m['iss'],zone=m['zone'],role='trust-proof-oracle',
+            revoked=False,not_before=now-1,not_after=now+10,x=_segment(private.public_key().public_bytes(Encoding.Raw,PublicFormat.Raw)))
+        verifier=InstalledProofVerifier(native_schema_bundle(),rfc8785.dumps({key['kid']:key}),rfc8785.dumps(dict(
+            issuer=m['iss'],audience=m['aud'],zone=m['zone'],subject=f['op']['actor'],subject_kind='person',required_ceilings={},ring_depth=0)),
+            ('EdDSA',),RootProofBinding(roots,m['zone']))
+        class Signer:
+            def sign(self,message,**kwargs):return private.sign(message)
+        issued=InstalledProofIssuer(source,Signer(),verifier,'EdDSA',key['kid']).issue(now=now,clock_healthy=True)
+        claims=json.loads(issued.payload_bytes)['ktp']
+        self.assertEqual(issued.verification.reason,'TP_CLEAR');self.assertEqual(claims['e_base'],69)
+        self.assertEqual(claims['root_instrument']['attestation_digest'],facts['instrument_digest'])
+        self.assertFalse(set(claims)&{'generation','lineage','sponsor'})
