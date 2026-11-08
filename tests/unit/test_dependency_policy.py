@@ -200,7 +200,10 @@ class DependencyPolicyTests(unittest.TestCase):
                 with self.subTest(path=path, line=line_number, action=action):
                     self.assertTrue(
                         owner in {"actions", "github"}
-                        or action == "pypa/gh-action-pypi-publish"
+                        or action in {
+                            "pypa/gh-action-pypi-publish",
+                            "zizmorcore/zizmor-action",
+                        }
                     )
                     self.assertRegex(revision, r"\A[0-9a-f]{40}\Z")
         self.assertGreater(found, 0)

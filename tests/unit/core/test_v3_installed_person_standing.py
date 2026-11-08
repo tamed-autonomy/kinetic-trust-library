@@ -33,7 +33,7 @@ def fixture(deployment=None):
     roots=select_assessed_roots((root,),context_bytes=context,evaluated_at=now,algorithm="sha256")
     state=dict(deployment_digest=_digest(dp,"sha256"),profile_digest=_digest(p,"sha256"),operation_digest=digest_demand_operation(op,algorithm="sha256"),
         subject=subject,zone="zone:blue",checked_at=now,expires_at=now+5,
-        signed_acts=list(acts()),por_contribution=42,zone_risk=0.25,ceilings={"ial":95,"trajectory":100},
+        signed_acts=list(acts()),trajectory_length=1600,por_contribution=42,zone_risk=0.25,ceilings={"ial":95,"trajectory_length":70},
         contribution_policy=p["contribution_policy"],trajectory_ceiling_policy=p["trajectory_ceiling_policy"],
         ledger_head="audit:person-ledger",root_digest=json.loads(root.projection_bytes).get("attestation_digest"),
         terminator=dict(identity=body["terminator"],standing=80,anchor="audit:institution",as_of=now,expires_at=now+3))
@@ -45,6 +45,33 @@ def fixture(deployment=None):
 
 @unittest.skipUnless(find_spec("rfc8785") and find_spec("jsonschema"),"install v3-proofs")
 class InstalledPersonStandingTests(unittest.TestCase):
+    def test_signed_person_bond_supplies_new_person_root(self):
+        import base64,rfc8785
+        from tests.unit.core._v3_root_fixture import RootFixtureAdapter
+        from kinetic_trust_library.v3.installed_root import InstalledRootVerifier
+        from kinetic_trust_library.v3.assessed_root_selection import select_assessed_roots
+        from kinetic_trust_library.v3.demand_operation import digest_demand_operation
+        vectors=json.loads((Path(__file__).parents[3]/"spec/proposals/external-root-v1.json").read_text())
+        instrument=vectors["instruments"]["person-bond"]
+        f=fixture();subject=instrument["body"]["subject"]
+        class LocalPersonBondAdapter(RootFixtureAdapter):
+            def verify(self,*args,**kwargs):
+                from dataclasses import replace
+                return replace(super().verify(*args,**kwargs),issuer_zone="zone:blue")
+        f["op"]["actor"]=subject
+        context=rfc8785.dumps(dict(subject=subject,subject_profile="person",hop_bound=4,
+            receiving_zone="zone:blue",deployment_digest=_digest(f["dp"],"sha256")))
+        raw=base64.urlsafe_b64decode(instrument["complete_bytes_base64url"]+"==")
+        assessed=InstalledRootVerifier(LocalPersonBondAdapter(vectors),"sha256").evaluate(raw,
+            context_bytes=context,evaluated_at=f["now"])
+        roots=select_assessed_roots((assessed,),context_bytes=context,evaluated_at=f["now"],algorithm="sha256")
+        f["state"].update(subject=subject,operation_digest=digest_demand_operation(f["op"],algorithm="sha256"),
+            signed_acts=[],trajectory_length=0,por_contribution=0,zone_risk=0,
+            ceilings={"trajectory_length":50},root_digest=json.loads(assessed.projection_bytes)["bond_digest"],terminator=None)
+        result=f["v"].evaluate(roots=roots,actual_operation=f["op"],evaluated_at=f["now"],clock_healthy=True)
+        self.assertEqual(result.standing.root_term,24)
+        self.assertEqual(result.standing.base_trust,24)
+
     def test_current_root_institution_and_signed_acts(self):
         f=fixture();r=f["v"].evaluate(roots=f["roots"],actual_operation=f["op"],evaluated_at=f["now"],clock_healthy=True)
         self.assertEqual(r.standing.base_trust,66);self.assertEqual(str(r.standing.effective_trust),"49.5")
@@ -86,7 +113,7 @@ class InstalledPersonStandingTests(unittest.TestCase):
         f["state"]["expires_at"]=f["now"]+100
         r=f["v"].evaluate(roots=f["roots"],actual_operation=f["op"],evaluated_at=f["now"],clock_healthy=True)
         self.assertEqual(r.expires_at,1800000010)
-        f["state"]["ceilings"].pop("trajectory")
+        f["state"]["ceilings"].pop("trajectory_length")
         with self.assertRaises(ValidationError):f["v"].evaluate(roots=f["roots"],actual_operation=f["op"],evaluated_at=f["now"],clock_healthy=True)
 
     def test_factless_person_instrument_cannot_reuse_software_ranking(self):

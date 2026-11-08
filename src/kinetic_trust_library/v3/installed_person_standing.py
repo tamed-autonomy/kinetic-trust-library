@@ -1,7 +1,7 @@
 """Installed person signed-act and institutional standing evidence boundary.
 
-Source authenticates the complete corrected signed-act ledger, the declared
-contribution assessment and current standing of the exact Root terminator.
+Source authenticates signed-act evidence and its full ledger count, the declared
+contribution assessment and current standing of the exact Root instrument.
 This is a provisional zero-peer profile, not a human-capacity evaluation.
 """
 from dataclasses import dataclass
@@ -77,14 +77,14 @@ class InstalledPersonStandingVerifier:
             raise ValidationError("person standing Source must authenticate bounded complete ledger and institution facts")
         s=_parse_jcs_object(source.state_bytes)
         if (set(s)!={"deployment_digest","profile_digest","operation_digest","subject","zone","checked_at","expires_at",
-                "signed_acts","por_contribution","zone_risk","ceilings","contribution_policy","trajectory_ceiling_policy",
+                "signed_acts","trajectory_length","por_contribution","zone_risk","ceilings","contribution_policy","trajectory_ceiling_policy",
                 "ledger_head","root_digest","terminator"}
                 or s["deployment_digest"]!=_digest(dp,self.algorithm) or s["profile_digest"]!=_digest(p,self.algorithm)
                 or s["operation_digest"]!=digest_demand_operation(op,algorithm=self.algorithm) or s["subject"]!=op["actor"]
                 or s["zone"]!=p["zone"] or not _time(s["checked_at"]) or s["checked_at"]!=evaluated_at
                 or not _time(s["expires_at"]) or s["expires_at"]<=evaluated_at or not _name(s["ledger_head"])
                 or s["contribution_policy"]!=p["contribution_policy"] or s["trajectory_ceiling_policy"]!=p["trajectory_ceiling_policy"]
-                or type(s["signed_acts"]) is not list or type(s["ceilings"]) is not dict or "trajectory" not in s["ceilings"]):
+                or type(s["signed_acts"]) is not list or type(s["ceilings"]) is not dict or "trajectory_length" not in s["ceilings"]):
             raise ValidationError("person standing evidence differs from actual current request and declared policies")
         expiry=s["expires_at"];institutional_standing=0
         for candidate in roots.candidates:
@@ -97,7 +97,13 @@ class InstalledPersonStandingVerifier:
                 raise ValidationError("missing current person Root cannot retain institutional credit")
         else:
             root=_parse_jcs_object(roots.selected.projection_bytes);institution=s["terminator"]
-            if (root["kind"]!="external_attestation" or root["root_person"]!=op["actor"]
+            if root["kind"]=="sponsorship_bond":
+                if (root["bond_digest"]!=s["root_digest"] or root["sponsor_id"]!=root["root_person"]
+                        or institution is not None):
+                    raise ValidationError("person sponsorship differs from authenticated Root")
+                institutional_standing=roots.selected.score
+                expiry=min(expiry,root["end_time"])
+            elif (root["kind"]!="external_attestation" or root["root_person"]!=op["actor"]
                     or root["attestation_digest"]!=s["root_digest"] or type(institution) is not dict
                     or set(institution)!={"identity","standing","anchor","as_of","expires_at"}
                     or institution["identity"]!=root["terminator"] or not _name(institution["anchor"])
@@ -105,14 +111,15 @@ class InstalledPersonStandingVerifier:
                     or not _time(institution["expires_at"]) or institution["expires_at"]<=evaluated_at
                     or root["end_time"]<=evaluated_at):
                 raise ValidationError("person institutional standing differs from actual current accountable Root")
-            measured=as_decimal(institution["standing"],name="selected person institution",minimum=0,maximum=100)
-            if Fraction(measured)!=Fraction(roots.selected.score_numerator,roots.selected.score_denominator):
-                raise ValidationError("selected person institution differs from authenticated Root ranking standing")
-            institutional_standing=institution["standing"]
-            expiry=min(expiry,institution["expires_at"],root["end_time"])
+            else:
+                measured=as_decimal(institution["standing"],name="selected person institution",minimum=0,maximum=100)
+                if Fraction(measured)!=Fraction(roots.selected.score_numerator,roots.selected.score_denominator):
+                    raise ValidationError("selected person institution differs from authenticated Root ranking standing")
+                institutional_standing=institution["standing"]
+                expiry=min(expiry,institution["expires_at"],root["end_time"])
         standing=calculate_person_standing(subject=op["actor"],zone=p["zone"],signed_acts=tuple(s["signed_acts"]),
             por_contribution=s["por_contribution"],terminator_standing=institutional_standing,ceilings=s["ceilings"],
-            zone_risk=s["zone_risk"],evaluated_at=evaluated_at)
+            zone_risk=s["zone_risk"],evaluated_at=evaluated_at,trajectory_length=s["trajectory_length"])
         result=object.__new__(PersonStandingAssessment)
         for k,v in dict(standing=standing,roots=roots,operation_bytes=op_bytes,profile_bytes=self.profile_bytes,
                 authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes,

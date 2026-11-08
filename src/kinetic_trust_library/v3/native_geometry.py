@@ -225,7 +225,7 @@ class NativeGeometrySource:
         add("prior_supervision","term",prior_state,profile["sources"]["authority"],evidence,prior_level)
         if prior_state!="observed" or prior_level=="silent_veto":
             gates["prior"]="failed" if prior_level=="silent_veto" and prior_state=="observed" else "undetermined"
-            return finish("PRIOR_VETO" if gates["prior"]=="failed" else "INPUT_UNAVAILABLE")
+            return finish("PRIOR_VETO" if gates["prior"]=="failed" else "TRUST_INSUFFICIENT")
         gates["prior"]="passed"
         if ambient is not None and (ambient.criticality_valid is False or ambient.consequential_hosting_forbidden):
             gates["inputs"]="failed"

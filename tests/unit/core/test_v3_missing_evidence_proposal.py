@@ -13,6 +13,7 @@ from kinetic_trust_library.v3.evidence_state import (
     canonical_undefined_inputs,
 )
 from kinetic_trust_library.v3.sensor_config import validate_sensor_factor_config
+from kinetic_trust_library.v3.sensor_slots import aggregate_weighted_slots
 
 
 VECTORS = Path(__file__).parents[3] / "spec/proposals/missing-evidence-v1.json"
@@ -27,6 +28,38 @@ class ProposedMissingEvidence(unittest.TestCase):
                     validate_sensor_factor_config(case["configuration"]),
                     case["schemaAccepted"],
                 )
+
+    def test_risk_domains_are_not_a_separate_sensor_configuration(self):
+        feed = {
+            "id": "node-errors",
+            "source": "https://node.local/api/errors",
+            "enabled": True,
+            "weight": 0.3,
+        }
+        configuration = {
+            "dimension": "adversarial_pressure",
+            "feeds": [feed],
+            "aggregation": "weighted_average",
+        }
+        self.assertTrue(validate_sensor_factor_config(configuration))
+        self.assertFalse(validate_sensor_factor_config({
+            **configuration,
+            "risk_domains": {"node": {"weight": 1}},
+        }))
+
+    def test_independent_backup_preserves_installed_slot_weight(self):
+        case=json.loads(VECTORS.read_text())["weighted_average_cases"][0]
+        config=case["configuration"]
+        readings=case["normalized_values"]
+        self.assertTrue(validate_sensor_factor_config(config))
+        for evaluation in case["evaluations"]:
+            with self.subTest(current=evaluation["current"]):
+                actual=aggregate_weighted_slots(config,
+                    {name:readings[name] for name in evaluation["current"]},
+                    admissible_sources=frozenset(evaluation["current"]))
+                self.assertEqual(actual, Decimal(str(evaluation["expected"]["value"])))
+        self.assertIsNone(aggregate_weighted_slots(config,{"c":readings["c"]},
+            admissible_sources=frozenset({"c"})))
 
     def test_all_proposed_factor_boundary_projections(self):
         vectors = json.loads(VECTORS.read_text(), parse_float=Decimal)["vectors"]

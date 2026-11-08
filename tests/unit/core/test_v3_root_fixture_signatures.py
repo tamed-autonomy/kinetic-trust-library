@@ -7,6 +7,30 @@ from importlib.util import find_spec
 
 @unittest.skipUnless(all(find_spec(n) for n in ("rfc8785","jsonschema","cryptography")), "install v3-proofs")
 class RootFixtureSignatures(unittest.TestCase):
+    def test_person_sponsorship_uses_signed_person_bond(self):
+        import rfc8785
+        from tests.unit.core._v3_root_fixture import RootFixtureAdapter
+        from kinetic_trust_library.v3.installed_root import InstalledRootVerifier
+        vectors=json.loads((Path(__file__).parents[3]/"spec/proposals/external-root-v1.json").read_text())
+        instrument=vectors["instruments"]["person-bond"]
+        raw=base64.urlsafe_b64decode(instrument["complete_bytes_base64url"]+"==")
+        verifier=InstalledRootVerifier(RootFixtureAdapter(vectors),"sha256")
+        context=rfc8785.dumps(dict(subject=instrument["body"]["subject"],subject_profile="person",
+            receiving_zone="zone:fixture",hop_bound=4))
+        result=verifier.evaluate(raw,context_bytes=context,evaluated_at=1800000000)
+        self.assertEqual(result.score,80)
+        self.assertEqual(json.loads(result.projection_bytes),instrument["projection"] if "projection" in instrument else vectors["projection_examples"]["person-bond"])
+        from kinetic_trust_library.v3.assessed_root_selection import select_assessed_roots
+        from kinetic_trust_library.v3.native_proof_profile import RootProofBinding
+        selection=select_assessed_roots((result,),context_bytes=context,evaluated_at=1800000000,algorithm="sha256")
+        payload=dict(sub=instrument["body"]["subject"],exp=1800000005,
+            ktp=dict(zone="zone:fixture",subject_kind="person",root_instrument=json.loads(result.projection_bytes),
+                applicable_ceilings=[]))
+        self.assertTrue(RootProofBinding(selection,"zone:fixture")(rfc8785.dumps(payload),1800000000))
+        invalid=rfc8785.dumps(dict(subject=instrument["body"]["issuer"],subject_profile="person",
+            receiving_zone="zone:fixture",hop_bound=4))
+        self.assertEqual(verifier.evaluate(raw,context_bytes=invalid,evaluated_at=1800000000).score,0)
+
     def test_complete_instrument_witness_and_event_signatures(self):
         import rfc8785
         from tests.unit.core._v3_root_fixture import RootFixtureAdapter

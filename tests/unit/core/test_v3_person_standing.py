@@ -16,12 +16,13 @@ def acts():
 class PersonStandingTests(unittest.TestCase):
     def test_exact_published_source_and_composition_cases(self):
         raw=(Path(__file__).parents[3]/"spec/proposals/person-standing-v1.json").read_bytes()
-        self.assertEqual(hashlib.sha256(raw).hexdigest(),"728d49aed24be8ba395f0200848730fb0b476b3a078867ed69e16ffe663c0a04")
+        self.assertEqual(hashlib.sha256(raw).hexdigest(),"46cbcb51ef38a03b8cf0ef72690cb133ca9a2705955064560577f7ce46a1831d")
         cases={c["id"]:c for c in json.loads(raw)["vectors"]}
         source=cases["PS01-signed-acts-compose"]
         given=source["given"];expected=source["expect"]
         r=self.compose(por_contribution=given["PoR_contribution"],terminator_standing=given["terminator"]["standing"],
-            ceilings={c["ceiling"]:c["value"] for c in given["applicable_ceilings"]})
+            ceilings={c["ceiling"]:c["value"] for c in given["applicable_ceilings"]},
+            trajectory_length=given["trajectory_length"])
         self.assertEqual(r.base_trust,expected["E_base"]);self.assertEqual(r.raw_base,expected["E_raw"])
         self.assertEqual(r.root_term,expected["root_term"])
         for name in ("PS05-transfer-by-agreement","PS06-agreement-admits-at-zero","PS07-no-agreement-no-transfer","PS08-ceiling-binds"):
@@ -68,6 +69,42 @@ class PersonStandingTests(unittest.TestCase):
         self.assertEqual(self.compose(ceilings={"ial":40}).base_trust,40)
         self.assertEqual(self.compose(terminator_standing=0,por_contribution=70,ceilings={}).base_trust,70)
         with self.assertRaises(ValidationError):self.compose(por_contribution=71)
+
+    def test_person_trajectory_ceiling_counts_authenticated_signed_acts(self):
+        cases={c["id"]:c for c in json.loads((Path(__file__).parents[3]/"spec/proposals/person-standing-v1.json").read_bytes())["vectors"]}
+        case=cases["PS18-trajectory-ceiling-counts-signed-acts"]
+        for given, expected in zip(case["given"]["cases"], case["expect"]["E_base"], strict=True):
+            with self.subTest(count=given["trajectory_length"]):
+                result=self.compose(por_contribution=40,ceilings={"trajectory_length":given["applicable_ceilings"][0]["value"]},
+                    trajectory_length=given["trajectory_length"])
+                self.assertEqual(result.raw_base,case["expect"]["E_raw"])
+                self.assertEqual(result.base_trust,expected)
+        with self.assertRaises(ValidationError):
+            self.compose(ceilings={"trajectory_length":70},trajectory_length=999)
+
+    def test_person_action_vectors_keep_tier_and_adapter_capacity_separate(self):
+        from kinetic_trust_library.v3.person_action import assess_person_tier_and_capacity
+        cases={c["id"]:c for c in json.loads((Path(__file__).parents[3]/"spec/proposals/person-standing-v1.json").read_bytes())["vectors"]}
+        for name in ("PS12-trust-score-sets-the-tier","PS14-capacity-from-the-adapter"):
+            case=cases[name];given=case["given"]
+            trust=(Decimal(str(given["E_base"]))*(1-Decimal(str(given["zone_R"])))
+                   if "E_base" in given else given["E_trust"])
+            for action,expected in zip(given["candidate_actions"],case["expect"]["decisions"],strict=True):
+                with self.subTest(case=name,action=action["id"]):
+                    result=assess_person_tier_and_capacity(effective_trust=trust,
+                        operational_e=given["operational_E"],action_risk=action["A"],action_class=action["class"])
+                    self.assertEqual(result.tier,case["expect"].get("tier",given.get("tier")))
+                    self.assertEqual(result.capacity_e,expected["E"])
+                    self.assertEqual(result.capacity_passed,expected["capacityPassed"])
+                    self.assertEqual(result.silent_veto,expected["silent_veto"])
+                    self.assertEqual(result.veto_reason,expected.get("vetoReason"))
+        case=cases["PS17-ledger-acts-not-tier-restricted"]
+        given=case["given"];expected=case["expect"]
+        result=assess_person_tier_and_capacity(effective_trust=given["E_trust"],
+            operational_e=given["operational_E"],action_risk=given["act"]["A"],ledger_act=given["act"]["kind"])
+        self.assertEqual(result.tier_checked,expected["tierChecked"])
+        self.assertEqual(result.capacity_passed,expected["capacityPassed"])
+        self.assertEqual(result.silent_veto,expected["silent_veto"])
 
     def test_published_person_directional_import(self):
         from kinetic_trust_library.v3.person_standing import calculate_imported_person_standing

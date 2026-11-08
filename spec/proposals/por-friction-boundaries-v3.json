@@ -1,8 +1,6 @@
 {
   "profile": "por-friction-boundaries-v3",
-  "issue": 150,
   "baseline": "v2.1.0",
-  "status": "proposed",
   "evidence": "Modeled ordinary-success boundary decisions; not runtime validation.",
   "numeric_encoding": "Decimal strings are exact numeric test inputs, not an attestation wire format.",
   "step": "0.000001",

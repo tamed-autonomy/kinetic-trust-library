@@ -117,7 +117,7 @@ class InstalledRootVerifier:
             subject_kind = context.get("subject_profile")
             if subject_kind not in ("software", "person"):
                 raise RootVerificationFailure("invalid_instrument")
-            if subject_kind == "person" and (body.get("root_person") != body["subject"] or not _name(context.get("receiving_zone"))):
+            if subject_kind == "person" and not _name(context.get("receiving_zone")):
                 raise RootVerificationFailure("invalid_instrument")
             projection = {"kind": kind, "status": state, "end_time": body["end_time"],
                           "terminator": body["terminator"], "root_person": body["root_person"], "chain_length": chain}
@@ -125,8 +125,12 @@ class InstalledRootVerifier:
             with localcontext(Context(prec=34)):
                 if kind == "sponsorship_bond":
                     generation = context.get("generation")
-                    if (subject_kind != "software" or context.get("lineage") != "sponsored"
+                    if subject_kind == "software" and (context.get("lineage") != "sponsored"
                             or type(generation) is not int or not 0 <= generation <= 2):
+                        raise RootVerificationFailure("invalid_instrument")
+                    if subject_kind == "person" and (not body["issuer"].startswith("person:")
+                            or body.get("root_person") != body["issuer"]
+                            or set(context)&{"generation","lineage","mass_ceiling","mitosis"}):
                         raise RootVerificationFailure("invalid_instrument")
                     if "proof_sponsor" in context and context["proof_sponsor"] != body["issuer"]:
                         raise RootVerificationFailure("invalid_instrument")
@@ -167,6 +171,8 @@ class InstalledRootVerifier:
                     score = Decimal(exact_score.numerator) / Decimal(exact_score.denominator)
                     projection.update(bond_id=body["id"], bond_digest=digest, sponsor_id=body["issuer"], bond_inputs=inputs)
                 elif kind == "external_attestation":
+                    if subject_kind == "person" and body.get("root_person") != body["subject"]:
+                        raise RootVerificationFailure("invalid_instrument")
                     if subject_kind == "software":
                         generation = context.get("generation")
                         if (type(generation) is not int or generation < 3

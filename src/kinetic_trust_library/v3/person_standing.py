@@ -14,7 +14,7 @@ from .execution_observation import _name
 
 
 ACT_KINDS=frozenset(("bond_posted","attestation_issued","approval","veto_clear","decision_contested"))
-PERSON_CEILINGS=frozenset(("ial","trajectory","adversity","external_root_missing","repair_reentry"))
+PERSON_CEILINGS=frozenset(("ial","trajectory_length","adversity","external_root_missing","repair_reentry"))
 
 
 @dataclass(frozen=True,slots=True,init=False)
@@ -38,11 +38,11 @@ def _person(subject):
     return type(subject) is str and subject.startswith("person:") and len(subject)>7 and not any(c.isspace() for c in subject)
 
 
-def calculate_person_standing(*,subject,zone,signed_acts,por_contribution,terminator_standing,ceilings,zone_risk,evaluated_at):
+def calculate_person_standing(*,subject,zone,signed_acts,por_contribution,terminator_standing,ceilings,zone_risk,evaluated_at,trajectory_length=None):
     """Compose the zero-peer-share person profile without default ceilings.
 
-    The complete authenticated historical ledger supplies signed stress acts
-    and the contribution derived under its declared assessment policy. Merely
+    The authenticated source supplies signed stress acts, the full signed-act
+    count and the contribution derived under its declared assessment policy. Merely
     participating in an incident earns no contribution. Corrections and retained
     historical credit are provider facts; elapsed time does not decay them.
     """
@@ -65,6 +65,15 @@ def calculate_person_standing(*,subject,zone,signed_acts,por_contribution,termin
     if por and not stress:raise ValidationError("resilience requires an authenticated signed act under stress")
     bounded={k:ratio(v,name="person "+k+" ceiling",maximum=100) for k,v in ceilings.items()}
     if "ial" in bounded and bounded["ial"] not in (40,80,95):raise ValidationError("person identity assurance ceiling is invalid")
+    if "trajectory_length" in bounded:
+        if (type(trajectory_length) is not int or trajectory_length < len(signed_acts)
+                or trajectory_length > 9007199254740991):
+            raise ValidationError("trajectory ceiling requires authenticated full signed-act count")
+        expected = 50 if trajectory_length < 1000 else 70 if trajectory_length < 10000 else 100
+        if bounded["trajectory_length"] != expected:
+            raise ValidationError("person trajectory ceiling differs from signed-act count")
+    elif trajectory_length is not None:
+        raise ValidationError("person signed-act count requires its trajectory ceiling")
     raw=por+root*Fraction(3,10)
     base=min((raw,*bounded.values()))
     try:base_decimal=finite_decimal(base);effective=finite_decimal(base*(1-risk))

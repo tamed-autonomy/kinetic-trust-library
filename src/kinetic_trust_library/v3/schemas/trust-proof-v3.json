@@ -176,7 +176,7 @@
         "sponsor": {
           "type": "string",
           "format": "uri",
-          "description": "Sponsor agent identifier (for sponsored agents)"
+          "description": "Sponsor identifier (agent or person; for sponsored software agents)"
         },
         "resilience_hash": {
           "type": "string",
@@ -313,7 +313,7 @@
               }
             }
           },
-          "description": "Standard claim coordinated with proposed KTP-ZONES, Ingress Path and Egress Shaping (KTP-ZONES Ingress Path and Egress Shaping). At most five bound receipts, outermost first; required at positive authorized topology depth and absent at depth zero. Shape alone does not verify signatures, topology, possession or session binding. See specifications/trust-proof.md.",
+          "description": "Standard claim coordinated with KTP-ZONES Sections 6.6 (Ingress Path) and 7.4 (Egress Shaping). At most five bound receipts, outermost first; required at positive authorized topology depth and absent at depth zero. Shape alone does not verify signatures, topology, possession or session binding. See specifications/trust-proof.md.",
           "minItems": 1
         },
         "subject_kind": {
@@ -491,8 +491,14 @@
                 "required": [
                   "kind"
                 ]
+              },
+              "subject_kind": {
+                "const": "software_agent"
               }
-            }
+            },
+            "required": [
+              "subject_kind"
+            ]
           },
           "then": {
             "properties": {
@@ -548,7 +554,7 @@
             },
             "properties": {
               "root_instrument": {
-                "not": {
+                "if": {
                   "properties": {
                     "kind": {
                       "const": "sponsorship_bond"
@@ -557,6 +563,13 @@
                   "required": [
                     "kind"
                   ]
+                },
+                "then": {
+                  "properties": {
+                    "sponsor_id": {
+                      "pattern": "^person:"
+                    }
+                  }
                 }
               },
               "applicable_ceilings": {

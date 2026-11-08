@@ -27,8 +27,17 @@ class GeometryVerifierTests(unittest.TestCase):
                 class Source:
                     def reproduce(self, *, evaluated_at):
                         return AuthenticatedGeometryReproduction(rfc8785.dumps(expected),rfc8785.dumps(context["request"]),context["proof"],context["clock_healthy"])
+                person=context["identity"]["actor"].startswith("person:")
+                proof_context=dict(proofs["context"])
+                if person:
+                    from kinetic_trust_library.v3.trust_proof_framing import parse_compact_framing
+                    from kinetic_trust_library.v3.trust_proof_json import parse_proof_json_objects
+                    _,claims=parse_proof_json_objects(parse_compact_framing(context["proof"]))
+                    proof_context.update(subject=claims["sub"],subject_kind="person",issuer=claims["iss"],
+                        audience=claims["aud"],zone=claims["ktp"]["zone"],
+                        required_ceilings={item["ceiling"]:item["value"] for item in claims["ktp"]["applicable_ceilings"]})
                 pv=InstalledProofVerifier(bundle,rfc8785.dumps({k["kid"]:k for k in proofs["keys"]}),
-                    rfc8785.dumps(proofs["context"]),("ES256",),lambda p,n:True,fixture_software_default=True)
+                    rfc8785.dumps(proof_context),("ES256",),lambda p,n:True,fixture_software_default=not person)
                 verifier=InstalledGeometryVerifier(Source(),pv,context["digest_algorithm"])
                 body=json.loads(json.dumps(vectors["bodies"][case["base"]]))
                 for mutation in case.get("mutations",[]):

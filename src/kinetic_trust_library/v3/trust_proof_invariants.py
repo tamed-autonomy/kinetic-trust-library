@@ -101,9 +101,16 @@ def _invariants_hold(
     root = ktp["root_instrument"]
     if not isinstance(root, Mapping):
         return False
-    if person and (root.get("kind") == "sponsorship_bond" or
-                   (root.get("kind") == "external_attestation" and root.get("root_person") != subject)):
-        return False
+    if person:
+        if root.get("kind") == "external_attestation" and root.get("root_person") != subject:
+            return False
+        if root.get("kind") == "sponsorship_bond" and (
+            root.get("sponsor_id") != root.get("root_person")
+            or not isinstance(root.get("sponsor_id"), str)
+            or not root["sponsor_id"].startswith("person:")
+            or root["sponsor_id"] == subject
+        ):
+            return False
     if root.get("status") in ("current", "non_renewable"):
         end_time = root.get("end_time")
         if type(end_time) is not int or claims["exp"] > end_time:

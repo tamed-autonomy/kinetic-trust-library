@@ -65,7 +65,8 @@ class RootProofBinding:
         selected = self.selection.selected
         if person:
             if source.get("receiving_zone")!=self.expected_zone:return False
-            if selected is not None and selected.person_standing_bytes is None:return False
+            if (selected is not None and selected.person_standing_bytes is None
+                    and _parse_jcs_object(selected.projection_bytes)["kind"]!="sponsorship_bond"):return False
             if any(candidate.person_standing_bytes is not None and payload["exp"]>_parse_jcs_object(candidate.person_standing_bytes)["expires_at"]
                    for candidate in self.selection.candidates):return False
         cross=None if selected is None else selected.federated_sponsorship
@@ -87,10 +88,13 @@ class RootProofBinding:
             if sponsorship is not None and (not sponsorship.eligible or sponsorship.zone_id!=self.expected_zone
                     or sponsorship.checked_at!=now or payload["exp"]>sponsorship.expires_at):
                 return False
-            if person and (expected["kind"] != "external_attestation" or expected["root_person"] != payload["sub"]):
-                return False
+            if person:
+                if expected["kind"]=="external_attestation" and expected["root_person"]!=payload["sub"]:return False
+                if expected["kind"]=="sponsorship_bond" and (expected["sponsor_id"]!=expected["root_person"]
+                        or not expected["sponsor_id"].startswith("person:") or expected["sponsor_id"]==payload["sub"]):return False
+                if expected["kind"] not in ("external_attestation","sponsorship_bond"):return False
             return (ktp["root_instrument"] == expected and payload["exp"] <= expected["end_time"]
-                    and (expected["kind"] != "sponsorship_bond" or ktp.get("sponsor") == expected["sponsor_id"]))
+                    and (person or expected["kind"] != "sponsorship_bond" or ktp.get("sponsor") == expected["sponsor_id"]))
         expected = {"kind":"none", "status":"none", "reason":self.no_credit_reason}
         actual = ktp["root_instrument"]
         if {k:v for k,v in actual.items() if k != "diagnostic_ref"} != expected:

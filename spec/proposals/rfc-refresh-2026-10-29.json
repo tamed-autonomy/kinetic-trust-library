@@ -4,14 +4,14 @@
     {
       "path": "spec/proposals/trust-proof-schema-v3.json",
       "source_path": "schemas/trust-proof.json",
-      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
-      "sha256": "cb1cf9d02ec3a32244a48b6b35d1ed95423c401a2293cda8713292ac518f3f4f"
+      "source_commit": "81eed0a37845edb572bb4e541681309ac8770686",
+      "sha256": "cf98e703433904a76fc0ff69bfe837bedd94cc0633cac812ebf85cc7e1c2e896"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/trust-proof-v3.json",
       "source_path": "schemas/trust-proof.json",
-      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
-      "sha256": "cb1cf9d02ec3a32244a48b6b35d1ed95423c401a2293cda8713292ac518f3f4f"
+      "source_commit": "81eed0a37845edb572bb4e541681309ac8770686",
+      "sha256": "cf98e703433904a76fc0ff69bfe837bedd94cc0633cac812ebf85cc7e1c2e896"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/risk-factors-native-v3.json",
@@ -28,8 +28,8 @@
     {
       "path": "spec/proposals/trust-proof-v3.json",
       "source_path": "specifications/conformance/trust-proof-v3.json",
-      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
-      "sha256": "265dd794fb4d4604e2e1dd192b5c2187ceb3410b38d32e6bc07dec4d72d3aadb"
+      "source_commit": "81eed0a37845edb572bb4e541681309ac8770686",
+      "sha256": "3e1f6f641f46a66d69f2b7739a2dffe5756f5738ac69e5fbf0176955107249d3"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/request-binding-v1.json",
@@ -46,14 +46,14 @@
     {
       "path": "spec/proposals/request-binding-v1.json",
       "source_path": "specifications/conformance/request-binding-v1.json",
-      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
-      "sha256": "6c809a166e3c95155818ed12f38684b5fd1e87104ee4e6b479854291b30d5778"
+      "source_commit": "0330fea4c21f5fc33942e85031596c705198cf34",
+      "sha256": "85997aa73de8b51e3598bf0d607a27ae5ff740e2f5dd133cfcbfddabecefe9b4"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/decision-geometry-v1.json",
       "source_path": "schemas/decision-geometry.json",
-      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
-      "sha256": "d1f5cd3cdd74d0182e429a10055cac987e07ec40609dda74dbfc9bd8e4ab5459"
+      "source_commit": "a9e285f14fe962dca620f2ceaf09963bb988b336",
+      "sha256": "e04fd8eb6fc18cb5e2ff337cb70fa036a2e8b5e1215b86d499d6e1b1de29dfbe"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/decision-geometry-carrier-v1.json",
@@ -64,26 +64,26 @@
     {
       "path": "spec/proposals/decision-geometry-v1.json",
       "source_path": "specifications/conformance/decision-geometry-v1.json",
-      "source_commit": "3e8db334b2c6ec008d3c5f961f7b311948079ad8",
-      "sha256": "7581775468657793626fa2061a3f6007261da50fe8411e5dee498a039110ccc1"
+      "source_commit": "a9e285f14fe962dca620f2ceaf09963bb988b336",
+      "sha256": "fb3eab13fe25544b1d26ac8739c498fdeb318ad58e169976416d14f597b61513"
     },
     {
       "path": "spec/proposals/demand-input-v1.json",
       "source_path": "specifications/conformance/demand-input-v1.json",
-      "source_commit": "a3a507aa7953e9a2c71ee43d5e8c03b1339bae3e",
-      "sha256": "ce4f78f4a123d4daa545abf6c63ce37353a8397a2a6e46177e201d250093fb0f"
+      "source_commit": "35f4759693d2c93c45b422a27c7e44f4daf6f83c",
+      "sha256": "163bf5f7d7619b0789907f051e928803ea28c9fc1811cf92e875b3800229deec"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/trust-proof-composed-v3.json",
       "source_path": "schemas/trust-proof.json",
-      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
-      "sha256": "cb1cf9d02ec3a32244a48b6b35d1ed95423c401a2293cda8713292ac518f3f4f"
+      "source_commit": "81eed0a37845edb572bb4e541681309ac8770686",
+      "sha256": "cf98e703433904a76fc0ff69bfe837bedd94cc0633cac812ebf85cc7e1c2e896"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/root-instrument-v3.json",
       "source_path": "schemas/root-instrument.json",
-      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
-      "sha256": "9641a572f302e484dc09cd72ba80b2ff71b34e491aee04ad4bdb10bb0b576895"
+      "source_commit": "81eed0a37845edb572bb4e541681309ac8770686",
+      "sha256": "1cf06b10cbe14f8fb3c7ed0ba87ba09ef09e0f98b387663fdb28d908271c4d83"
     },
     {
       "path": "spec/proposals/hand-back-v1.json",
@@ -106,11 +106,11 @@
     {
       "path": "spec/proposals/external-root-v1.json",
       "source_path": "specifications/conformance/external-root-v1.json",
-      "source_commit": "4ea1b6774dbe823659d305a4e5be4fa1af0e69ba",
-      "sha256": "1c55294a550741c14eca1053dd4bb433a789efdd9742a6a287216bb38997d6c9"
+      "source_commit": "81eed0a37845edb572bb4e541681309ac8770686",
+      "sha256": "1480384cf58b175c775209f7377f01f3b136a8434d07c56155caeb927c2da3af"
     }
   ],
-  "composition_note": "The current proof/root/person schema is adopted byte-for-byte from the coalesced one-Core proposal. Historical snapshots remain archived; no legacy fallback or final release claim.",
+  "composition_note": "Provisional proof and Root schemas and vectors track RFC PR #201 at 81eed0a; other entries retain their individually pinned proposal heads. Historical snapshots remain archived; no final release claim.",
   "refresh_phase": "late-proposal-update",
-  "last_verified_refresh": "2026-11-07"
+  "last_verified_refresh": "2026-11-08"
 }
