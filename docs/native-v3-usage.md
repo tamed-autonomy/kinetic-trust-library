@@ -15,6 +15,22 @@ importing it establishes no final 3.0 release or deployment conformance claim.
 The final adoption will deliberately switch the root API/version/pin. Native
 processing already rejects incompatible wire contracts and has no v2 fallback.
 
+## Provisional Celestial calculations
+
+`kinetic_trust_library.v3.celestial_profile` offers pure validity projection,
+latest causally observable event time, linear and exponential trust degradation,
+and step tier ceilings. Its exponential curve uses `ln(2) / half_life` from
+RFC PR #222. Callers supply the latency class; the RFC's distance ranges leave
+gaps and boundary questions, so the Library does not classify a distance
+automatically. Class 5 requires a declared mission-duration cap. The validity
+formula uses the RFC's numeric departure-tier input and does not invent factors
+for behavioral variance or mission criticality.
+
+These calculations do not issue or verify Extended Trust Proofs, attest a
+departure, establish current remote state, or authorize transit actions.
+Ordinary v3 Trust Proofs retain their ten-second lifetime. RFC PR #209 names
+the unresolved relationship between that lifetime and Celestial validity caps.
+
 ## Installed graph
 
 All constructors receive independently installed policy and trusted provider
