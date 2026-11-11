@@ -7,6 +7,7 @@ These pure checks do not establish their signatures, status, or authority.
 from __future__ import annotations
 
 import re
+from collections.abc import Collection
 
 from kinetic_trust_library.errors import ValidationError
 
@@ -62,19 +63,35 @@ def validate_sponsorship_binding(
     bond_sponsor_id: object,
     proof_sub: object,
     proof_sponsor: object,
+    *,
+    authenticated_person_ids: Collection[str] = (),
 ) -> None:
-    """Check byte-exact v3 identifiers after bond and proof authentication."""
-    evaluated_subject = validate_agent_uri(subject)
-    sponsored = validate_agent_uri(bond_sponsored_id)
-    sponsor = validate_agent_uri(bond_sponsor_id)
-    proof_subject = validate_agent_uri(proof_sub)
-    proof_sponsor_id = validate_agent_uri(proof_sponsor)
-    if not evaluated_subject.startswith("agent:sponsored:"):
-        raise ValidationError("subject must be a sponsored Agent")
+    """Check byte-exact v3 binding after bond, proof and person authentication.
+
+    Person identifiers are supplied by an independent identity contract. This
+    function does not define or infer their grammar from a ``person:`` prefix.
+    """
+    if isinstance(authenticated_person_ids, (str, bytes)):
+        raise ValidationError("authenticated person identifiers must be a collection")
+
+    def checked(value: object) -> str:
+        if type(value) is str and value.startswith("person:"):
+            if value not in authenticated_person_ids:
+                raise ValidationError("person identifier is not independently authenticated")
+            return value
+        return validate_agent_uri(value)
+
+    evaluated_subject = checked(subject)
+    sponsored = checked(bond_sponsored_id)
+    sponsor = checked(bond_sponsor_id)
+    proof_subject = checked(proof_sub)
+    proof_sponsor_id = checked(proof_sponsor)
+    if not (evaluated_subject.startswith("agent:sponsored:") or evaluated_subject.startswith("person:")):
+        raise ValidationError("subject must be a sponsored Agent or authenticated person")
     if evaluated_subject != sponsored or evaluated_subject != proof_subject:
-        raise ValidationError("sponsored Agent binding does not match")
+        raise ValidationError("sponsored subject binding does not match")
     if sponsor != proof_sponsor_id:
-        raise ValidationError("sponsor Agent binding does not match")
+        raise ValidationError("sponsor binding does not match")
 
 
 __all__ = ["validate_agent_uri", "validate_sponsorship_binding"]

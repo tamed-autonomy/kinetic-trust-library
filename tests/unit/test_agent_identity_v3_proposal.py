@@ -1,4 +1,4 @@
-"""Provisional checks against RFC PR #194, head 9889cabcf4eb."""
+"""Provisional checks against RFC PR #194, head a85e198a1736."""
 
 import json
 import unittest
@@ -38,11 +38,18 @@ class ProposedAgentIdentifiers(unittest.TestCase):
                     case["proof_sub"],
                     case["proof_sponsor"],
                 )
+                persons = frozenset(value for value in values if isinstance(value, str) and value.startswith("person:"))
                 if case["expected_valid"]:
-                    self.assertIsNone(validate_sponsorship_binding(*values))
+                    self.assertIsNone(validate_sponsorship_binding(*values, authenticated_person_ids=persons))
                 else:
                     with self.assertRaises(ValidationError):
-                        validate_sponsorship_binding(*values)
+                        validate_sponsorship_binding(*values, authenticated_person_ids=persons)
+
+    def test_person_id_requires_independent_authentication(self):
+        with self.assertRaises(ValidationError):
+            validate_sponsorship_binding(
+                "person:alex", "person:alex", "person:robin", "person:alex", "person:robin"
+            )
 
 
 if __name__ == "__main__":
