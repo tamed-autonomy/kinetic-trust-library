@@ -5,6 +5,7 @@ from decimal import Decimal
 from types import MappingProxyType
 from typing import Iterator, Mapping
 
+from .._decimal import MAX_DECIMAL_ADJUSTED_EXPONENT
 from ..errors import ValidationError
 from ._json import _freeze_json, _number, _object
 from ._models import (
@@ -16,6 +17,9 @@ from ._models import (
 from ._time import _validate_rfc3339
 
 
+_MAX_COUNTER_DIGITS = MAX_DECIMAL_ADJUSTED_EXPONENT + 1
+
+
 def _ranged(value: object, name: str, maximum: int | None = None) -> Decimal:
     number = _number(value, name)
     if number < 0 or (maximum is not None and number > maximum):
@@ -25,7 +29,14 @@ def _ranged(value: object, name: str, maximum: int | None = None) -> Decimal:
 
 def _integer(value: object, name: str) -> int:
     number = _ranged(value, name)
-    if number != number.to_integral_value():
+    _, digits, exponent = number.as_tuple()
+    if len(digits) > _MAX_COUNTER_DIGITS or (
+        not number.is_zero() and number.adjusted() >= _MAX_COUNTER_DIGITS
+    ):
+        raise ValidationError(f"{name} is outside its range")
+    if number.is_zero():
+        return 0
+    if exponent < 0 and any(digits[exponent:]):
         raise ValidationError(f"{name} must be mathematically integral")
     return int(number)
 

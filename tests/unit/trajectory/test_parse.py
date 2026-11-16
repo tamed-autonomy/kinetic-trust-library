@@ -166,6 +166,29 @@ class TrajectoryParseTests(unittest.TestCase):
                 actual = parsed.sequence if path == ("sequence",) else parsed.current_state.generation
                 self.assertIs(type(actual), int)
                 self.assertEqual(actual, int(value))
+        counter_digits = 6_145
+        maximum_counter = 10**counter_digits - 1
+        excessive_coefficient = Decimal("1." + "0" * counter_digits)
+        counter_paths = integer_paths + [("previous_state", "generation")]
+        for path in counter_paths:
+            for value in (maximum_counter, Decimal("1E+6144")):
+                data = adjacent_transaction(official_transaction())
+                _at(data, path[:-1])[path[-1]] = value
+                actual = self._parse(data)
+                for key in path:
+                    actual = getattr(actual, key)
+                self.assertEqual(actual, int(value))
+            for bad in (
+                maximum_counter + 1,
+                Decimal("1E+6145"),
+                Decimal("1E+1000000000"),
+                excessive_coefficient,
+            ):
+                with self.subTest(path=path, unsafe_counter=bad):
+                    data = adjacent_transaction(official_transaction())
+                    _at(data, path[:-1])[path[-1]] = bad
+                    with self.assertRaises(ValidationError):
+                        self._parse(data)
         for path in number_paths:
             maximum = 100 if path[-1] in ("e_base", "e_trust", "action_risk") else 1
             if path == ("velocity",):

@@ -651,6 +651,12 @@ over every finite Proof of Resilience (PoR) or root history. Soul Constraint and
 Trajectory parsers accept already-decoded mappings; they do not inherit Trust
 Proof byte, nesting-depth, or string limits.
 
+Trajectory `sequence` and `generation` counters limit both Decimal coefficients
+and materialized values to 6,145 decimal digits. This yields an
+implementation-safety range of 0 through `10**6145 - 1`, matching the Library
+decimal domain's maximum adjusted exponent while retaining exact values within
+that range.
+
 Products own ingress controls: serialized request/body size, decoder depth,
 collection cardinality, concurrency, deadlines, and availability policy. The
 Library's validation and typed failures do not replace these product controls.
