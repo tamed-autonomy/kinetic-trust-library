@@ -14,7 +14,7 @@ def fixture():
     from kinetic_trust_library.v3._readiness_crypto import digest_bytes
     from kinetic_trust_library.v3.installed_repair import HARD_ENTRIES
     profile=dict(id="urn:test:sponsorship-repair",version=1,aggregate_count_limit=1,
-        entry_classes={name:dict(hard=True,count_limit=1,declared_capacity=4) for name in HARD_ENTRIES})
+        entry_classes={name:dict(hard=True,count_limit=1,declared_capacity=4,act_of="actor") for name in HARD_ENTRIES})
     dp=dict(profile_id="sponsorship-test",version=1)
     body=json.loads((Path(__file__).parents[3]/"spec/proposals/external-root-v1.json").read_text())["instruments"]["bond"]["body"]
     raw=b"modeled-complete-authenticated-bond-envelope"
@@ -57,7 +57,7 @@ class SponsorshipRepairTests(unittest.TestCase):
     def test_profile_bounds_and_opening_binding(self):
         import rfc8785
         v,state,context,raw,body,profile=fixture()
-        for patch in (dict(count_limit=2),dict(count_limit=1,declared_capacity=0),dict(hard=False)):
+        for patch in (dict(count_limit=2),dict(count_limit=1,declared_capacity=0),dict(hard=False),dict(act_of="zone")):
             changed=json.loads(rfc8785.dumps(profile));changed["entry_classes"]["misattestation"].update(patch)
             with self.assertRaises(ValidationError):replace(v,profile_bytes=rfc8785.dumps(changed))
         for patch in (dict(subject="another-subject"),dict(root="another-root"),dict(opening_anchor_verified=False),

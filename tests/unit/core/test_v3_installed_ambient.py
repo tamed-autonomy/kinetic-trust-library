@@ -23,7 +23,7 @@ def fixture(operation=None,deployment=None,now=1030,zone="zone-1",parent="zone-0
         criticality_model="idle-reproduction-reference-v1",window_seconds=10,recovery_windows=2,declared_capacity=4,
         criticality=2,single_lineage_share=1,repairer_interval=0,retirement_credit_per_weight=1,
         source_signals=["relational.obligation.breach_count","relational.repair.unresolved_count"],
-        entry_classes={name:dict(hard=True,weight=1,declared_capacity=4) for name in HARD_ENTRIES},
+        entry_classes={name:dict(hard=True,weight=1,declared_capacity=4,act_of="actor") for name in HARD_ENTRIES},
         normalizer=dict(id=normalizer["id"],version=1,digest=_digest(normalizer,"sha256")))
     windows=[]
     for n in range(2):
@@ -215,6 +215,12 @@ class InstalledAmbientTests(unittest.TestCase):
             def normalize(self,**kwargs):return 0
         v,state,op,profile,calls=fixture()
         with self.assertRaises(ValidationError):replace(v,normalizer=Permissive()).evaluate(actual_operation=op,evaluated_at=1030,clock_healthy=True)
+
+    def test_zone_act_cannot_be_declared_as_ambient_breach(self):
+        import rfc8785
+        v,state,op,profile,calls=fixture()
+        profile["entry_classes"]["contained-by-zone"]={"hard":False,"weight":0.5,"declared_capacity":1,"act_of":"zone"}
+        with self.assertRaises(ValidationError):replace(v,profile_bytes=rfc8785.dumps(profile))
 
     def test_native_environment_core_claims_and_geometry_use_current_floor(self):
         import rfc8785

@@ -9,7 +9,7 @@ from dataclasses import dataclass,fields
 from decimal import Decimal
 from kinetic_trust_library._decimal import as_decimal
 from kinetic_trust_library.errors import ValidationError
-from .repair import ReconciliationFacts,ReentryProjection,project_reentry
+from .repair import ReconciliationFacts,ReentryProjection,project_reentry,project_breach_ceiling
 from .trust_proof_json import _parse_jcs_object
 from .root_lifecycle import _time
 from .demand_supplier import _digest
@@ -30,8 +30,9 @@ def _profile(raw):
             or not HARD_ENTRIES<=profile["entry_classes"].keys()):
         raise ValidationError("invalid declared re-entry policy")
     for name,value in profile["entry_classes"].items():
-        if (not name or type(value) is not dict or set(value)!={"hard","delta","unrepaired_raise"}
-                or type(value["hard"]) is not bool or name in HARD_ENTRIES and not value["hard"]):
+        if (not name or type(value) is not dict or set(value)!={"hard","delta","unrepaired_raise","act_of"}
+                or value["act_of"]!="actor" or type(value["hard"]) is not bool
+                or name in HARD_ENTRIES and not value["hard"]):
             raise ValidationError("repair entry classes must apply without actor-specific exceptions")
         delta=as_decimal(value["delta"],name="declared delta",minimum=0,maximum=1)
         increase=as_decimal(value["unrepaired_raise"],name="declared unrepaired raise",minimum=0,maximum=1)
@@ -126,12 +127,17 @@ class InstalledRepairVerifier:
                     or entry["entry_class"] not in profile["entry_classes"]):
                 raise ValidationError("invalid or duplicate applicable breach")
             anchors.add(entry["breach_anchor"])
+            declared=profile["entry_classes"][entry["entry_class"]]
+            if not _time(entry["breached_at"]) or entry["breached_at"]>evaluated_at:
+                raise ValidationError("breach must precede this evaluation")
+            initial=project_breach_ceiling(entry["standing_at_breach"],declared_delta=declared["delta"],
+                previous_delta=entry["previous_delta"],hard_entry=declared["hard"])
             record=entry["record_facts"]
             if record is None:
+                ceiling=initial if ceiling is None else min(ceiling,initial)
                 projections.append((entry["breach_anchor"],None));continue
             if type(record) is not dict or set(record)!={field.name for field in fields(ReconciliationFacts)}:
                 raise ValidationError("incomplete reconciliation semantic record")
-            declared=profile["entry_classes"][entry["entry_class"]]
             if (any(record[name]!=entry[name] for name in ("breach_anchor","standing_at_breach","previous_delta","breached_at",
                     "breaching_terminator","required_parties")) or record["hard_entry"] is not declared["hard"]
                     or as_decimal(record["declared_delta"],name="record delta")!=as_decimal(declared["delta"],name="declared delta")
@@ -160,11 +166,13 @@ class InstalledRepairVerifier:
                     lifted.append((entry["breach_anchor"],current))
                 ceiling=current if ceiling is None else min(ceiling,current)
                 after=projection.anchored_at if after is None else max(after,projection.anchored_at)
+            else:
+                ceiling=initial if ceiling is None else min(ceiling,initial)
             projections.append((entry["breach_anchor"],projection))
         eligible=all(value is not None and value.record_valid for _,value in projections)
         result=object.__new__(RepairAssessment)
         for name,value in dict(reentry_eligible=eligible,reason="REPAIR_ELIGIBLE" if eligible else "REPAIR_UNRECONCILED",
-            standing_ceiling=ceiling if eligible else None,readiness_after=after if eligible else None,deployment_digest=deployment,
+            standing_ceiling=ceiling,readiness_after=after if eligible else None,deployment_digest=deployment,
             operation_digest=invocation,profile_bytes=self.profile_bytes,evaluated_at=evaluated_at,expires_at=state["expires_at"],
             actor=state["actor"],lineage=state["lineage"],zone_id=state["zone_id"],breaches=tuple(projections),
             authenticated_state_bytes=source.state_bytes,source_evidence_bytes=source.evidence_bytes,

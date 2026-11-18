@@ -138,7 +138,7 @@ class FederatedSponsorshipTests(unittest.TestCase):
         from kinetic_trust_library.errors import ValidationError
         v,state,body,instrument,context=fixture()
         policy=dict(id="urn:test:opening-repair",version=1,aggregate_count_limit=1,
-            entry_classes={key:dict(hard=True,count_limit=1,declared_capacity=2) for key in HARD_ENTRIES})
+            entry_classes={key:dict(hard=True,count_limit=1,declared_capacity=2,act_of="actor") for key in HARD_ENTRIES})
         state["opening"]["repair_zones"]=[dict(zone_id="zone-c",root=state["root"],profile=policy,
             counts={key:2 if key=="misattestation" else 0 for key in HARD_ENTRIES},blocked_classes=[],aggregate_blocked=False,hard_blocked=False)]
         self.assertFalse(self.evaluate(v,instrument,context).opening_valid)

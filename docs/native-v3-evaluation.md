@@ -799,6 +799,12 @@ policy, not a universal RFC formula. Mandatory hard classes include acting
 outside a signed decision, withdrawal for cause, misattestation, and seeking
 reconciliation without attending; none may declare a delta below one tenth.
 No grace period, new sponsor or favorable token substitutes for a record.
+The updated PR #172 applies the declared ceiling from the authenticated breach
+anchor, before any reconciliation record exists. An unresolved breach still
+blocks re-entry; its repair assessment now retains the standing ceiling rather
+than presenting it as absent. Every declared entry class must name an act of
+the actor. Containment, suspension, quarantine, readiness withdrawal and gate
+refusal are zone/gate acts, not entry classes by themselves.
 
 Select the installed repair verifier on `InstalledStandingVerifier` and its
 exact `profile_bytes` as `NativeCoreContext.repair_profile_bytes`. Standing

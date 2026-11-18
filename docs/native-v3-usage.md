@@ -140,6 +140,12 @@ normalization execution and aggregation truth remain authenticated Source duties
 The Library-derived `catalog/label-requirements.json` is explicitly separate from
 the unmodified source catalog and records its scope and the 15-vs-17 entropy
 inventory discrepancy. Historical component fixtures are amended only inside tests.
+The provisional fixed-slot helper also requires authenticated feed-to-observation
+identities for every configured alternative. It rejects a mapping that could
+reuse one observation in different slots, including under an alias. The Source
+must establish current, independent, equivalent complete population before
+marking an alternative admissible; a cooler subset is not a backup merely
+because its reading is lower.
 
 `NativeCoreContext` and `NativePersonClaimsSource` apply the same complete
 installation declaration check before proof production. A declaration alone

@@ -3,7 +3,7 @@ import unittest
 from decimal import Decimal,localcontext
 from dataclasses import replace
 from kinetic_trust_library.errors import ValidationError
-from kinetic_trust_library.v3.repair import ReconciliationFacts,project_reentry
+from kinetic_trust_library.v3.repair import ReconciliationFacts,project_reentry,project_breach_ceiling
 
 
 def facts(**changes):
@@ -19,6 +19,15 @@ def facts(**changes):
 
 
 class ReentryTests(unittest.TestCase):
+    def test_breach_ceiling_precedes_reconciliation(self):
+        import json
+        from pathlib import Path
+        cases=json.loads((Path(__file__).parents[3]/"spec/proposals/breach-reconciliation-v1.json").read_text())["vectors"]
+        case=next(item for item in cases if item["id"]=="BR39-ceiling-holds-before-the-record")
+        self.assertEqual(project_breach_ceiling(case["given"]["breach"]["standingAtBreach"],
+            declared_delta=case["given"]["profile"]["delta"]["hard"],previous_delta=0,hard_entry=True),
+            case["expect"]["ceiling"])
+
     def test_record_cost_and_repeat_breach(self):
         result=project_reentry(facts())
         self.assertTrue(result.record_valid)

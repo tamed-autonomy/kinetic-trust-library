@@ -51,7 +51,8 @@ def _profile(raw):
         raise ValidationError("invalid ambient criticality/share/retirement declaration")
     _rational(profile["repairer_interval"])
     for name,entry in profile["entry_classes"].items():
-        if (not name or type(entry) is not dict or set(entry)!={"hard","weight","declared_capacity"} or type(entry["hard"]) is not bool
+        if (not name or type(entry) is not dict or set(entry)!={"hard","weight","declared_capacity","act_of"}
+                or entry["act_of"]!="actor" or type(entry["hard"]) is not bool
                 or name in HARD_ENTRIES and not entry["hard"] or not 0<_rational(entry["weight"])<=1
                 or entry["hard"] and _rational(entry["weight"])!=1):
             raise ValidationError("ambient entry weights must preserve hard breaches")

@@ -56,10 +56,37 @@ class ProposedMissingEvidence(unittest.TestCase):
             with self.subTest(current=evaluation["current"]):
                 actual=aggregate_weighted_slots(config,
                     {name:readings[name] for name in evaluation["current"]},
-                    admissible_sources=frozenset(evaluation["current"]))
+                    admissible_sources=frozenset(evaluation["current"]),
+                    observation_ids={name:name for name in readings})
                 self.assertEqual(actual, Decimal(str(evaluation["expected"]["value"])))
         self.assertIsNone(aggregate_weighted_slots(config,{"c":readings["c"]},
-            admissible_sources=frozenset({"c"})))
+            admissible_sources=frozenset({"c"}),
+            observation_ids={name:name for name in readings}))
+
+    def test_backup_coverage_and_cross_slot_observation_identity(self):
+        from copy import deepcopy
+        vectors=json.loads(VECTORS.read_text())
+        config=vectors["weighted_average_cases"][0]["configuration"]
+        cases={case["id"]:case for case in vectors["backup_admissibility_cases"]}
+        for name in ("cooler-subset-is-not-equivalent","unknown-coverage-is-not-continuity",
+                     "lower-current-complete-observation-is-admissible"):
+            case=cases[name]
+            eligible=frozenset({"b","c"}) if case["equivalent_population"] is True else frozenset({"c"})
+            result=aggregate_weighted_slots(config,{"b":case["backup_value"],"c":0.4},
+                admissible_sources=eligible,observation_ids={"a":"obs-a","b":"obs-b","c":"obs-c"})
+            self.assertEqual(result is not None,case["expected"]=="populated")
+        reused=deepcopy(config)
+        reused["aggregation_slots"][0]["alternatives"].append("c")
+        with self.assertRaises(ValidationError):
+            aggregate_weighted_slots(reused,{"b":0.1,"c":0.4},
+                admissible_sources=frozenset({"b","c"}),observation_ids={"a":"obs-a","b":"obs-b","c":"obs-c"})
+        aliased=deepcopy(config)
+        aliased["feeds"].append(dict(aliased["feeds"][-1],id="alias-c"))
+        aliased["aggregation_slots"][0]["alternatives"].append("alias-c")
+        with self.assertRaises(ValidationError):
+            aggregate_weighted_slots(aliased,{"b":0.1,"c":0.4},
+                admissible_sources=frozenset({"b","c"}),
+                observation_ids={"a":"obs-a","b":"obs-b","c":"obs-c","alias-c":"obs-c"})
 
     def test_all_proposed_factor_boundary_projections(self):
         vectors = json.loads(VECTORS.read_text(), parse_float=Decimal)["vectors"]

@@ -23,8 +23,9 @@ def _profile(raw):
         raise ValidationError("invalid declared sponsorship repair policy")
     capacities=[]
     for name,value in profile["entry_classes"].items():
-        if (not name or type(value) is not dict or set(value)!={"hard","count_limit","declared_capacity"}
-                or type(value["hard"]) is not bool or name in HARD_ENTRIES and not value["hard"]
+        if (not name or type(value) is not dict or set(value)!={"hard","count_limit","declared_capacity","act_of"}
+                or value["act_of"]!="actor" or type(value["hard"]) is not bool
+                or name in HARD_ENTRIES and not value["hard"]
                 or not _time(value["count_limit"]) or value["hard"] and value["count_limit"]>1):
             raise ValidationError("invalid sponsorship breach count limit")
         capacity=as_decimal(value["declared_capacity"],name="declared repair capacity",minimum=0)

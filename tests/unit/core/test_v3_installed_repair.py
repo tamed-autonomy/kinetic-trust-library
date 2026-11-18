@@ -17,7 +17,7 @@ def fixture(operation=None,deployment=None,now=1000):
         resource="urn:resource:1",parameters={},request_id="request-1",replay_domain="urn:replay:1")
     dp=deployment or dict(profile_id="repair-test",version=1)
     profile=dict(id="urn:test:repair",version=1,formula="fractional-reentry-with-additive-unrepaired-raise-v1",route="urn:repair:route",
-        entry_classes={name:dict(hard=True,delta="0.25",unrepaired_raise="0.15") for name in
+        entry_classes={name:dict(hard=True,delta="0.25",unrepaired_raise="0.15",act_of="actor") for name in
             ("act-outside-decision","withdrawal-for-cause","misattestation","seeking-without-attendance")})
     values={key:(str(value) if type(value) is Decimal else list(value) if type(value) is tuple else value) for key,value in asdict(facts()).items()}
     entry=dict(breach_anchor=values["breach_anchor"],entry_class="act-outside-decision",standing_at_breach="80",previous_delta="0",
@@ -85,6 +85,12 @@ class InstalledRepairTests(unittest.TestCase):
         profile["entry_classes"]["seeking-without-attendance"].update(hard=False,delta="0")
         with self.assertRaises(ValidationError):replace(v,profile_bytes=rfc8785.dumps(profile))
 
+    def test_declared_zone_act_cannot_be_a_breach_entry(self):
+        import rfc8785
+        v,state,op,profile,calls=fixture()
+        profile["entry_classes"]["contained-by-zone"]={"hard":False,"delta":"0.1","unrepaired_raise":"0.15","act_of":"zone"}
+        with self.assertRaises(ValidationError):replace(v,profile_bytes=rfc8785.dumps(profile))
+
     def test_current_inventory_and_record_closure(self):
         v,state,op,profile,calls=fixture()
         result=v.evaluate(actual_operation=op,evaluated_at=1000,clock_healthy=True)
@@ -95,7 +101,7 @@ class InstalledRepairTests(unittest.TestCase):
         state["breaches"][0]["record_facts"]=None
         result=v.evaluate(actual_operation=op,evaluated_at=1000,clock_healthy=True)
         self.assertFalse(result.reentry_eligible)
-        self.assertIsNone(result.standing_ceiling)
+        self.assertEqual(result.standing_ceiling,60)
         self.assertNotIn("record_facts",calls[0])
         state["actor"]="urn:other"
         with self.assertRaises(ValidationError):v.evaluate(actual_operation=op,evaluated_at=1000,clock_healthy=True)

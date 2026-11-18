@@ -50,6 +50,17 @@ class ReentryProjection:
     anchored_at: int | None
 
 
+def project_breach_ceiling(standing_at_breach, *, declared_delta, previous_delta, hard_entry):
+    """Bound base standing from an authenticated breach, before any record exists."""
+    if type(hard_entry) is not bool:raise ValidationError("breach entry hardness must be explicit")
+    standing=as_decimal(standing_at_breach,name="standing at breach",minimum=0,maximum=100)
+    declared=as_decimal(declared_delta,name="breach delta",minimum=0,maximum=1)
+    previous=as_decimal(previous_delta,name="previous breach delta",minimum=0,maximum=1)
+    if hard_entry and declared<Decimal(".1"):
+        raise ValidationError("hard breach reduction is below its floor")
+    return finite_decimal(Fraction(standing)*(1-max(Fraction(declared),Fraction(previous))))
+
+
 def project_reentry(facts):
     """Validate record prerequisites; a valid ceiling restores no readiness."""
     if type(facts) is not ReconciliationFacts:raise ValidationError("typed reconciliation facts required")
@@ -73,4 +84,4 @@ def project_reentry(facts):
     return ReentryProjection(True,reason,finite_decimal(delta),finite_decimal(Fraction(standing)*(1-delta)),facts.anchored_at)
 
 
-__all__=("ReconciliationFacts","ReentryProjection","project_reentry")
+__all__=("ReconciliationFacts","ReentryProjection","project_breach_ceiling","project_reentry")

@@ -94,8 +94,8 @@
     {
       "path": "spec/proposals/breach-reconciliation-v1.json",
       "source_path": "specifications/conformance/breach-reconciliation-v1.json",
-      "source_commit": "6892c709ecdb175523e4f9d435eb5f2fce742580",
-      "sha256": "eb04c61eecbf743f9606a5c1fa85bb4ae078dde799d6747abc3f88dd94ea42cc"
+      "source_commit": "c34d955287f55686338a67efd486dd6c86deccb4",
+      "sha256": "4fe56f6d23d8f305de1582b4992139e6c0d1254222852d8465596ca080e1a6e5"
     },
     {
       "path": "src/kinetic_trust_library/v3/schemas/adjudication-token.json",
@@ -108,9 +108,21 @@
       "source_path": "specifications/conformance/external-root-v1.json",
       "source_commit": "81eed0a37845edb572bb4e541681309ac8770686",
       "sha256": "1480384cf58b175c775209f7377f01f3b136a8434d07c56155caeb927c2da3af"
+    },
+    {
+      "path": "spec/proposals/missing-evidence-v1.json",
+      "source_path": "specifications/conformance/missing-evidence-v1.json",
+      "source_commit": "f81824ae41af8089db9763f257a6479fb6bcaab6",
+      "sha256": "643d57231090523d6661367e817074a09c3dae0e3fa818f6399f8b261074950e"
+    },
+    {
+      "path": "src/kinetic_trust_library/v3/schemas/sensor-config-v3.json",
+      "source_path": "schemas/sensor-config.json",
+      "source_commit": "f81824ae41af8089db9763f257a6479fb6bcaab6",
+      "sha256": "a0556ecb686884fbb5e28bd97d49a950a499203d19443a9f285693463660de27"
     }
   ],
   "composition_note": "Provisional proof and Root schemas and vectors track RFC PR #201 at 81eed0a; other entries retain their individually pinned proposal heads. Historical snapshots remain archived; no final release claim.",
   "refresh_phase": "late-proposal-update",
-  "last_verified_refresh": "2026-11-08"
+  "last_verified_refresh": "2026-11-17"
 }
